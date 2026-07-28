@@ -29,13 +29,6 @@
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 
-.dark {
-  --color-border: #1e293b;
-  --color-background: #030712;
-  --color-card: #0b0f19;
-  --color-muted-foreground: #9ca3af;
-}
-
 html {
   scroll-behavior: smooth;
 }
@@ -48,7 +41,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.dark body {
+/* Styles explicites pour le mode sombre sans dépendre du sélecteur parent brut */
+html.dark {
+  background-color: #030712;
+  color: #f3f4f6;
+}
+
+html.dark body {
   background-color: #030712 !important;
   color: #f3f4f6 !important;
 }
@@ -68,7 +67,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.3);
   }
 
-  .dark .glass-effect {
+  html.dark .glass-effect {
     background: rgba(11, 15, 25, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
