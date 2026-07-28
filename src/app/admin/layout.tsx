@@ -1,6 +1,3 @@
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { ADMIN_SESSION_COOKIE, verifyAdminSessionToken } from '@/lib/adminSession';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 
 export const dynamic = 'force-dynamic';
@@ -10,19 +7,13 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
-  const session = token ? await verifyAdminSessionToken(token) : null;
-
-  if (!session) {
-    redirect('/admin/login');
-  }
+  const email = process.env.ADMIN_EMAIL || 'admin@djossi.ci';
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col lg:flex-row">
       {/* Sidebar Desktop */}
       <div className="hidden lg:block lg:w-72 lg:fixed lg:inset-y-0 z-30">
-        <AdminSidebar email={session.email} />
+        <AdminSidebar email={email} />
       </div>
 
       {/* Main Content Area */}
@@ -36,11 +27,11 @@ export default async function AdminLayout({
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <div className="text-xs font-semibold text-white">{session.email}</div>
+              <div className="text-xs font-semibold text-white">{email}</div>
               <div className="text-[10px] text-emerald-400">Rôle Admin Actif</div>
             </div>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 border border-primary/30 text-primary font-bold text-sm">
-              {session.email.charAt(0).toUpperCase()}
+              {email.charAt(0).toUpperCase()}
             </div>
           </div>
         </header>
