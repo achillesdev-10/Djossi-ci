@@ -30,10 +30,10 @@
 }
 
 .dark {
-  --color-border: #334155;
-  --color-background: #0f172a;
-  --color-card: #1e293b;
-  --color-muted-foreground: #94a3b8;
+  --color-border: #1e293b;
+  --color-background: #030712;
+  --color-card: #0b0f19;
+  --color-muted-foreground: #9ca3af;
 }
 
 html {
@@ -49,7 +49,8 @@ body {
 }
 
 .dark body {
-  color: #f1f5f9;
+  background-color: #030712 !important;
+  color: #f3f4f6 !important;
 }
 
 @layer utilities {
@@ -68,7 +69,7 @@ body {
   }
 
   .dark .glass-effect {
-    background: rgba(30, 41, 59, 0.75);
+    background: rgba(11, 15, 25, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
