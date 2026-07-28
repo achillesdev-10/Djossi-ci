@@ -1,0 +1,43 @@
+{
+  "name": "djossi-ci",
+  "version": "1.0.0",
+  "description": "Djossi.ci - Plateforme d'offres d'emploi en Côte d'Ivoire",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:setup": "tsx scripts/sqlite-setup.ts",
+    "db:reset": "tsx scripts/sqlite-setup.ts --reset",
+    "db:seed": "tsx scripts/sqlite-setup.ts --seed-only",
+    "db:dry": "tsx scripts/sqlite-setup.ts --dry-run"
+  },
+  "keywords": [
+    "emploi",
+    "cote-divoire",
+    "jobs",
+    "offres",
+    "travail"
+  ],
+  "author": "Djossi.ci Team",
+  "license": "MIT",
+  "dependencies": {
+    "next": "^16.2.12",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.5.4",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.2.12",
+    "postcss": "^8.5.24",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.1",
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "title": "Responsable Marketing et Communication",
+    "company": "Caféivoire Export SA",
+    "location": "Yamoussoukro",
+    "contract_type": "CDI",
+    "description": "# Poste\nCaféivoire Export SA, exportateur ivoirien de café-cacao certifié UTZ recherche son nouveau Responsable Marketing & Communication, basé(e) à Yamoussoukro (dépendance Abidjan possible).\n\n## Responsabilités\n1. Définir la stratégie de marque et la déployer (AFRICA FOOD SHOW, SIAL, sites web)\n2. Piloter les campagnes B2B et B2C sur LinkedIn, Meta, TikTok Business\n3. Produire les contenus, catalogues produits et salons internationaux\n\n## Profil\n- Bac+5 Marketing (ESCAE, EAGC, UJLoG, Sup'INFO)\n- 4+ ans en marketing B2B agroalimentaire souhaité\n- Anglais professionnel requis\n- Permis B\n\n## Postuler\nEnvoyer CV + LM (objet: CAND-RESP-MKT-2026) à l'adresse careers@cafeivoire-export.ci",
+    "source_url": "https://demo.djossi.local/cafeivoire-resp-marketing",
+    "apply_link": null,
+    "apply_email": "careers@cafeivoire-export.ci",
+    "is_verified": false,
+    "published_at": "2026-07-20T08:15:00"
+  },
+  {
+    "title": "Stage Data Analyst Power BI (Bac+4/5)",
+    "company": "Compagnie Ivoirienne d'Électricité (CIE)",
+    "location": "Abidjan - Plateau",
+    "contract_type": "Stage",
+    "description": "## Stage 6 mois — Département Performance Industrielle\nLa CIE recherche un(e) stagiaire Data Analyst Bac+4/5 en statistique, informatique ou mathématiques appliquées, pour automatiser les rapports du réseau électrique sous Power BI.\n\n## Activités\n- ETL depuis SQL Server / PostgreSQL → Power BI Dataflows\n- Création de dashboards consommation, pannes, prévisions charge\n- Automatisation sous Python (Pandas) des exports mensuels\n\n## Profil\n- M1/2 Ingénieur, MST ou équivalent\n- Niveau avancé Power BI, bases solides SQL\n- Notions Python appréciées\n- Français impeccable\n\n## Modalités\nDébut Septembre 2026 — Gratification + tickets restaurant + allocation transport\nPostuler via https://cie.ci/stages/data-analyst-2026",
+    "source_url": "https://demo.djossi.local/cie-stage-data-analyst",
+    "apply_link": "https://cie.ci/stages/data-analyst-2026",
+    "apply_email": null,
+    "is_verified": false,
+    "published_at": "2026-07-27T14:00:00"
+  },
+  {
+    "title": "Développeur Frontend React / Next.js",
+    "company": "Orange Digital Center Côte d'Ivoire",
+    "location": "Abidjan - Cocody",
+    "contract_type": "CDI",
+    "description": "## Mission\nIntégrez l'équipe Produit d'Orange Digital Center Côte d'Ivoire pour développer de nouvelles plateformes digitales en Next.js destinées à 5M+ d'utilisateurs.\n\n## Profil recherché\n- 3+ ans d'expérience React, TypeScript, Next.js (App Router)\n- Maîtrise de Tailwind CSS 4 et des Server Components\n- Connaissance de GraphQL ou REST, tests Playwright\n- Français courant, télétravail hybride accepté (3j/7 sur site Cocody)\n\n## Avantages\nMutuelle, prime de rendement, formations certifiantes Orange.\n\nPostuler directement : recrutement.odc@orange.ci",
+    "source_url": "https://demo.djossi.local/orange-digital-center-dev-react",
+    "apply_link": "https://orange.ci/recrutement/digital-center-frontend",
+    "apply_email": null,
+    "is_verified": false,
+    "published_at": "2026-07-26T09:00:00"
+  },
+  {
+    "title": "Ingénieur Commercial BTP",
+    "company": "Société Ivoirienne de Bâtiment (SIB)",
+    "location": "Bouaké",
+    "contract_type": "CDD",
+    "description": "### Contexte\nLa SIB recherche un(e) Ingénieur(e) Commercial(le) pour sa direction Grand Public sur le pôle Bouaké, dans le cadre d'un CDD de 18 mois renouvelable.\n\n### Missions\n- Prospection commerciale sur les marchés de Bouaké et du Centre\n- Négociation d'offres de prix et signature de contrats\n- Suivi portefeuille clients BTP\n\n### Profil\nBac+4/5 Commercial, École de commerce ou Ingénieur option commercial.\n2+ années d'expérience vente B2B dans le bâtiment idéal.\n\nCandidatures par email : jobs@sib.ci (objet : Candidature IC-BTP Bouaké)",
+    "source_url": "https://demo.djossi.local/sib-ingenieur-commercial-btp-bouake",
+    "apply_link": null,
+    "apply_email": "jobs@sib.ci",
+    "is_verified": false,
+    "published_at": "2026-07-25T10:30:00"
+  }
+]
