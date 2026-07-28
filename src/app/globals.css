@@ -29,6 +29,13 @@
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 
+.dark {
+  --color-border: #334155;
+  --color-background: #0f172a;
+  --color-card: #1e293b;
+  --color-muted-foreground: #94a3b8;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -39,6 +46,10 @@ body {
   color: #1f2937;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.dark body {
+  color: #f1f5f9;
 }
 
 @layer utilities {
@@ -54,6 +65,11 @@ body {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .dark .glass-effect {
+    background: rgba(30, 41, 59, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .hover-lift {
