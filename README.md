@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+# Djossi-ci
+=======
+>>>>>>> HEAD@{1}
 # Djossi.ci — Plateforme d'emploi en Côte d'Ivoire
 
 > **Djossi.ci** est la première plateforme de recrutement 100% ivoirienne. Elle permet aux **candidats** de trouver l'emploi de leurs rêves et aux **entreprises** de recruter les meilleurs talents partout en Côte d'Ivoire.
@@ -335,3 +341,7 @@ Référence complète : voir `.env.example`.
 ---
 
 > **Pensé et construit avec ❤️ pour les talents et les entreprises ivoiriennes.**
+<<<<<<< HEAD
+=======
+>>>>>>> a5e65fb (feat: initial commit - Djossi.ci plateforme d'emploi et dashboard admin sécurisé)
+>>>>>>> HEAD@{1}
