@@ -9,11 +9,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname === '/admin/login') {
-    const session = await getAdminSessionFromRequest(request);
-    if (session) {
-      return NextResponse.redirect(new URL('/admin', request.url));
-    }
+  // Autoriser explicitement la page de login pour éviter les boucles de redirection
+  if (pathname.startsWith('/admin/login')) {
     return NextResponse.next();
   }
 
