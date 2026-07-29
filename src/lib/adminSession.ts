@@ -58,12 +58,12 @@ async function signValue(value: string): Promise<string> {
   const secret = new TextEncoder().encode(getSessionSecret());
   const key = await crypto.subtle.importKey(
     'raw',
-    secret,
+    secret as unknown as BufferSource,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
   );
-  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value));
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value) as unknown as BufferSource);
   return bytesToBase64Url(new Uint8Array(signature));
 }
 
@@ -71,13 +71,21 @@ async function verifySignature(value: string, signature: string): Promise<boolea
   const secret = new TextEncoder().encode(getSessionSecret());
   const key = await crypto.subtle.importKey(
     'raw',
-    secret,
+    secret as unknown as BufferSource,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['verify']
   );
 
-  return crypto.subtle.verify('HMAC', key, base64UrlToBytes(signature), new TextEncoder().encode(value));
+  const sigBytes = base64UrlToBytes(signature);
+  const dataBytes = new TextEncoder().encode(value);
+
+  return crypto.subtle.verify(
+    'HMAC',
+    key,
+    sigBytes as unknown as BufferSource,
+    dataBytes as unknown as BufferSource
+  );
 }
 
 export function isAdminCredentialsConfigured(): boolean {

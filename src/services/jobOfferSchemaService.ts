@@ -321,7 +321,7 @@ export class JobOfferSchemaService {
       WHERE substr(created_at, 1, 10) >= $startDay
       GROUP BY substr(created_at, 1, 10)
       ORDER BY dayKey ASC;
-    `).all({ $startDay: dayKeys[0] }) as Array<{
+    `).all({ $startDay: dayKeys[0] }) as unknown as Array<{
       dayKey: string;
       total: number;
       verified: number;
