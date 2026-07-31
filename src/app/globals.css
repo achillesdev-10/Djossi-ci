@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-primary: #009639;
   --color-primary-dark: #007a2e;
@@ -41,7 +43,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Styles explicites pour le mode sombre sans dépendre du sélecteur parent brut */
 html.dark {
   background-color: #030712;
   color: #f3f4f6;
