@@ -3,28 +3,43 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks';
 import { useDarkMode } from '@/hooks/useDarkMode';
 
 const NAV_LINKS = [
   { label: 'Offres d\'emploi', href: '/jobs' },
   { label: 'Entreprises', href: '/companies' },
   { label: 'Candidats', href: '/candidates' },
-  { label: 'Tableau de bord', href: '/dashboard', protected: true },
 ];
 
 export default function Header() {
-  const { user, isAuthenticated, logout } = useAuth();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [user, setUser] = useState<{ email: string; role: 'candidate' | 'company' | 'admin'; name: string } | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     onScroll();
     window.addEventListener('scroll', onScroll);
+
+    try {
+      const stored = localStorage.getItem('djossi_user');
+      if (stored) {
+        setUser(JSON.parse(stored));
+      }
+    } catch {}
+
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  function handleLogout() {
+    localStorage.removeItem('djossi_user');
+    document.cookie = 'djossi_role=; path=/; max-age=0';
+    setUser(null);
+    window.location.href = '/';
+  }
+
+  const dashboardHref = user?.role === 'company' ? '/dashboard/company' : '/dashboard/candidate';
 
   return (
     <header
@@ -52,7 +67,7 @@ export default function Header() {
           </Link>
 
           <nav className="hidden lg:flex items-center gap-8">
-            {NAV_LINKS.filter((l) => !l.protected || isAuthenticated).map((link) => (
+            {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -61,6 +76,14 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
+            {user ? (
+              <Link
+                href={dashboardHref}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                Mon Tableau de Bord
+              </Link>
+            ) : null}
           </nav>
 
           <div className="hidden lg:flex items-center gap-3">
@@ -81,17 +104,17 @@ export default function Header() {
               )}
             </button>
 
-            {isAuthenticated ? (
+            {user ? (
               <>
                 <Link
-                  href="/dashboard"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary"
+                  href={dashboardHref}
+                  className="text-sm font-bold text-gray-900 dark:text-white px-3 py-2 bg-gray-100 dark:bg-slate-800 rounded-xl"
                 >
-                  {user?.first_name || user?.email}
+                  {user.name || user.email} ({user.role === 'company' ? 'Entreprise' : 'Candidat'})
                 </Link>
                 <button
-                  onClick={() => logout()}
-                  className="px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                  onClick={handleLogout}
+                  className="px-4 py-2 rounded-xl border border-border text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
                 >
                   Déconnexion
                 </button>
@@ -99,14 +122,14 @@ export default function Header() {
             ) : (
               <>
                 <Link
-                  href="/auth/candidate/login"
+                  href="/login"
                   className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary px-4 py-2"
                 >
                   Connexion
                 </Link>
                 <Link
-                  href="/auth/candidate/register"
-                  className="px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-dark shadow-md shadow-primary/20 transition-all"
+                  href="/register"
+                  className="px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:brightness-110 shadow-md shadow-primary/20 transition-all"
                 >
                   S'inscrire
                 </Link>
@@ -148,7 +171,7 @@ export default function Header() {
 
         {open && (
           <div className="lg:hidden border-t border-border py-4 space-y-1">
-            {NAV_LINKS.filter((l) => !l.protected || isAuthenticated).map((link) => (
+            {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -158,19 +181,21 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
+            {user ? (
+              <Link
+                href={dashboardHref}
+                onClick={() => setOpen(false)}
+                className="block px-2 py-3 rounded-lg text-sm font-medium text-primary hover:bg-gray-50 dark:hover:bg-slate-800"
+              >
+                Mon Tableau de Bord
+              </Link>
+            ) : null}
             <div className="pt-4 mt-4 border-t border-border space-y-2">
-              {isAuthenticated ? (
+              {user ? (
                 <>
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setOpen(false)}
-                    className="block px-2 py-3 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-800 dark:text-gray-200"
-                  >
-                    Mon espace
-                  </Link>
                   <button
                     onClick={() => {
-                      logout();
+                      handleLogout();
                       setOpen(false);
                     }}
                     className="w-full text-left px-2 py-3 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-800 dark:text-gray-200"
@@ -181,14 +206,14 @@ export default function Header() {
               ) : (
                 <>
                   <Link
-                    href="/auth/candidate/login"
+                    href="/login"
                     onClick={() => setOpen(false)}
                     className="block px-2 py-3 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-800 dark:text-gray-200"
                   >
                     Connexion
                   </Link>
                   <Link
-                    href="/auth/candidate/register"
+                    href="/register"
                     onClick={() => setOpen(false)}
                     className="block px-2 py-3 rounded-lg bg-primary text-white text-sm font-semibold text-center"
                   >

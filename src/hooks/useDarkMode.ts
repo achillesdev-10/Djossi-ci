@@ -3,19 +3,47 @@
 import { useState, useEffect } from 'react';
 
 export function useDarkMode() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const stored = localStorage.getItem('djossi_theme');
+    if (stored) return stored === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
 
   useEffect(() => {
-    const stored = localStorage.getItem('djossi_theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const initial = stored ? stored === 'dark' : prefersDark;
-    
-    setIsDarkMode(initial);
-    if (initial) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    const updateTheme = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setIsDarkMode(isDark);
+    };
+
+    updateTheme();
+
+    const observer = new MutationObserver(() => {
+      updateTheme();
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'djossi_theme') {
+        const dark = e.newValue === 'dark';
+        setIsDarkMode(dark);
+        if (dark) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   const toggleDarkMode = () => {

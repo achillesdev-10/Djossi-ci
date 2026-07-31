@@ -42,6 +42,8 @@ interface JobOfferRow {
   apply_email: string | null;
   source_url: string | null;
   is_verified: 0 | 1;
+  is_archived: 0 | 1;
+  is_expired: 0 | 1;
   created_at: string;
   updated_at: string;
 }
@@ -68,6 +70,8 @@ const SEED_JOBS: Omit<JobOfferRow, 'id' | 'created_at' | 'updated_at'>[] = [
     apply_email: 'recrutement.tech@mtn.ci',
     source_url: 'https://mtn.ci/recrutement',
     is_verified: 1,
+    is_archived: 0,
+    is_expired: 0,
   },
   {
     title: 'Chef de Projet Marketing Digital',
@@ -79,6 +83,8 @@ const SEED_JOBS: Omit<JobOfferRow, 'id' | 'created_at' | 'updated_at'>[] = [
     apply_email: null,
     source_url: 'https://www.linkedin.com/jobs/view/sg-ci-chef-projet-marketing',
     is_verified: 1,
+    is_archived: 0,
+    is_expired: 0,
   },
   {
     title: 'Stagiaire Data Analyst (Fin de cycle - Bac+4/5)',
@@ -90,6 +96,8 @@ const SEED_JOBS: Omit<JobOfferRow, 'id' | 'created_at' | 'updated_at'>[] = [
     apply_email: 'stages.data@ecobank.ci',
     source_url: 'https://career.ecobank.com/cotedivoire',
     is_verified: 0,
+    is_archived: 0,
+    is_expired: 0,
   },
 ];
 
@@ -148,6 +156,8 @@ function runMigration(db: DatabaseSync) {
       apply_email     TEXT,
       source_url      TEXT,
       is_verified     INTEGER NOT NULL DEFAULT 0,
+      is_archived     INTEGER NOT NULL DEFAULT 0,
+      is_expired      INTEGER NOT NULL DEFAULT 0,
       created_at      TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
 
@@ -156,6 +166,12 @@ function runMigration(db: DatabaseSync) {
       ),
       CONSTRAINT valid_is_verified CHECK (
         is_verified IN (0,1)
+      ),
+      CONSTRAINT valid_is_archived CHECK (
+        is_archived IN (0,1)
+      ),
+      CONSTRAINT valid_is_expired CHECK (
+        is_expired IN (0,1)
       ),
       CONSTRAINT valid_apply_method CHECK (
         apply_link IS NOT NULL OR apply_email IS NOT NULL

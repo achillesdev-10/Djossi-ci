@@ -1,46 +1,99 @@
 import Link from 'next/link';
+import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
+import JobCard from '@/components/jobs/JobCard';
+import SearchBar from '@/components/jobs/SearchBar';
+import type { JobOfferSchema } from '@/types';
 
 export const metadata = {
-  title: 'Toutes les offres d\'emploi',
-  description: 'Parcourez et recherchez des milliers d\'offres d\'emploi en Côte d\'Ivoire.',
+  title: 'Toutes les offres d\'emploi en Côte d\'Ivoire',
+  description: 'Parcourez, filtrez et recherchez des milliers d\'offres d\'emploi, CDI, CDD et stages à Abidjan et partout en Côte d\'Ivoire sur Djossi.ci.',
 };
 
-export default function JobsPage() {
+interface JobsPageProps {
+  searchParams: Promise<{
+    q?: string;
+    city?: string;
+    contract?: string;
+    page?: string;
+  }>;
+}
+
+export default async function JobsPage({ searchParams }: JobsPageProps) {
+  const resolvedParams = await searchParams;
+  const keyword = resolvedParams.q || '';
+  const city = resolvedParams.city || '';
+  const contract = resolvedParams.contract || '';
+
+  const { rows: jobs, total } = await JobOfferSchemaService.list({
+    keyword,
+    location: city,
+    contract_type: contract ? (contract as any) : undefined,
+    limit: 50,
+  });
+
   return (
-    <div className="container mx-auto px-4 py-16">
-      <nav className="text-sm text-gray-500 mb-8">
-        <Link href="/" className="hover:text-primary">Accueil</Link>
-        <span className="mx-2">/</span>
-        <span className="text-gray-900 font-medium">Offres d'emploi</span>
-      </nav>
+    <main className="flex-1 min-h-screen bg-gradient-to-b from-white to-gray-50/70 dark:from-slate-950 dark:to-slate-900 transition-colors py-8 sm:py-12">
+      <div className="container mx-auto px-4 max-w-6xl">
+        <nav aria-label="Fil d'Ariane" className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+          <Link href="/" className="hover:text-primary">Accueil</Link>
+          <span className="mx-2" aria-hidden="true">/</span>
+          <span className="text-gray-900 dark:text-gray-200 font-medium">Offres d'emploi</span>
+        </nav>
 
-      <div className="mb-10">
-        <h1 className="text-4xl font-bold mb-4 font-[var(--font-display)]">
-          Toutes les offres d'emploi
-        </h1>
-        <p className="text-gray-600 text-lg max-w-2xl">
-          Explorez nos offres et trouvez l'opportunité qui correspond à vos compétences et vos aspirations.
-        </p>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-border p-12 text-center">
-        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-          <svg className="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+        <div className="mb-8">
+          <h1 className="text-3xl sm:text-4xl font-extrabold mb-3 font-[var(--font-display)] text-gray-900 dark:text-white">
+            Toutes les offres d'emploi en Côte d'Ivoire
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 text-base sm:text-lg max-w-2xl">
+            Trouvez l'opportunité idéale parmi nos offres vérifiées à Abidjan et à l'intérieur du pays.
+          </p>
         </div>
-        <h2 className="text-2xl font-bold mb-2 font-[var(--font-display)]">
-          Page en cours de construction
-        </h2>
-        <p className="text-gray-600 max-w-lg mx-auto mb-8">
-          La fonctionnalité de recherche avancée et le listing des offres arrivent très vite. 
-          Revenez sur la page d'accueil pour découvrir quelques offres à la une.
-        </p>
-        <Link
-          href="/"
-          className="inline-block bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-semibold shadow-md transition-all"
-        >
-          Retour à l'accueil
-        </Link>
+
+        {/* Barre de recherche interactive avec gestion des paramètres d'URL */}
+        <div className="mb-8">
+          <SearchBar
+            initialKeyword={keyword}
+            initialLocation={city}
+            initialContract={contract}
+          />
+        </div>
+
+        {/* Résultats */}
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white font-[var(--font-display)]">
+            {total} {total > 1 ? 'offres trouvées' : 'offre trouvée'}
+            {keyword || city || contract ? ' (filtrées)' : ''}
+          </h2>
+        </div>
+
+        {jobs.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            {jobs.map((job) => (
+              <JobCard key={job.id} job={job as JobOfferSchema} />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-slate-900 border border-dashed border-border rounded-2xl p-8 sm:p-12 text-center">
+            <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center mb-5">
+              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2 font-[var(--font-display)]">
+              Aucune offre ne correspond à vos critères
+            </h3>
+            <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              Essayez de modifier vos filtres, de chercher un autre mot-clé ou de réinitialiser la recherche.
+            </p>
+            <Link
+              href="/jobs"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white font-semibold text-sm shadow-md transition-all"
+            >
+              Voir toutes les offres
+            </Link>
+          </div>
+        )}
       </div>
-    </div>
+    </main>
   );
 }

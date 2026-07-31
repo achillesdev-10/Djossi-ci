@@ -91,6 +91,8 @@ export interface JobOfferSchema {
   apply_email: string | null;
   source_url: string | null;
   is_verified: boolean;
+  is_archived: boolean;
+  is_expired: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -104,6 +106,8 @@ export interface JobOfferSchemaFilters {
   location?: string;
   contract_type?: JobContractType | JobContractType[];
   is_verified?: boolean;
+  is_archived?: boolean;
+  is_expired?: boolean;
   company?: string;
   limit?: number;
   offset?: number;

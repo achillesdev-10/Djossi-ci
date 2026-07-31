@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
 import AppShell from '@/components/layout/AppShell';
+import AnalyticsTracker from '@/components/analytics/AnalyticsTracker';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -48,8 +49,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className={`${inter.variable} ${poppins.variable}`}>
-      <body className="min-h-screen flex flex-col bg-background">
+    <html lang="fr" className={`${inter.variable} ${poppins.variable}`} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const stored = localStorage.getItem('djossi_theme');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (stored === 'dark' || (!stored && prefersDark)) {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-screen flex flex-col bg-background dark:bg-slate-950 dark:text-gray-100 transition-colors">
+        <AnalyticsTracker />
         <AppShell>{children}</AppShell>
       </body>
     </html>

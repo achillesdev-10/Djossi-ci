@@ -7,10 +7,6 @@
  *   → Pour Supabase : remplacer les implémentations ci-dessous par le SDK Supabase
  *     (`createClient` sur le serveur + requêtes SQL via `.from('job_offers')`)
  *     — toutes les signatures sont 1:1 compatibles (mêmes types JobOfferSchema / Filters).
- *
- *  Note: Le module `node:sqlite` étant expérimental, on charge DatabaseSync dynamiquement
- *  pour ne pas casser l'import côté Next.js SSR (qui ne sait pas toujours charger des addons natifs
- *  expérimentaux). Si indisponible → fallback sur le tableau SEED local (mode offline mock).
  */
 
 import {
@@ -22,7 +18,7 @@ import {
 } from '@/types';
 
 // -----------------------------------------------------------------------------
-// Données de fallback (mêmes 3 offres que le seed SQL pour les tests unitaires/SSR sans BDD)
+// Données de fallback
 // -----------------------------------------------------------------------------
 const FALLBACK_OFFERS: JobOfferSchema[] = [
   {
@@ -31,12 +27,13 @@ const FALLBACK_OFFERS: JobOfferSchema[] = [
     company: "MTN Côte d'Ivoire",
     location: 'Abidjan - Plateau',
     contract_type: 'CDI',
-    description:
-      "**À propos du poste**\n\nRejoignez l'équipe Digital & Tech de MTN Côte d'Ivoire…",
+    description: "**À propos du poste**\n\nRejoignez l'équipe Digital & Tech de MTN Côte d'Ivoire…",
     apply_link: 'https://mtn.ci/recrutement/developpeur-fullstack',
     apply_email: 'recrutement.tech@mtn.ci',
     source_url: 'https://mtn.ci/recrutement',
     is_verified: true,
+    is_archived: false,
+    is_expired: false,
     created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
     updated_at: new Date(Date.now() - 2 * 86400000).toISOString(),
   },
@@ -46,12 +43,13 @@ const FALLBACK_OFFERS: JobOfferSchema[] = [
     company: "Société Générale Côte d'Ivoire",
     location: 'Abidjan - Cocody Riviera',
     contract_type: 'CDI',
-    description:
-      "La Direction Marketing et Communication de Société Générale CI recherche un(e) Chef(fe) de Projet Marketing Digital…",
+    description: "La Direction Marketing et Communication de Société Générale CI recherche un(e) Chef(fe) de Projet Marketing Digital…",
     apply_link: 'https://sg.ci/fr/carrieres/offre/chef-projet-marketing-digital',
     apply_email: null,
     source_url: 'https://www.linkedin.com/jobs/view/sg-ci-chef-projet-marketing',
     is_verified: true,
+    is_archived: false,
+    is_expired: false,
     created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
     updated_at: new Date(Date.now() - 5 * 86400000).toISOString(),
   },
@@ -61,20 +59,18 @@ const FALLBACK_OFFERS: JobOfferSchema[] = [
     company: "Ecobank Côte d'Ivoire",
     location: 'Abidjan - Plateau',
     contract_type: 'Stage',
-    description:
-      "**Offre de stage 6 mois — Paiement : 250 000 FCFA / mois**\n\nEcobank CI propose un stage au sein de la Business Intelligence & Data Team…",
+    description: "**Offre de stage 6 mois — Paiement : 250 000 FCFA / mois**\n\nEcobank CI propose un stage au sein de la Business Intelligence & Data Team…",
     apply_link: null,
     apply_email: 'stages.data@ecobank.ci',
     source_url: 'https://career.ecobank.com/cotedivoire',
     is_verified: false,
+    is_archived: false,
+    is_expired: false,
     created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
     updated_at: new Date(Date.now() - 1 * 86400000).toISOString(),
   },
 ];
 
-// -----------------------------------------------------------------------------
-// Helpers : chargement paresseux du module natif + résolution du chemin BDD
-// -----------------------------------------------------------------------------
 type DatabaseSyncInstance = {
   prepare(sql: string): StatementInstance;
   exec(sql: string): void;
@@ -82,10 +78,10 @@ type DatabaseSyncInstance = {
 };
 type StatementInstance = {
   run(params?: unknown): { changes: number; lastInsertRowid: unknown };
-  get(params?: unknown): JobOfferSchemaRow | undefined;
-  all(params?: unknown): JobOfferSchemaRow[];
+  get(params?: unknown): any | undefined;
+  all(params?: unknown): any[];
 };
-type JobOfferSchemaRow = Omit<JobOfferSchema, 'is_verified'> & { is_verified: 0 | 1 };
+type JobOfferSchemaRow = Omit<JobOfferSchema, 'is_verified' | 'is_archived' | 'is_expired'> & { is_verified: 0 | 1; is_archived: 0 | 1; is_expired: 0 | 1 };
 
 export interface JobOffersActivityPoint {
   date: string;
@@ -99,29 +95,31 @@ export interface JobOffersAdminStats {
   verifiedOffers: number;
   offersToday: number;
   pendingReview: number;
+  activeOffers: number;
+  newThisWeek: number;
+  totalClicks: number;
   activity: JobOffersActivityPoint[];
   latestOffers: JobOfferSchema[];
+  scraperHealth?: ScraperLog;
+}
+
+export interface ScraperLog {
+  id: number;
+  status: 'success' | 'error' | 'running';
+  offers_added: number;
+  message: string;
+  started_at: string;
+  finished_at: string | null;
 }
 
 let cachedDb: DatabaseSyncInstance | null = null;
-let cacheEnabled = true;
 async function getDb(): Promise<DatabaseSyncInstance | null> {
-  if (cachedDb && cacheEnabled) return cachedDb;
+  if (cachedDb) return cachedDb;
   try {
     const mod = await import('node:sqlite');
     const { DatabaseSync } = mod as unknown as { DatabaseSync: new (path: string) => DatabaseSyncInstance };
-    // Lazy require to avoid bundling into Next.js client components
-    const { resolve, dirname } = await import('node:path');
-    const { fileURLToPath, mkdirSync, existsSync } = await import('node:module').then(() => ({
-      fileURLToPath: (u: string) => {
-        const p = require('url').fileURLToPath(u);
-        return p;
-      },
-      mkdirSync: require('node:fs').mkdirSync,
-      existsSync: require('node:fs').existsSync,
-    }));
-    const { mkdirSync: mkdir, existsSync: exists } = (await import('node:fs')) as typeof import('node:fs');
     const { resolve: resolvePath } = (await import('node:path')) as typeof import('node:path');
+    const { existsSync: exists, mkdirSync: mkdir } = (await import('node:fs')) as typeof import('node:fs');
     const dataDir = resolvePath(process.cwd(), 'data');
     if (!exists(dataDir)) mkdir(dataDir, { recursive: true });
     const dbPath = resolvePath(dataDir, 'djossi-ci.sqlite3');
@@ -129,7 +127,6 @@ async function getDb(): Promise<DatabaseSyncInstance | null> {
     ensureSchema(cachedDb);
     return cachedDb;
   } catch (err) {
-    // Indisponibilité OK : mode fallback sans BDD (données mockées FALLBACK_OFFERS)
     return null;
   }
 }
@@ -147,10 +144,15 @@ function ensureSchema(db: DatabaseSyncInstance) {
       apply_email     TEXT,
       source_url      TEXT,
       is_verified     INTEGER NOT NULL DEFAULT 0,
+      is_archived     INTEGER NOT NULL DEFAULT 0,
+      is_expired      INTEGER NOT NULL DEFAULT 0,
+      clicks_count    INTEGER NOT NULL DEFAULT 0,
       created_at      TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
       CONSTRAINT valid_contract_type CHECK (contract_type IN ('CDI','CDD','Stage','Prestation','Alternance','Freelance')),
       CONSTRAINT valid_is_verified CHECK (is_verified IN (0,1)),
+      CONSTRAINT valid_is_archived CHECK (is_archived IN (0,1)),
+      CONSTRAINT valid_is_expired CHECK (is_expired IN (0,1)),
       CONSTRAINT valid_apply_method CHECK (apply_link IS NOT NULL OR apply_email IS NOT NULL),
       CONSTRAINT unique_title_company UNIQUE (title, company)
     );
@@ -159,10 +161,26 @@ function ensureSchema(db: DatabaseSyncInstance) {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_contract   ON job_offers (contract_type);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON job_offers (created_at DESC);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_verified   ON job_offers (is_verified DESC, created_at DESC);`);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS scraper_logs (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      status          TEXT NOT NULL,
+      offers_added    INTEGER NOT NULL DEFAULT 0,
+      message         TEXT,
+      started_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      finished_at     TEXT
+    );
+  `);
 }
 
-function rowToSchema(row: JobOfferSchemaRow): JobOfferSchema {
-  return { ...row, is_verified: row.is_verified === 1 };
+function rowToSchema(row: any): JobOfferSchema {
+  return {
+    ...row,
+    is_verified: row.is_verified === 1,
+    is_archived: row.is_archived === 1,
+    is_expired: row.is_expired === 1,
+  };
 }
 
 function getDayKey(date: string | Date): string {
@@ -171,330 +189,115 @@ function getDayKey(date: string | Date): string {
 }
 
 function formatActivityLabel(dayKey: string): string {
-  return new Date(`${dayKey}T00:00:00`).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'short',
-  });
+  return new Date(`${dayKey}T00:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
 }
 
-// -----------------------------------------------------------------------------
-// API publique du service
-// -----------------------------------------------------------------------------
-
 export class JobOfferSchemaService {
-  // ------------ Lecture ----------------------------------------------------
   static async list(filters: JobOfferSchemaFilters = {}): Promise<PaginatedRows<JobOfferSchema>> {
     const db = await getDb();
-    const {
-      keyword,
-      location,
-      contract_type,
-      is_verified,
-      company,
-      limit = 50,
-      offset = 0,
-      order_by = 'created_at',
-      order_dir = 'desc',
-    } = filters;
-
-    if (!db) {
-      return { rows: this.applyFiltersMemory(FALLBACK_OFFERS, filters), total: FALLBACK_OFFERS.length };
-    }
-
+    const { keyword, location, contract_type, is_verified, is_archived, is_expired, company, limit = 50, offset = 0, order_by = 'created_at', order_dir = 'desc' } = filters;
+    if (!db) return { rows: [], total: 0 };
     const clauses: string[] = [];
     const params: Record<string, unknown> = {};
-    let idx = 1;
-
-    if (keyword) {
-      clauses.push('(title LIKE $kw OR company LIKE $kw OR description LIKE $kw)');
-      params.$kw = `%${keyword}%`;
-    }
-    if (location) {
-      clauses.push('location LIKE $loc');
-      params.$loc = `%${location}%`;
-    }
+    if (keyword) { clauses.push('(title LIKE $kw OR company LIKE $kw OR description LIKE $kw)'); params.$kw = `%${keyword}%`; }
+    if (location) { clauses.push('location LIKE $loc'); params.$loc = `%${location}%`; }
     if (contract_type) {
       const list = Array.isArray(contract_type) ? contract_type : [contract_type];
-      const placeholders = list.map((t) => `$ct${idx++}`).join(',');
-      list.forEach((t, i) => (params[`$ct${idx - list.length + i}`] = t));
+      const placeholders = list.map((_, i) => `$ct${i}`).join(',');
+      list.forEach((t, i) => params[`$ct${i}`] = t);
       clauses.push(`contract_type IN (${placeholders})`);
     }
-    if (typeof is_verified === 'boolean') {
-      clauses.push(`is_verified = $iv`);
-      params.$iv = is_verified ? 1 : 0;
-    }
-    if (company) {
-      clauses.push('company LIKE $co');
-      params.$co = `%${company}%`;
-    }
-
+    if (typeof is_verified === 'boolean') { clauses.push(`is_verified = $iv`); params.$iv = is_verified ? 1 : 0; }
+    if (typeof is_archived === 'boolean') { clauses.push(`is_archived = $ia`); params.$ia = is_archived ? 1 : 0; }
+    if (typeof is_expired === 'boolean') { clauses.push(`is_expired = $ie`); params.$ie = is_expired ? 1 : 0; }
+    if (company) { clauses.push('company LIKE $co'); params.$co = `%${company}%`; }
     const whereSql = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
-    const orderSafe = ['created_at', 'title', 'company'].includes(order_by) ? order_by : 'created_at';
+    const orderSafe = ['created_at', 'title', 'company'].includes(order_by!) ? order_by : 'created_at';
     const dirSafe = order_dir === 'asc' ? 'ASC' : 'DESC';
-
-    const rowsStmt = db.prepare(`
-      SELECT * FROM job_offers
-      ${whereSql}
-      ORDER BY ${orderSafe} ${dirSafe}
-      LIMIT $limit OFFSET $offset;
-    `);
-    const countStmt = db.prepare(`SELECT COUNT(*) AS total FROM job_offers ${whereSql};`);
-
-    const rows = (rowsStmt.all({ ...params, $limit: limit, $offset: offset }) as JobOfferSchemaRow[]).map(rowToSchema);
-    const total = ((countStmt.get(params) || { total: 0 }) as { total: number }).total;
-
+    const rows = db.prepare(`SELECT * FROM job_offers ${whereSql} ORDER BY ${orderSafe} ${dirSafe} LIMIT $limit OFFSET $offset`).all({ ...params, $limit: limit, $offset: offset }).map(rowToSchema);
+    const total = (db.prepare(`SELECT COUNT(*) AS total FROM job_offers ${whereSql}`).get(params) as any).total;
     return { rows, total };
   }
 
   static async getById(id: string): Promise<JobOfferSchema | null> {
     const db = await getDb();
-    if (!db) return FALLBACK_OFFERS.find((o) => o.id === id) || null;
-    const row = db.prepare('SELECT * FROM job_offers WHERE id = $id').get({ $id: id }) as JobOfferSchemaRow | undefined;
+    if (!db) return null;
+    const row = db.prepare('SELECT * FROM job_offers WHERE id = $id').get({ $id: id });
     return row ? rowToSchema(row) : null;
   }
 
   static async getAdminStats(days: number = 7): Promise<JobOffersAdminStats> {
-    const safeDays = Math.max(1, days);
-    const dayKeys = Array.from({ length: safeDays }, (_, index) => {
-      const date = new Date();
-      date.setHours(0, 0, 0, 0);
-      date.setDate(date.getDate() - (safeDays - index - 1));
-      return getDayKey(date);
-    });
-    const todayKey = dayKeys[dayKeys.length - 1];
     const db = await getDb();
-
-    if (!db) {
-      const activityMap = new Map<string, { total: number; verified: number }>();
-      dayKeys.forEach((dayKey) => {
-        activityMap.set(dayKey, { total: 0, verified: 0 });
-      });
-
-      FALLBACK_OFFERS.forEach((offer) => {
-        const dayKey = getDayKey(offer.created_at);
-        const current = activityMap.get(dayKey);
-        if (!current) return;
-        current.total += 1;
-        if (offer.is_verified) current.verified += 1;
-      });
-
-      const totalOffers = FALLBACK_OFFERS.length;
-      const verifiedOffers = FALLBACK_OFFERS.filter((offer) => offer.is_verified).length;
-      const offersToday = FALLBACK_OFFERS.filter((offer) => getDayKey(offer.created_at) === todayKey).length;
-
-      return {
-        totalOffers,
-        verifiedOffers,
-        offersToday,
-        pendingReview: totalOffers - verifiedOffers,
-        activity: dayKeys.map((dayKey) => {
-          const point = activityMap.get(dayKey) || { total: 0, verified: 0 };
-          return {
-            date: dayKey,
-            label: formatActivityLabel(dayKey),
-            total: point.total,
-            verified: point.verified,
-          };
-        }),
-        latestOffers: [...FALLBACK_OFFERS]
-          .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at), 'fr'))
-          .slice(0, 5),
-      };
-    }
-
+    if (!db) return { totalOffers: 0, verifiedOffers: 0, offersToday: 0, pendingReview: 0, activeOffers: 0, newThisWeek: 0, totalClicks: 0, activity: [], latestOffers: [] };
+    const dayKeys = Array.from({ length: days }, (_, i) => {
+      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (days - i - 1));
+      return getDayKey(d);
+    });
     const counts = db.prepare(`
       SELECT
         COUNT(*) AS totalOffers,
         SUM(CASE WHEN is_verified = 1 THEN 1 ELSE 0 END) AS verifiedOffers,
-        SUM(CASE WHEN substr(created_at, 1, 10) = $today THEN 1 ELSE 0 END) AS offersToday
+        SUM(CASE WHEN substr(created_at, 1, 10) = $today THEN 1 ELSE 0 END) AS offersToday,
+        SUM(CASE WHEN is_archived = 0 AND is_expired = 0 THEN 1 ELSE 0 END) AS activeOffers,
+        SUM(CASE WHEN created_at >= $weekAgo THEN 1 ELSE 0 END) AS newThisWeek,
+        SUM(clicks_count) AS totalClicks
       FROM job_offers;
-    `).get({ $today: todayKey }) as
-      | { totalOffers?: number; verifiedOffers?: number; offersToday?: number }
-      | undefined;
+    `).get({ $today: dayKeys[days-1], $weekAgo: new Date(Date.now() - 7 * 86400000).toISOString() }) as any;
 
     const activityRows = db.prepare(`
-      SELECT
-        substr(created_at, 1, 10) AS dayKey,
-        COUNT(*) AS total,
-        SUM(CASE WHEN is_verified = 1 THEN 1 ELSE 0 END) AS verified
-      FROM job_offers
-      WHERE substr(created_at, 1, 10) >= $startDay
-      GROUP BY substr(created_at, 1, 10)
-      ORDER BY dayKey ASC;
-    `).all({ $startDay: dayKeys[0] }) as unknown as Array<{
-      dayKey: string;
-      total: number;
-      verified: number;
-    }>;
+      SELECT substr(created_at, 1, 10) AS dayKey, COUNT(*) AS total, SUM(CASE WHEN is_verified = 1 THEN 1 ELSE 0 END) AS verified
+      FROM job_offers WHERE substr(created_at, 1, 10) >= $startDay GROUP BY dayKey ORDER BY dayKey ASC
+    `).all({ $startDay: dayKeys[0] });
 
-    const activityMap = new Map(
-      activityRows.map((row) => [
-        row.dayKey,
-        { total: Number(row.total || 0), verified: Number(row.verified || 0) },
-      ])
-    );
-
-    const latestRows = db.prepare(`
-      SELECT * FROM job_offers
-      ORDER BY created_at DESC
-      LIMIT 5;
-    `).all() as JobOfferSchemaRow[];
-
-    const totalOffers = Number(counts?.totalOffers || 0);
-    const verifiedOffers = Number(counts?.verifiedOffers || 0);
-    const offersToday = Number(counts?.offersToday || 0);
+    const scraperLog = db.prepare(`SELECT * FROM scraper_logs ORDER BY started_at DESC LIMIT 1`).get() as ScraperLog | undefined;
 
     return {
-      totalOffers,
-      verifiedOffers,
-      offersToday,
-      pendingReview: totalOffers - verifiedOffers,
-      activity: dayKeys.map((dayKey) => {
-        const point = activityMap.get(dayKey) || { total: 0, verified: 0 };
-        return {
-          date: dayKey,
-          label: formatActivityLabel(dayKey),
-          total: point.total,
-          verified: point.verified,
-        };
+      totalOffers: counts.totalOffers || 0,
+      verifiedOffers: counts.verifiedOffers || 0,
+      offersToday: counts.offersToday || 0,
+      activeOffers: counts.activeOffers || 0,
+      newThisWeek: counts.newThisWeek || 0,
+      totalClicks: counts.totalClicks || 0,
+      pendingReview: (counts.totalOffers || 0) - (counts.verifiedOffers || 0),
+      activity: dayKeys.map(k => {
+        const r = activityRows.find(ar => ar.dayKey === k) || { total: 0, verified: 0 };
+        return { date: k, label: formatActivityLabel(k), total: r.total, verified: r.verified };
       }),
-      latestOffers: latestRows.map(rowToSchema),
+      latestOffers: db.prepare(`SELECT * FROM job_offers ORDER BY created_at DESC LIMIT 5`).all().map(rowToSchema),
+      scraperHealth: scraperLog
     };
-  }
-
-  // ------------ Écriture ---------------------------------------------------
-  static async create(input: JobOfferSchemaInsert): Promise<JobOfferSchema> {
-    if (!input.apply_link && !input.apply_email) {
-      throw new Error("Une offre doit avoir au moins apply_link OU apply_email.");
-    }
-    const db = await getDb();
-    const now = new Date().toISOString();
-    if (!db) {
-      const created: JobOfferSchema = {
-        ...input,
-        id: cryptoRandomUUID(),
-        created_at: now,
-        updated_at: now,
-      };
-      FALLBACK_OFFERS.unshift(created);
-      return created;
-    }
-    const stmt = db.prepare(`
-      INSERT INTO job_offers
-        (title, company, location, contract_type, description, apply_link, apply_email, source_url, is_verified)
-      VALUES ($title, $company, $location, $contract_type, $description, $apply_link, $apply_email, $source_url, $is_verified)
-      RETURNING *;
-    `);
-    const row = stmt.get({
-      $title: input.title,
-      $company: input.company,
-      $location: input.location,
-      $contract_type: input.contract_type,
-      $description: input.description,
-      $apply_link: input.apply_link,
-      $apply_email: input.apply_email,
-      $source_url: input.source_url,
-      $is_verified: input.is_verified ? 1 : 0,
-    }) as JobOfferSchemaRow | undefined;
-    if (!row) throw new Error('Insertion échouée.');
-    return rowToSchema(row);
   }
 
   static async update(id: string, patch: Partial<JobOfferSchemaInsert>): Promise<JobOfferSchema | null> {
     const db = await getDb();
-    if (!db) {
-      const idx = FALLBACK_OFFERS.findIndex((o) => o.id === id);
-      if (idx === -1) return null;
-      FALLBACK_OFFERS[idx] = { ...FALLBACK_OFFERS[idx], ...patch, updated_at: new Date().toISOString() };
-      return FALLBACK_OFFERS[idx];
-    }
+    if (!db) return null;
     const existing = await this.getById(id);
     if (!existing) return null;
-    const merged: JobOfferSchemaInsert = {
-      title: existing.title,
-      company: existing.company,
-      location: existing.location,
-      contract_type: existing.contract_type as JobContractType,
-      description: existing.description,
-      apply_link: existing.apply_link,
-      apply_email: existing.apply_email,
-      source_url: existing.source_url,
-      is_verified: existing.is_verified,
-      ...patch,
-    };
-    db.prepare(`
-      UPDATE job_offers SET
-        title = $title, company = $company, location = $location,
-        contract_type = $contract_type, description = $description,
-        apply_link = $apply_link, apply_email = $apply_email,
-        source_url = $source_url, is_verified = $is_verified
-      WHERE id = $id;
-    `).run({
-      $id: id,
-      $title: merged.title,
-      $company: merged.company,
-      $location: merged.location,
-      $contract_type: merged.contract_type,
-      $description: merged.description,
-      $apply_link: merged.apply_link,
-      $apply_email: merged.apply_email,
-      $source_url: merged.source_url,
-      $is_verified: merged.is_verified ? 1 : 0,
-    });
+    const fields = Object.keys(patch).map(k => `${k} = $${k}`).join(', ');
+    const params: any = { $id: id };
+    Object.entries(patch).forEach(([k, v]) => params[`$${k}`] = typeof v === 'boolean' ? (v ? 1 : 0) : v);
+    db.prepare(`UPDATE job_offers SET ${fields} WHERE id = $id`).run(params);
     return this.getById(id);
   }
 
   static async remove(id: string): Promise<boolean> {
     const db = await getDb();
-    if (!db) {
-      const before = FALLBACK_OFFERS.length;
-      const kept = FALLBACK_OFFERS.filter((o) => o.id !== id);
-      FALLBACK_OFFERS.splice(0, FALLBACK_OFFERS.length, ...kept);
-      return FALLBACK_OFFERS.length < before;
-    }
-    const info = db.prepare('DELETE FROM job_offers WHERE id = $id').run({ $id: id });
-    return typeof info.changes === 'number' ? info.changes > 0 : true;
+    if (!db) return false;
+    return (db.prepare('DELETE FROM job_offers WHERE id = $id').run({ $id: id }).changes || 0) > 0;
   }
 
-  // ------------ Helpers ----------------------------------------------------
-  private static applyFiltersMemory(
-    rows: JobOfferSchema[],
-    f: JobOfferSchemaFilters
-  ): JobOfferSchema[] {
-    return rows
-      .filter((r) => (f.keyword ?
-        r.title.includes(f.keyword) || r.company.includes(f.keyword) || r.description.includes(f.keyword)
-        : true))
-      .filter((r) => (f.location ? r.location.includes(f.location) : true))
-      .filter((r) => {
-        if (!f.contract_type) return true;
-        const arr = Array.isArray(f.contract_type) ? f.contract_type : [f.contract_type];
-        return arr.includes(r.contract_type);
-      })
-      .filter((r) => (typeof f.is_verified === 'boolean' ? r.is_verified === f.is_verified : true))
-      .filter((r) => (f.company ? r.company.includes(f.company) : true))
-      .sort((a, b) => {
-        const by = (f.order_by || 'created_at') as keyof JobOfferSchema;
-        const dir = f.order_dir === 'asc' ? 1 : -1;
-        const va = a[by]; const vb = b[by];
-        if (va == null) return 1; if (vb == null) return -1;
-        return String(va).localeCompare(String(vb), 'fr') * dir;
-      })
-      .slice(f.offset || 0, (f.offset || 0) + (f.limit || 50));
+  static async addScraperLog(status: 'success' | 'error' | 'running', offers_added: number, message: string): Promise<number> {
+    const db = await getDb();
+    if (!db) return 0;
+    const stmt = db.prepare(`INSERT INTO scraper_logs (status, offers_added, message) VALUES ($status, $offers_added, $message) RETURNING id`);
+    const res = stmt.get({ $status: status, $offers_added: offers_added, $message: message }) as any;
+    return res?.id || 0;
+  }
+
+  static async finishScraperLog(id: number, status: 'success' | 'error', offers_added: number, message: string) {
+    const db = await getDb();
+    if (!db) return;
+    db.prepare(`UPDATE scraper_logs SET status = $status, offers_added = $offers_added, message = $message, finished_at = datetime('now') WHERE id = $id`).run({ $id: id, $status: status, $offers_added: offers_added, $message: message });
   }
 }
-
-// Petit polyfill UUID si crypto.randomUUID n'existe pas (très ancien Node)
-function cryptoRandomUUID(): string {
-  if (typeof globalThis.crypto !== 'undefined' && 'randomUUID' in globalThis.crypto) {
-    return globalThis.crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-// Évite que require/module manglent le bundler — on ne garde que l'export classe
 export const __forTesting = { FALLBACK_OFFERS };

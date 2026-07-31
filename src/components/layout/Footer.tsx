@@ -33,9 +33,9 @@ const COLUMNS = [
   {
     title: 'Légal',
     links: [
-      { label: 'CGU', href: '/legal/terms' },
-      { label: 'Politique de confidentialité', href: '/legal/privacy' },
-      { label: 'Cookies', href: '/legal/cookies' },
+      { label: 'Mentions Légales', href: '/mentions-legales' },
+      { label: 'CGU', href: '/cgu' },
+      { label: 'Politique de confidentialité', href: '/politique-de-confidentialite' },
     ],
   },
 ];
