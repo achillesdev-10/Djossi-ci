@@ -36,14 +36,30 @@ function normalizePatch(body: Record<string, unknown>): Partial<JobOfferSchemaIn
   if (typeof body.company === 'string') patch.company = body.company.trim();
   if (typeof body.location === 'string') patch.location = body.location.trim();
   if (typeof body.description === 'string') patch.description = body.description.trim();
-  if (typeof body.apply_link === 'string' || body.apply_link === null) patch.apply_link = body.apply_link;
-  if (typeof body.apply_email === 'string' || body.apply_email === null) patch.apply_email = body.apply_email;
-  if (typeof body.source_url === 'string' || body.source_url === null) patch.source_url = body.source_url;
-  if (typeof body.source_website === 'string' || body.source_website === null) patch.source_website = body.source_website;
-  if (typeof body.seo_title === 'string' || body.seo_title === null) patch.seo_title = body.seo_title;
-  if (typeof body.seo_description === 'string' || body.seo_description === null) patch.seo_description = body.seo_description;
-  if (typeof body.seo_keywords === 'string' || body.seo_keywords === null) patch.seo_keywords = body.seo_keywords;
-  if (typeof body.slug === 'string' || body.slug === null) patch.slug = body.slug;
+
+  if (typeof body.apply_link === 'string') {
+    patch.apply_link = body.apply_link.trim() ? body.apply_link.trim() : null;
+  } else if (body.apply_link === null) {
+    patch.apply_link = null;
+  }
+
+  if (typeof body.apply_email === 'string') {
+    patch.apply_email = body.apply_email.trim() ? body.apply_email.trim() : null;
+  } else if (body.apply_email === null) {
+    patch.apply_email = null;
+  }
+
+  if (!patch.apply_link && !patch.apply_email) {
+    patch.apply_email = 'contact@travaillerenci.ci';
+  }
+
+  if (typeof body.source_url === 'string') patch.source_url = body.source_url.trim() ? body.source_url.trim() : null;
+  if (typeof body.source_website === 'string') patch.source_website = body.source_website.trim() ? body.source_website.trim() : null;
+  if (typeof body.seo_title === 'string') patch.seo_title = body.seo_title.trim() ? body.seo_title.trim() : null;
+  if (typeof body.seo_description === 'string') patch.seo_description = body.seo_description.trim() ? body.seo_description.trim() : null;
+  if (typeof body.seo_keywords === 'string') patch.seo_keywords = body.seo_keywords.trim() ? body.seo_keywords.trim() : null;
+  if (typeof body.slug === 'string') patch.slug = body.slug.trim() ? body.slug.trim() : null;
+
   if (typeof body.is_verified === 'boolean') patch.is_verified = body.is_verified;
   if (typeof body.is_archived === 'boolean') patch.is_archived = body.is_archived;
   if (typeof body.is_expired === 'boolean') patch.is_expired = body.is_expired;
