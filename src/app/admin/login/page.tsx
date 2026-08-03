@@ -44,10 +44,10 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-2xl space-y-6">
         <div className="text-center space-y-2">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-black/30 text-white font-[var(--font-display)] text-2xl font-black mb-2">
-            D
+            T
           </div>
           <h1 className="text-2xl font-extrabold text-white font-[var(--font-display)]">
-            Administration Djossi.ci
+            Administration TravaillerenCi
           </h1>
           <p className="text-xs text-slate-400">
             Veuillez vous authentifier avec vos identifiants administrateur.

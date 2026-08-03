@@ -72,11 +72,11 @@ export default function AdminSidebar({
       <div className="border-b border-white/10 px-6 py-6">
         <Link href="/admin" className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-black/30">
-            <span className="font-[var(--font-display)] text-xl font-black">D</span>
+            <span className="font-[var(--font-display)] text-xl font-black">T</span>
           </div>
           <div>
             <div className="font-[var(--font-display)] text-lg font-extrabold tracking-tight">
-              Djossi Admin
+              TravaillerenCi Admin
             </div>
             <div className="text-xs text-slate-400">Modération et pilotage</div>
           </div>

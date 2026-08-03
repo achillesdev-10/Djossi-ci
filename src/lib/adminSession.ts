@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import type { NextRequest } from 'next/server';
 
 export const ADMIN_SESSION_COOKIE = 'travaillerenci_admin_session';
+const LEGACY_ADMIN_SESSION_COOKIE = 'djossi_admin_session';
 const SESSION_DURATION_HOURS = Number(process.env.ADMIN_SESSION_TTL_HOURS || 12);
 
 export interface AdminSession {
@@ -139,11 +140,13 @@ export async function verifyAdminSessionToken(token?: string | null): Promise<Ad
 
 export async function getAdminSession(): Promise<AdminSession | null> {
   const cookieStore = await cookies();
-  return verifyAdminSessionToken(cookieStore.get(ADMIN_SESSION_COOKIE)?.value);
+  const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value || cookieStore.get(LEGACY_ADMIN_SESSION_COOKIE)?.value;
+  return verifyAdminSessionToken(token);
 }
 
 export async function getAdminSessionFromRequest(request: NextRequest): Promise<AdminSession | null> {
-  return verifyAdminSessionToken(request.cookies.get(ADMIN_SESSION_COOKIE)?.value);
+  const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value || request.cookies.get(LEGACY_ADMIN_SESSION_COOKIE)?.value;
+  return verifyAdminSessionToken(token);
 }
 
 export async function requireAdminSession(nextPath: string = '/admin'): Promise<AdminSession> {
