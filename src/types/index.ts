@@ -72,6 +72,8 @@ export type JobContractType =
   | 'Alternance'
   | 'Freelance';
 
+export type JobOfferSchemaStatus = 'pending' | 'published' | 'rejected' | 'archived';
+
 /**
  * JobOfferSchema — miroir STRICT de la table `public.job_offers` (Supabase / SQLite).
  * Une offre DOIT avoir AU MOINS un moyen de postuler : apply_link XOR apply_email (ou les deux).
@@ -90,6 +92,12 @@ export interface JobOfferSchema {
   apply_link: string | null;
   apply_email: string | null;
   source_url: string | null;
+  source_website: string | null;
+  status: JobOfferSchemaStatus;
+  seo_title: string | null;
+  seo_description: string | null;
+  seo_keywords: string | null;
+  slug: string | null;
   is_verified: boolean;
   is_archived: boolean;
   is_expired: boolean;
@@ -105,6 +113,7 @@ export interface JobOfferSchemaFilters {
   keyword?: string;
   location?: string;
   contract_type?: JobContractType | JobContractType[];
+  status?: JobOfferSchemaStatus | JobOfferSchemaStatus[];
   is_verified?: boolean;
   is_archived?: boolean;
   is_expired?: boolean;

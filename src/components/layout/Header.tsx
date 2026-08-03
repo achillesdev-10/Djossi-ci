@@ -23,7 +23,7 @@ export default function Header() {
     window.addEventListener('scroll', onScroll);
 
     try {
-      const stored = localStorage.getItem('djossi_user');
+      const stored = localStorage.getItem('travaillerenci_user');
       if (stored) {
         setUser(JSON.parse(stored));
       }
@@ -33,8 +33,8 @@ export default function Header() {
   }, []);
 
   function handleLogout() {
-    localStorage.removeItem('djossi_user');
-    document.cookie = 'djossi_role=; path=/; max-age=0';
+    localStorage.removeItem('travaillerenci_user');
+    document.cookie = 'travaillerenci_role=; path=/; max-age=0';
     setUser(null);
     window.location.href = '/';
   }
@@ -54,11 +54,11 @@ export default function Header() {
         <div className="flex items-center justify-between h-16 md:h-20">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md">
-              <span className="text-white font-black text-xl font-[var(--font-display)]">D</span>
+              <span className="text-white font-black text-xl font-[var(--font-display)]">T</span>
             </div>
             <div>
-              <div className="text-xl font-black font-[var(--font-display)] tracking-tight dark:text-white">
-                Djossi<span className="text-primary">.ci</span>
+              <div className="text-lg sm:text-xl font-black font-[var(--font-display)] tracking-tight dark:text-white">
+                Travailleren<span className="text-primary">Ci</span>
               </div>
               <div className="text-[10px] uppercase tracking-widest text-muted-foreground -mt-1">
                 L'emploi en Côte d'Ivoire

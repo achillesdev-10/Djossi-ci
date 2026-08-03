@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getAdminSessionFromRequest } from '@/lib/adminSession';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
-import type { JobContractType, JobOfferSchemaInsert } from '@/types';
+import type { JobContractType, JobOfferSchemaInsert, JobOfferSchemaStatus } from '@/types';
 
 const ALLOWED_CONTRACTS: JobContractType[] = [
   'CDI',
@@ -12,6 +12,13 @@ const ALLOWED_CONTRACTS: JobContractType[] = [
   'Prestation',
   'Alternance',
   'Freelance',
+];
+
+const ALLOWED_STATUSES: JobOfferSchemaStatus[] = [
+  'pending',
+  'published',
+  'rejected',
+  'archived',
 ];
 
 async function ensureAdmin(request: NextRequest) {
@@ -23,7 +30,7 @@ async function ensureAdmin(request: NextRequest) {
 }
 
 function normalizePatch(body: Record<string, unknown>): Partial<JobOfferSchemaInsert> {
-  const patch: Partial<JobOfferSchemaInsert> = {};
+  const patch: Record<string, any> = {};
 
   if (typeof body.title === 'string') patch.title = body.title.trim();
   if (typeof body.company === 'string') patch.company = body.company.trim();
@@ -32,7 +39,25 @@ function normalizePatch(body: Record<string, unknown>): Partial<JobOfferSchemaIn
   if (typeof body.apply_link === 'string' || body.apply_link === null) patch.apply_link = body.apply_link;
   if (typeof body.apply_email === 'string' || body.apply_email === null) patch.apply_email = body.apply_email;
   if (typeof body.source_url === 'string' || body.source_url === null) patch.source_url = body.source_url;
+  if (typeof body.source_website === 'string' || body.source_website === null) patch.source_website = body.source_website;
+  if (typeof body.seo_title === 'string' || body.seo_title === null) patch.seo_title = body.seo_title;
+  if (typeof body.seo_description === 'string' || body.seo_description === null) patch.seo_description = body.seo_description;
+  if (typeof body.seo_keywords === 'string' || body.seo_keywords === null) patch.seo_keywords = body.seo_keywords;
+  if (typeof body.slug === 'string' || body.slug === null) patch.slug = body.slug;
   if (typeof body.is_verified === 'boolean') patch.is_verified = body.is_verified;
+  if (typeof body.is_archived === 'boolean') patch.is_archived = body.is_archived;
+  if (typeof body.is_expired === 'boolean') patch.is_expired = body.is_expired;
+
+  if (
+    typeof body.status === 'string' &&
+    ALLOWED_STATUSES.includes(body.status as JobOfferSchemaStatus)
+  ) {
+    patch.status = body.status as JobOfferSchemaStatus;
+    if (patch.status === 'published') {
+      patch.is_verified = true;
+    }
+  }
+
   if (
     typeof body.contract_type === 'string' &&
     ALLOWED_CONTRACTS.includes(body.contract_type as JobContractType)
@@ -79,7 +104,7 @@ export async function PATCH(
 
     revalidateAdminPages(id);
     return NextResponse.json({ ok: true, job: updated });
-  } catch {
+  } catch (err) {
     return NextResponse.json(
       { error: 'Impossible de mettre à jour cette offre.' },
       { status: 500 }

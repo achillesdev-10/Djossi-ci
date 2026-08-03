@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { NextRequest } from 'next/server';
 
-export const ADMIN_SESSION_COOKIE = 'djossi_admin_session';
+export const ADMIN_SESSION_COOKIE = 'travaillerenci_admin_session';
 const SESSION_DURATION_HOURS = Number(process.env.ADMIN_SESSION_TTL_HOURS || 12);
 
 export interface AdminSession {

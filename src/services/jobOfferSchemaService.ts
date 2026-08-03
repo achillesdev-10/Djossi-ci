@@ -15,6 +15,7 @@ import {
   JobOfferSchemaFilters,
   JobOfferSchemaInsert,
   PaginatedRows,
+  JobOfferSchemaStatus,
 } from '@/types';
 
 // -----------------------------------------------------------------------------
@@ -31,6 +32,12 @@ const FALLBACK_OFFERS: JobOfferSchema[] = [
     apply_link: 'https://mtn.ci/recrutement/developpeur-fullstack',
     apply_email: 'recrutement.tech@mtn.ci',
     source_url: 'https://mtn.ci/recrutement',
+    source_website: 'MTN CI',
+    status: 'published',
+    seo_title: "Développeur Full Stack Senior - MTN Côte d'Ivoire",
+    seo_description: "Offre d'emploi Développeur Full Stack Senior chez MTN Côte d'Ivoire à Abidjan.",
+    seo_keywords: 'developpeur, fullstack, react, nodejs',
+    slug: 'developpeur-fullstack-senior-mtn-ci',
     is_verified: true,
     is_archived: false,
     is_expired: false,
@@ -47,6 +54,12 @@ const FALLBACK_OFFERS: JobOfferSchema[] = [
     apply_link: 'https://sg.ci/fr/carrieres/offre/chef-projet-marketing-digital',
     apply_email: null,
     source_url: 'https://www.linkedin.com/jobs/view/sg-ci-chef-projet-marketing',
+    source_website: 'LinkedIn',
+    status: 'published',
+    seo_title: "Chef de Projet Marketing Digital - Société Générale CI",
+    seo_description: "Recrutement Chef de Projet Marketing Digital à Abidjan Cocody par Société Générale CI.",
+    seo_keywords: 'marketing digital, chef de projet, societe generale',
+    slug: 'chef-de-projet-marketing-digital-sg-ci',
     is_verified: true,
     is_archived: false,
     is_expired: false,
@@ -63,6 +76,12 @@ const FALLBACK_OFFERS: JobOfferSchema[] = [
     apply_link: null,
     apply_email: 'stages.data@ecobank.ci',
     source_url: 'https://career.ecobank.com/cotedivoire',
+    source_website: 'Ecobank',
+    status: 'pending',
+    seo_title: "Stage Data Analyst - Ecobank Côte d'Ivoire",
+    seo_description: "Stage de fin d'études Data Analyst chez Ecobank Côte d'Ivoire au Plateau Abidjan.",
+    seo_keywords: 'stage, data analyst, ecobank, abidjan',
+    slug: 'stage-data-analyst-ecobank-ci',
     is_verified: false,
     is_archived: false,
     is_expired: false,
@@ -81,7 +100,6 @@ type StatementInstance = {
   get(params?: unknown): any | undefined;
   all(params?: unknown): any[];
 };
-type JobOfferSchemaRow = Omit<JobOfferSchema, 'is_verified' | 'is_archived' | 'is_expired'> & { is_verified: 0 | 1; is_archived: 0 | 1; is_expired: 0 | 1 };
 
 export interface JobOffersActivityPoint {
   date: string;
@@ -143,6 +161,12 @@ function ensureSchema(db: DatabaseSyncInstance) {
       apply_link      TEXT,
       apply_email     TEXT,
       source_url      TEXT,
+      source_website  TEXT,
+      status          TEXT NOT NULL DEFAULT 'pending',
+      seo_title       TEXT,
+      seo_description TEXT,
+      seo_keywords    TEXT,
+      slug            TEXT,
       is_verified     INTEGER NOT NULL DEFAULT 0,
       is_archived     INTEGER NOT NULL DEFAULT 0,
       is_expired      INTEGER NOT NULL DEFAULT 0,
@@ -150,6 +174,7 @@ function ensureSchema(db: DatabaseSyncInstance) {
       created_at      TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
       CONSTRAINT valid_contract_type CHECK (contract_type IN ('CDI','CDD','Stage','Prestation','Alternance','Freelance')),
+      CONSTRAINT valid_status CHECK (status IN ('pending','published','rejected','archived')),
       CONSTRAINT valid_is_verified CHECK (is_verified IN (0,1)),
       CONSTRAINT valid_is_archived CHECK (is_archived IN (0,1)),
       CONSTRAINT valid_is_expired CHECK (is_expired IN (0,1)),
@@ -159,6 +184,7 @@ function ensureSchema(db: DatabaseSyncInstance) {
   `);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_location   ON job_offers (location);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_contract   ON job_offers (contract_type);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_status     ON job_offers (status);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON job_offers (created_at DESC);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_verified   ON job_offers (is_verified DESC, created_at DESC);`);
 
@@ -177,6 +203,7 @@ function ensureSchema(db: DatabaseSyncInstance) {
 function rowToSchema(row: any): JobOfferSchema {
   return {
     ...row,
+    status: row.status || 'pending',
     is_verified: row.is_verified === 1,
     is_archived: row.is_archived === 1,
     is_expired: row.is_expired === 1,
@@ -195,7 +222,7 @@ function formatActivityLabel(dayKey: string): string {
 export class JobOfferSchemaService {
   static async list(filters: JobOfferSchemaFilters = {}): Promise<PaginatedRows<JobOfferSchema>> {
     const db = await getDb();
-    const { keyword, location, contract_type, is_verified, is_archived, is_expired, company, limit = 50, offset = 0, order_by = 'created_at', order_dir = 'desc' } = filters;
+    const { keyword, location, contract_type, status, is_verified, is_archived, is_expired, company, limit = 50, offset = 0, order_by = 'created_at', order_dir = 'desc' } = filters;
     if (!db) return { rows: [], total: 0 };
     const clauses: string[] = [];
     const params: Record<string, unknown> = {};
@@ -206,6 +233,12 @@ export class JobOfferSchemaService {
       const placeholders = list.map((_, i) => `$ct${i}`).join(',');
       list.forEach((t, i) => params[`$ct${i}`] = t);
       clauses.push(`contract_type IN (${placeholders})`);
+    }
+    if (status) {
+      const list = Array.isArray(status) ? status : [status];
+      const placeholders = list.map((_, i) => `$st${i}`).join(',');
+      list.forEach((t, i) => params[`$st${i}`] = t);
+      clauses.push(`status IN (${placeholders})`);
     }
     if (typeof is_verified === 'boolean') { clauses.push(`is_verified = $iv`); params.$iv = is_verified ? 1 : 0; }
     if (typeof is_archived === 'boolean') { clauses.push(`is_archived = $ia`); params.$ia = is_archived ? 1 : 0; }

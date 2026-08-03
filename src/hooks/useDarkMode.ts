@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 export function useDarkMode() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window === 'undefined') return false;
-    const stored = localStorage.getItem('djossi_theme');
+    const stored = localStorage.getItem('travaillerenci_theme');
     if (stored) return stored === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
@@ -28,7 +28,7 @@ export function useDarkMode() {
     });
 
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'djossi_theme') {
+      if (e.key === 'travaillerenci_theme') {
         const dark = e.newValue === 'dark';
         setIsDarkMode(dark);
         if (dark) {
@@ -49,7 +49,7 @@ export function useDarkMode() {
   const toggleDarkMode = () => {
     const next = !isDarkMode;
     setIsDarkMode(next);
-    localStorage.setItem('djossi_theme', next ? 'dark' : 'light');
+    localStorage.setItem('travaillerenci_theme', next ? 'dark' : 'light');
     if (next) {
       document.documentElement.classList.add('dark');
     } else {

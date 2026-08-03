@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { JobOfferSchema } from '@/types';
+import type { JobOfferSchema, JobOfferSchemaStatus } from '@/types';
 
-export default function AdminJobsPage({
+export default function AdminJobsClient({
   initialJobs,
 }: {
   initialJobs: JobOfferSchema[];
@@ -12,13 +12,13 @@ export default function AdminJobsPage({
   const router = useRouter();
   const [jobs, setJobs] = useState<JobOfferSchema[]>(initialJobs);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'unverified' | 'archived' | 'expired'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | JobOfferSchemaStatus | 'verified' | 'unverified'>('pending');
   const [contractFilter, setContractFilter] = useState<string>('all');
   const [cityFilter, setCityFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
 
-  // Modal d'édition
+  // Modal d'édition & SEO
   const [editingJob, setEditingJob] = useState<JobOfferSchema | null>(null);
   const [editForm, setEditForm] = useState({
     title: '',
@@ -26,6 +26,13 @@ export default function AdminJobsPage({
     location: '',
     contract_type: 'CDI' as JobOfferSchema['contract_type'],
     description: '',
+    status: 'pending' as JobOfferSchemaStatus,
+    seo_title: '',
+    seo_description: '',
+    seo_keywords: '',
+    slug: '',
+    source_url: '',
+    source_website: '',
   });
 
   const filteredJobs = jobs.filter((job) => {
@@ -36,14 +43,18 @@ export default function AdminJobsPage({
 
     const matchesStatus =
       statusFilter === 'all'
-        ? !job.is_archived && !job.is_expired
-        : statusFilter === 'verified'
-        ? job.is_verified && !job.is_archived && !job.is_expired
-        : statusFilter === 'unverified'
-        ? !job.is_verified && !job.is_archived && !job.is_expired
+        ? true
+        : statusFilter === 'pending'
+        ? job.status === 'pending'
+        : statusFilter === 'published'
+        ? job.status === 'published'
+        : statusFilter === 'rejected'
+        ? job.status === 'rejected'
         : statusFilter === 'archived'
-        ? job.is_archived
-        : job.is_expired;
+        ? job.status === 'archived'
+        : statusFilter === 'verified'
+        ? job.is_verified
+        : !job.is_verified;
 
     const matchesContract =
       contractFilter === 'all' ? true : job.contract_type === contractFilter;
@@ -54,26 +65,26 @@ export default function AdminJobsPage({
     return matchesSearch && matchesStatus && matchesContract && matchesCity;
   });
 
-  async function handleToggleVerified(job: JobOfferSchema) {
-    const nextVerified = !job.is_verified;
+  async function handleUpdateStatus(job: JobOfferSchema, newStatus: JobOfferSchemaStatus) {
+    const isVerified = newStatus === 'published' ? true : job.is_verified;
     setJobs((prev) =>
-      prev.map((j) => (j.id === job.id ? { ...j, is_verified: nextVerified } : j))
+      prev.map((j) => (j.id === job.id ? { ...j, status: newStatus, is_verified: isVerified } : j))
     );
 
     try {
       const res = await fetch(`/api/admin/jobs/${job.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_verified: nextVerified }),
+        body: JSON.stringify({ status: newStatus, is_verified: isVerified }),
       });
 
-      if (!res.ok) throw new Error('Échec de la mise à jour');
+      if (!res.ok) throw new Error('Échec de la mise à jour du statut');
       startTransition(() => { router.refresh(); });
     } catch {
       setJobs((prev) =>
-        prev.map((j) => (j.id === job.id ? { ...j, is_verified: job.is_verified } : j))
+        prev.map((j) => (j.id === job.id ? { ...j, status: job.status, is_verified: job.is_verified } : j))
       );
-      alert('Impossible de modifier le statut de vérification.');
+      alert('Impossible de modifier le statut de l’offre.');
     }
   }
 
@@ -91,9 +102,11 @@ export default function AdminJobsPage({
     }
   }
 
-  async function handleBulkAction(action: 'delete' | 'verify' | 'archive') {
+  async function handleBulkAction(action: 'delete' | 'publish' | 'archive') {
     if (selectedIds.length === 0) return;
     if (action === 'delete' && !confirm(`Supprimer ${selectedIds.length} offres ?`)) return;
+
+    const targetStatus: JobOfferSchemaStatus = action === 'publish' ? 'published' : action === 'archive' ? 'archived' : 'pending';
 
     try {
       const res = await fetch('/api/admin/jobs/bulk', {
@@ -102,7 +115,7 @@ export default function AdminJobsPage({
         body: JSON.stringify({
           action: action === 'delete' ? 'delete' : 'update',
           ids: selectedIds,
-          data: action === 'verify' ? { is_verified: true } : action === 'archive' ? { is_archived: true } : {},
+          data: action === 'delete' ? {} : { status: targetStatus, is_verified: action === 'publish' },
         }),
       });
 
@@ -116,7 +129,8 @@ export default function AdminJobsPage({
             selectedIds.includes(j.id)
               ? {
                   ...j,
-                  ...(action === 'verify' ? { is_verified: true } : { is_archived: true }),
+                  status: targetStatus,
+                  is_verified: action === 'publish' ? true : j.is_verified,
                 }
               : j
           )
@@ -124,7 +138,7 @@ export default function AdminJobsPage({
       }
       setSelectedIds([]);
       startTransition(() => { router.refresh(); });
-    } catch (err) {
+    } catch {
       alert('Une erreur est survenue lors de l’action en masse.');
     }
   }
@@ -156,6 +170,13 @@ export default function AdminJobsPage({
       location: job.location,
       contract_type: job.contract_type,
       description: job.description,
+      status: job.status || 'pending',
+      seo_title: job.seo_title || '',
+      seo_description: job.seo_description || '',
+      seo_keywords: job.seo_keywords || '',
+      slug: job.slug || '',
+      source_url: job.source_url || '',
+      source_website: job.source_website || '',
     });
   }
 
@@ -180,19 +201,81 @@ export default function AdminJobsPage({
     }
   }
 
+  const pendingCount = jobs.filter((j) => j.status === 'pending').length;
+
   return (
     <div className="space-y-8 pb-24">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-white font-[var(--font-display)]">
-            Offres d'emploi ({filteredJobs.length})
+            Gestion des Offres & Modération
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Recherchez, filtrez, validez ou modifiez les offres publiées sur la plateforme.
+            Examinez les offres collectées par le scraper, modérez le contenu et gérez le référencement SEO.
           </p>
         </div>
       </div>
 
+      {/* Onglets de Statut */}
+      <div className="flex flex-wrap gap-2 border-b border-slate-800 pb-4">
+        <button
+          onClick={() => setStatusFilter('pending')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+            statusFilter === 'pending'
+              ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
+              : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+          }`}
+        >
+          <span>Offres en attente</span>
+          {pendingCount > 0 && (
+            <span className="bg-slate-950/40 px-2 py-0.5 rounded-full text-[10px] text-white">
+              {pendingCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setStatusFilter('published')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+            statusFilter === 'published'
+              ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+              : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+          }`}
+        >
+          Publiées
+        </button>
+        <button
+          onClick={() => setStatusFilter('rejected')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+            statusFilter === 'rejected'
+              ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20'
+              : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+          }`}
+        >
+          Rejetées
+        </button>
+        <button
+          onClick={() => setStatusFilter('archived')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+            statusFilter === 'archived'
+              ? 'bg-slate-700 text-white'
+              : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+          }`}
+        >
+          Archivées
+        </button>
+        <button
+          onClick={() => setStatusFilter('all')}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+            statusFilter === 'all'
+              ? 'bg-primary text-slate-950'
+              : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+          }`}
+        >
+          Toutes ({jobs.length})
+        </button>
+      </div>
+
+      {/* Barre de recherche et filtres */}
       <div className="rounded-3xl border border-slate-800 bg-slate-950 p-5 shadow-xl flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="w-full md:w-80 relative">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -200,7 +283,7 @@ export default function AdminJobsPage({
           </svg>
           <input
             type="text"
-            placeholder="Rechercher..."
+            placeholder="Rechercher par titre, entreprise..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-2xl border border-slate-800 bg-slate-900 pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors"
@@ -208,18 +291,6 @@ export default function AdminJobsPage({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-primary"
-          >
-            <option value="all">Tous les statuts</option>
-            <option value="verified">Vérifiées</option>
-            <option value="unverified">En attente</option>
-            <option value="archived">Archivées</option>
-            <option value="expired">Expirées</option>
-          </select>
-
           <select
             value={cityFilter}
             onChange={(e) => setCityFilter(e.target.value)}
@@ -247,6 +318,7 @@ export default function AdminJobsPage({
         </div>
       </div>
 
+      {/* Tableau des offres */}
       <div className="rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -260,16 +332,16 @@ export default function AdminJobsPage({
                     className="rounded border-slate-700 bg-slate-900 text-primary focus:ring-primary h-4 w-4"
                   />
                 </th>
-                <th className="py-4 px-6">Poste / Entreprise</th>
+                <th className="py-4 px-6">Poste / Entreprise / Source</th>
                 <th className="py-4 px-6">Lieu</th>
                 <th className="py-4 px-6">Contrat</th>
                 <th className="py-4 px-6">Statut</th>
-                <th className="py-4 px-6 text-right">Actions</th>
+                <th className="py-4 px-6 text-right">Actions de Modération</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 text-sm">
               {filteredJobs.length === 0 ? (
-                <tr><td colSpan={6} className="py-12 text-center text-slate-500">Aucune offre trouvée.</td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-slate-500">Aucune offre trouvée dans cette vue.</td></tr>
               ) : (
                 filteredJobs.map((job) => (
                   <tr key={job.id} className={`hover:bg-slate-900/40 transition-colors ${selectedIds.includes(job.id) ? 'bg-primary/5' : ''}`}>
@@ -283,7 +355,9 @@ export default function AdminJobsPage({
                     </td>
                     <td className="py-4 px-6">
                       <div className="font-bold text-white max-w-xs truncate">{job.title}</div>
-                      <div className="text-xs text-slate-400 truncate mt-0.5">{job.company}</div>
+                      <div className="text-xs text-slate-400 truncate mt-0.5">
+                        {job.company} {job.source_website && <span className="text-primary/80 font-medium">· Source: {job.source_website}</span>}
+                      </div>
                     </td>
                     <td className="py-4 px-6 text-slate-300 text-xs">{job.location}</td>
                     <td className="py-4 px-6">
@@ -292,27 +366,46 @@ export default function AdminJobsPage({
                       </span>
                     </td>
                     <td className="py-4 px-6">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleVerified(job)}
-                        disabled={isPending}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                          job.is_verified
-                            ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30'
-                            : 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border border-amber-500/30'
-                        }`}
-                      >
-                        <span className={`h-1.5 w-1.5 rounded-full ${job.is_verified ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                        {job.is_verified ? 'Vérifiée' : 'En attente'}
-                      </button>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                        job.status === 'published'
+                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          : job.status === 'rejected'
+                          ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                          : job.status === 'archived'
+                          ? 'bg-slate-700/30 text-slate-400 border-slate-600/30'
+                          : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                      }`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${
+                          job.status === 'published' ? 'bg-emerald-400' : job.status === 'rejected' ? 'bg-rose-400' : job.status === 'archived' ? 'bg-slate-400' : 'bg-amber-400'
+                        }`} />
+                        {job.status === 'published' ? 'Publiée' : job.status === 'rejected' ? 'Rejetée' : job.status === 'archived' ? 'Archivée' : 'En attente'}
+                      </span>
                     </td>
                     <td className="py-4 px-6 text-right space-x-2 whitespace-nowrap">
+                      {job.status !== 'published' && (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateStatus(job, 'published')}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs font-bold border border-emerald-500/20"
+                        >
+                          Valider & Publier
+                        </button>
+                      )}
+                      {job.status !== 'rejected' && (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateStatus(job, 'rejected')}
+                          className="px-3 py-1.5 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs font-bold border border-rose-500/20"
+                        >
+                          Rejeter
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => openEditModal(job)}
                         className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-200 hover:bg-slate-700 text-xs font-semibold"
                       >
-                        Éditer
+                        Examiner / Éditer
                       </button>
                       <button
                         type="button"
@@ -330,6 +423,7 @@ export default function AdminJobsPage({
         </div>
       </div>
 
+      {/* Actions en masse */}
       {selectedIds.length > 0 && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-2xl">
           <div className="bg-slate-900 border border-primary/30 shadow-2xl shadow-primary/20 rounded-3xl p-4 flex items-center justify-between backdrop-blur-md">
@@ -339,7 +433,7 @@ export default function AdminJobsPage({
               </span>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <button onClick={() => handleBulkAction('verify')} className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs font-bold border border-emerald-500/20">Vérifier</button>
+              <button onClick={() => handleBulkAction('publish')} className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs font-bold border border-emerald-500/20">Publier</button>
               <button onClick={() => handleBulkAction('archive')} className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-bold border border-slate-700">Archiver</button>
               <button onClick={() => handleBulkAction('delete')} className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs font-bold border border-rose-500/20">Supprimer</button>
               <button onClick={() => setSelectedIds([])} className="p-2.5 rounded-2xl bg-slate-800 text-slate-400 hover:text-white transition-colors">
@@ -350,41 +444,103 @@ export default function AdminJobsPage({
         </div>
       )}
 
+      {/* Modal d'édition & Panneau SEO */}
       {editingJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900 p-6 lg:p-8 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-white font-[var(--font-display)]">Modifier l'offre</h3>
-              <button type="button" onClick={() => setEditingJob(null)} className="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-3xl rounded-3xl border border-slate-800 bg-slate-900 p-6 lg:p-8 shadow-2xl space-y-6 my-8">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div>
+                <h3 className="text-xl font-bold text-white font-[var(--font-display)]">Examiner & Éditer l'offre</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Modifiez le contenu réécrit par l'IA et ajustez les paramètres SEO.</p>
+              </div>
+              <button type="button" onClick={() => setEditingJob(null)} className="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
             </div>
-            <form onSubmit={handleSaveEdit} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Titre du poste</label>
-                <input type="text" required value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+
+            <form onSubmit={handleSaveEdit} className="space-y-6">
+              {/* Informations Générales */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold text-primary uppercase tracking-wider">1. Informations principales</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Titre du poste</label>
+                    <input type="text" required value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Entreprise</label>
+                    <input type="text" required value={editForm.company} onChange={(e) => setEditForm({ ...editForm, company: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Lieu / Ville</label>
+                    <input type="text" required value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Type de contrat</label>
+                    <select value={editForm.contract_type} onChange={(e) => setEditForm({ ...editForm, contract_type: e.target.value as any })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary">
+                      <option value="CDI">CDI</option><option value="CDD">CDD</option><option value="Stage">Stage</option><option value="Freelance">Freelance</option><option value="Alternance">Alternance</option><option value="Prestation">Prestation</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Statut</label>
+                    <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value as any })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary">
+                      <option value="pending">En attente (Pending)</option>
+                      <option value="published">Publiée (Published)</option>
+                      <option value="rejected">Rejetée (Rejected)</option>
+                      <option value="archived">Archivée (Archived)</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Entreprise</label>
-                  <input type="text" required value={editForm.company} onChange={(e) => setEditForm({ ...editForm, company: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Description (Markdown réécrit par IA)</label>
+                  <textarea rows={6} required value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 p-4 text-sm text-white focus:outline-none focus:border-primary font-mono text-xs" />
+                </div>
+              </div>
+
+              {/* Source & Liens */}
+              <div className="space-y-4 border-t border-slate-800 pt-4">
+                <h4 className="text-sm font-bold text-primary uppercase tracking-wider">2. Source & Application</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">URL d'origine (Source URL)</label>
+                    <input type="text" value={editForm.source_url} onChange={(e) => setEditForm({ ...editForm, source_url: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Site d'origine</label>
+                    <input type="text" value={editForm.source_website} onChange={(e) => setEditForm({ ...editForm, source_website: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Panneau SEO */}
+              <div className="space-y-4 border-t border-slate-800 pt-4">
+                <h4 className="text-sm font-bold text-primary uppercase tracking-wider">3. Panneau SEO & Référencement</h4>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">SEO Title (Titre pour moteurs de recherche)</label>
+                  <input type="text" value={editForm.seo_title} onChange={(e) => setEditForm({ ...editForm, seo_title: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Lieu</label>
-                  <input type="text" required value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">SEO Description (Max 160 caractères - Google / WhatsApp)</label>
+                  <textarea rows={2} maxLength={160} value={editForm.seo_description} onChange={(e) => setEditForm({ ...editForm, seo_description: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 p-3 text-sm text-white focus:outline-none focus:border-primary" />
+                  <div className="text-right text-[10px] text-slate-500 mt-1">{editForm.seo_description.length}/160 car.</div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">SEO Keywords</label>
+                    <input type="text" value={editForm.seo_keywords} onChange={(e) => setEditForm({ ...editForm, seo_keywords: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Slug URL canonique</label>
+                    <input type="text" value={editForm.slug} onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Contrat</label>
-                <select value={editForm.contract_type} onChange={(e) => setEditForm({ ...editForm, contract_type: e.target.value as any })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary">
-                  <option value="CDI">CDI</option><option value="CDD">CDD</option><option value="Stage">Stage</option><option value="Freelance">Freelance</option><option value="Alternance">Alternance</option><option value="Prestation">Prestation</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Description</label>
-                <textarea rows={4} required value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
-              </div>
-              <div className="flex items-center justify-end gap-3 pt-2">
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
                 <button type="button" onClick={() => setEditingJob(null)} className="rounded-2xl bg-slate-800 px-5 py-3 text-xs font-bold text-slate-300 hover:bg-slate-700 transition-colors">Annuler</button>
-                <button type="submit" className="rounded-2xl bg-primary px-5 py-3 text-xs font-bold text-slate-950 hover:brightness-110 transition-all shadow-lg shadow-primary/20">Enregistrer</button>
+                <button type="submit" className="rounded-2xl bg-primary px-6 py-3 text-xs font-bold text-slate-950 hover:brightness-110 transition-all shadow-lg shadow-primary/20">Enregistrer les modifications</button>
               </div>
             </form>
           </div>

@@ -87,17 +87,17 @@ const REMOTE_OPTIONS: Array<{ value: string; label: string }> = [
 ];
 
 const SITE_CONFIG = {
-  name: 'Djossi.ci',
+  name: 'TravaillerenCi',
   description: 'Plateforme d\'offres d\'emploi en Côte d\'Ivoire',
-  url: 'https://djossi.ci',
-  supportEmail: 'contact@djossi.ci',
+  url: 'https://travaillerenci.ci',
+  supportEmail: 'contact@travaillerenci.ci',
   phone: '+225 20 00 00 00',
   address: 'Abidjan, Côte d\'Ivoire',
   social: {
-    facebook: 'https://facebook.com/djossi.ci',
-    twitter: 'https://twitter.com/djossi_ci',
-    linkedin: 'https://linkedin.com/company/djossi-ci',
-    instagram: 'https://instagram.com/djossi.ci',
+    facebook: 'https://facebook.com/travaillerenci',
+    twitter: 'https://twitter.com/travaillerenci',
+    linkedin: 'https://linkedin.com/company/travaillerenci',
+    instagram: 'https://instagram.com/travaillerenci',
   },
   currency: 'FCFA',
 };

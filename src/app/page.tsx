@@ -25,6 +25,7 @@ export default async function HomePage({
     keyword: keyword || undefined,
     location: location || undefined,
     contract_type: contract || undefined,
+    status: 'published',
     limit: 30,
     order_by: 'created_at',
     order_dir: 'desc',
@@ -62,7 +63,7 @@ export default async function HomePage({
             </div>
 
             <h1 className="text-[28px] leading-[1.15] sm:text-4xl lg:text-5xl font-extrabold mb-3 sm:mb-5 font-[var(--font-display)] text-gray-900 dark:text-white">
-              Djossi<span className="text-primary">.ci</span>
+              Travailleren<span className="text-primary">Ci</span>
               <span className="block text-gray-800 dark:text-gray-200 text-[22px] sm:text-3xl lg:text-4xl mt-1 sm:mt-2">
                 Trouvez un job qui <span className="text-gradient-primary">vaut le coup</span>
               </span>
@@ -104,7 +105,7 @@ export default async function HomePage({
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {keyword || location || contract
                 ? <>Triées par : pertinence + nouveauté</>
-                : <>Les dernières offres publiées sur Djossi.ci</>}
+                : <>Les dernières offres publiées sur TravaillerenCi</>}
             </p>
           </div>
           {(keyword || location || contract) && (

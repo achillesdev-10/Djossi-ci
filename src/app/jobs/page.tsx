@@ -28,6 +28,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
     keyword,
     location: city,
     contract_type: contract ? (contract as any) : undefined,
+    status: 'published',
     limit: 50,
   });
 

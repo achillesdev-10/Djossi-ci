@@ -48,11 +48,11 @@ export default function Footer() {
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-5">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <span className="text-white font-black text-xl font-[var(--font-display)]">D</span>
+                <span className="text-white font-black text-xl font-[var(--font-display)]">T</span>
               </div>
               <div>
                 <div className="text-xl font-black font-[var(--font-display)] text-white">
-                  Djossi<span className="text-primary">.ci</span>
+                  Travailleren<span className="text-primary">Ci</span>
                 </div>
                 <div className="text-[10px] uppercase tracking-widest text-gray-500 -mt-1">
                   L'emploi en Côte d'Ivoire
@@ -102,7 +102,7 @@ export default function Footer() {
 
         <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <p className="text-sm text-gray-500">
-            © {new Date().getFullYear()} Djossi.ci. Tous droits réservés.
+            © {new Date().getFullYear()} TravaillerenCi. Tous droits réservés.
           </p>
           <div className="flex items-center gap-4">
             <a href={SITE_CONFIG.social.facebook} aria-label="Facebook" className="w-10 h-10 rounded-full bg-gray-800 hover:bg-primary flex items-center justify-center transition-colors">

@@ -30,6 +30,7 @@ const DATA_DIR = resolve(ROOT, 'data');
 const DB_PATH = resolve(DATA_DIR, 'djossi-ci.sqlite3');
 
 type ContractType = 'CDI' | 'CDD' | 'Stage' | 'Prestation' | 'Alternance' | 'Freelance';
+type JobStatus = 'pending' | 'published' | 'rejected' | 'archived';
 
 interface JobOfferRow {
   id: string;
@@ -41,6 +42,12 @@ interface JobOfferRow {
   apply_link: string | null;
   apply_email: string | null;
   source_url: string | null;
+  source_website: string | null;
+  status: JobStatus;
+  seo_title: string | null;
+  seo_description: string | null;
+  seo_keywords: string | null;
+  slug: string | null;
   is_verified: 0 | 1;
   is_archived: 0 | 1;
   is_expired: 0 | 1;
@@ -69,6 +76,12 @@ const SEED_JOBS: Omit<JobOfferRow, 'id' | 'created_at' | 'updated_at'>[] = [
     apply_link: 'https://mtn.ci/recrutement/developpeur-fullstack',
     apply_email: 'recrutement.tech@mtn.ci',
     source_url: 'https://mtn.ci/recrutement',
+    source_website: 'MTN CI',
+    status: 'published',
+    seo_title: "Développeur Full Stack Senior - MTN Côte d'Ivoire",
+    seo_description: "Offre d'emploi Développeur Full Stack Senior chez MTN Côte d'Ivoire à Abidjan.",
+    seo_keywords: 'developpeur, fullstack, react, nodejs, mtn, abidjan, emploi',
+    slug: 'developpeur-fullstack-senior-mtn-ci',
     is_verified: 1,
     is_archived: 0,
     is_expired: 0,
@@ -82,6 +95,12 @@ const SEED_JOBS: Omit<JobOfferRow, 'id' | 'created_at' | 'updated_at'>[] = [
     apply_link: 'https://sg.ci/fr/carrieres/offre/chef-projet-marketing-digital',
     apply_email: null,
     source_url: 'https://www.linkedin.com/jobs/view/sg-ci-chef-projet-marketing',
+    source_website: 'LinkedIn',
+    status: 'published',
+    seo_title: "Chef de Projet Marketing Digital - Société Générale CI",
+    seo_description: "Recrutement Chef de Projet Marketing Digital à Abidjan Cocody par Société Générale CI.",
+    seo_keywords: 'marketing digital, chef de projet, societe generale, abidjan, emploi',
+    slug: 'chef-de-projet-marketing-digital-sg-ci',
     is_verified: 1,
     is_archived: 0,
     is_expired: 0,
@@ -95,6 +114,12 @@ const SEED_JOBS: Omit<JobOfferRow, 'id' | 'created_at' | 'updated_at'>[] = [
     apply_link: null,
     apply_email: 'stages.data@ecobank.ci',
     source_url: 'https://career.ecobank.com/cotedivoire',
+    source_website: 'Ecobank',
+    status: 'pending',
+    seo_title: "Stage Data Analyst - Ecobank Côte d'Ivoire",
+    seo_description: "Stage de fin d'études Data Analyst chez Ecobank Côte d'Ivoire au Plateau Abidjan.",
+    seo_keywords: 'stage, data analyst, ecobank, abidjan, sql, python',
+    slug: 'stage-data-analyst-ecobank-ci',
     is_verified: 0,
     is_archived: 0,
     is_expired: 0,
@@ -155,6 +180,12 @@ function runMigration(db: DatabaseSync) {
       apply_link      TEXT,
       apply_email     TEXT,
       source_url      TEXT,
+      source_website  TEXT,
+      status          TEXT NOT NULL DEFAULT 'pending',
+      seo_title       TEXT,
+      seo_description TEXT,
+      seo_keywords    TEXT,
+      slug            TEXT,
       is_verified     INTEGER NOT NULL DEFAULT 0,
       is_archived     INTEGER NOT NULL DEFAULT 0,
       is_expired      INTEGER NOT NULL DEFAULT 0,
@@ -163,6 +194,9 @@ function runMigration(db: DatabaseSync) {
 
       CONSTRAINT valid_contract_type CHECK (
         contract_type IN ('CDI','CDD','Stage','Prestation','Alternance','Freelance')
+      ),
+      CONSTRAINT valid_status CHECK (
+        status IN ('pending','published','rejected','archived')
       ),
       CONSTRAINT valid_is_verified CHECK (
         is_verified IN (0,1)
@@ -182,6 +216,7 @@ function runMigration(db: DatabaseSync) {
 
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_location   ON job_offers (location);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_contract   ON job_offers (contract_type);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_status     ON job_offers (status);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON job_offers (created_at DESC);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_verified   ON job_offers (is_verified DESC, created_at DESC);`);
 
@@ -206,8 +241,8 @@ function runSeed(db: DatabaseSync): number {
 
   const stmt = db.prepare(`
     INSERT INTO job_offers
-      (title, company, location, contract_type, description, apply_link, apply_email, source_url, is_verified)
-    VALUES ($title, $company, $location, $contract_type, $description, $apply_link, $apply_email, $source_url, $is_verified)
+      (title, company, location, contract_type, description, apply_link, apply_email, source_url, source_website, status, seo_title, seo_description, seo_keywords, slug, is_verified)
+    VALUES ($title, $company, $location, $contract_type, $description, $apply_link, $apply_email, $source_url, $source_website, $status, $seo_title, $seo_description, $seo_keywords, $slug, $is_verified)
     ON CONFLICT(title, company) DO NOTHING;
   `);
 
@@ -224,6 +259,12 @@ function runSeed(db: DatabaseSync): number {
         $apply_link: j.apply_link,
         $apply_email: j.apply_email,
         $source_url: j.source_url,
+        $source_website: j.source_website,
+        $status: j.status,
+        $seo_title: j.seo_title,
+        $seo_description: j.seo_description,
+        $seo_keywords: j.seo_keywords,
+        $slug: j.slug,
         $is_verified: j.is_verified,
       });
       inserted += typeof info.changes === 'number' ? info.changes : 0;
@@ -249,7 +290,7 @@ function runVerification(db: DatabaseSync, inserted: number) {
 
   const rows = db
     .prepare(
-      `SELECT id, title, company, location, contract_type, is_verified, created_at
+      `SELECT id, title, company, location, contract_type, status, is_verified, created_at
        FROM job_offers
        ORDER BY created_at DESC
        LIMIT 5;`
@@ -260,7 +301,7 @@ function runVerification(db: DatabaseSync, inserted: number) {
     const badge = row.is_verified ? '✅ VERIFIED' : '⚪  ';
     const shortId = row.id.slice(0, 8) + '…';
     console.log(
-      `   ${String(i + 1).padStart(2, '0')}. ${badge} [${row.contract_type.padEnd(11)}] ${row.title.slice(0, 52).padEnd(52)} @ ${row.company} — ${row.location} (${shortId})`
+      `   ${String(i + 1).padStart(2, '0')}. ${badge} [${row.contract_type.padEnd(11)}] status=${row.status.padEnd(10)} ${row.title.slice(0, 40).padEnd(40)} @ ${row.company} — ${row.location} (${shortId})`
     );
   });
 }

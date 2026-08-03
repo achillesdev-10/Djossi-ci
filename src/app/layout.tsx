@@ -19,26 +19,26 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Djossi.ci - Offres d\'emploi en Côte d\'Ivoire',
-    template: '%s | Djossi.ci',
+    default: 'TravaillerenCi - Offres d\'emploi en Côte d\'Ivoire',
+    template: '%s | TravaillerenCi',
   },
   description: 'Trouvez votre emploi de rêve en Côte d\'Ivoire. Découvrez des milliers d\'offres d\'emploi, des stages et des opportunités professionnelles.',
   keywords: ['emploi', 'côte d\'ivoire', 'jobs', 'offres d\'emploi', 'travail', 'abidjan', 'carrière', 'recrutement'],
-  authors: [{ name: 'Djossi.ci Team' }],
+  authors: [{ name: 'TravaillerenCi Team' }],
   icons: {
     icon: '/favicon.svg',
   },
   openGraph: {
     type: 'website',
     locale: 'fr_CI',
-    url: 'https://djossi.ci',
-    siteName: 'Djossi.ci',
-    title: 'Djossi.ci - Offres d\'emploi en Côte d\'Ivoire',
+    url: 'https://travaillerenci.ci',
+    siteName: 'TravaillerenCi',
+    title: 'TravaillerenCi - Offres d\'emploi en Côte d\'Ivoire',
     description: 'Trouvez votre emploi de rêve en Côte d\'Ivoire.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Djossi.ci - Offres d\'emploi en Côte d\'Ivoire',
+    title: 'TravaillerenCi - Offres d\'emploi en Côte d\'Ivoire',
     description: 'Trouvez votre emploi de rêve en Côte d\'Ivoire.',
   },
 };
@@ -55,7 +55,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const stored = localStorage.getItem('djossi_theme');
+                const stored = localStorage.getItem('travaillerenci_theme');
                 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                 if (stored === 'dark' || (!stored && prefersDark)) {
                   document.documentElement.classList.add('dark');

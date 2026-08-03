@@ -21,13 +21,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
   const desc = truncate(
-    job.description.replace(/\*\*/g, '').replace(/\n/g, ' '),
+    (job.seo_description || job.description).replace(/\*\*/g, '').replace(/\n/g, ' '),
     170
   );
-  const canonicalUrl = `https://djossi.ci/jobs/${job.id}`;
+  const canonicalUrl = `https://djossi.ci/jobs/${job.slug || job.id}`;
   return {
-    title: `${job.title} — ${job.company} | Djossi.ci`,
+    title: job.seo_title || `${job.title} — ${job.company} | Djossi.ci`,
     description: desc,
+    keywords: job.seo_keywords || undefined,
     alternates: {
       canonical: canonicalUrl,
     },
