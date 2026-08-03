@@ -48,6 +48,8 @@ const SCRAPER_HEALTH_PATH = path.join(
   "admin-scraper-health.json",
 );
 
+let inMemoryScraperHealth: ScraperHealth | null = null;
+
 function quoteIdentifier(identifier: string) {
   return `"${identifier.replace(/"/g, "\"\"")}"`;
 }
@@ -334,6 +336,10 @@ function getFallbackClicksFromStatsTables(db: SqliteDb) {
 }
 
 function readStoredScraperHealth(): ScraperHealth {
+  if (inMemoryScraperHealth) {
+    return inMemoryScraperHealth;
+  }
+
   if (!existsSync(SCRAPER_HEALTH_PATH)) {
     return {
       status: "idle",
@@ -346,7 +352,7 @@ function readStoredScraperHealth(): ScraperHealth {
   try {
     const parsed = JSON.parse(readFileSync(SCRAPER_HEALTH_PATH, "utf8")) as Partial<ScraperHealth>;
 
-    return {
+    inMemoryScraperHealth = {
       status: normaliseRunStatus(parsed.status),
       lastRunAt: parsed.lastRunAt ? String(parsed.lastRunAt) : null,
       offersAdded:
@@ -355,6 +361,7 @@ function readStoredScraperHealth(): ScraperHealth {
           : numberFromUnknown(parsed.offersAdded),
       message: parsed.message ? String(parsed.message) : null,
     };
+    return inMemoryScraperHealth;
   } catch {
     return {
       status: "error",
@@ -366,8 +373,13 @@ function readStoredScraperHealth(): ScraperHealth {
 }
 
 function writeStoredScraperHealth(scraperHealth: ScraperHealth) {
-  mkdirSync(path.dirname(SCRAPER_HEALTH_PATH), { recursive: true });
-  writeFileSync(SCRAPER_HEALTH_PATH, JSON.stringify(scraperHealth, null, 2), "utf8");
+  inMemoryScraperHealth = scraperHealth;
+  try {
+    mkdirSync(path.dirname(SCRAPER_HEALTH_PATH), { recursive: true });
+    writeFileSync(SCRAPER_HEALTH_PATH, JSON.stringify(scraperHealth, null, 2), "utf8");
+  } catch {
+    // Ignore EROFS read-only filesystem errors in serverless/production
+  }
 }
 
 function getScraperHealthFromDatabase(db: SqliteDb): ScraperHealth | null {
