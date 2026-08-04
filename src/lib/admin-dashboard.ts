@@ -60,7 +60,25 @@ function openDatabase(): SqliteDb | null {
     return null;
   }
 
-  return new DatabaseSync(DB_PATH);
+  const db = new DatabaseSync(DB_PATH);
+
+  // Auto-guérison : un ancien trigger AFTER UPDATE (récursion infinie en
+  // SQLite) bloquait toutes les écritures. On ne le supprime que s'il existe
+  // réellement pour éviter une écriture inutile à chaque ouverture.
+  try {
+    const trigger = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'trigger' AND name = 'trigger_jobs_set_updated_at'",
+      )
+      .get();
+    if (trigger) {
+      db.exec("DROP TRIGGER trigger_jobs_set_updated_at;");
+    }
+  } catch {
+    // BDD verrouillée / en lecture seule : on laisse le fix suivant s'en charger.
+  }
+
+  return db;
 }
 
 function getTableNames(db: SqliteDb) {
@@ -469,6 +487,103 @@ function getScraperHealthFromDatabase(db: SqliteDb): ScraperHealth | null {
   };
 }
 
+export type ScraperRunRecord = {
+  status: ScraperHealth["status"];
+  lastRunAt: string | null;
+  offersAdded: number | null;
+  message: string | null;
+};
+
+/**
+ * Historique des exécutions du scraper (table scraper_logs / scraper_runs / …).
+ * Trié du plus récent au plus ancien, limité à `limit` entrées.
+ */
+export function getScraperRunHistory(limit = 10): ScraperRunRecord[] {
+  const db = openDatabase();
+  if (!db) {
+    return [];
+  }
+
+  try {
+    const tables = getTableNames(db);
+    const scraperTable = findExistingTable(tables, [
+      "scraper_logs",
+      "scraper_runs",
+      "scrape_runs",
+      "scraper_health",
+      "scrape_history",
+    ]);
+
+    if (!scraperTable) {
+      return [];
+    }
+
+    const columns = getTableColumns(db, scraperTable);
+    const statusColumn = pickFirstAvailable(columns, [
+      "status",
+      "result",
+      "state",
+      "success",
+    ]);
+    const addedColumn = pickFirstAvailable(columns, [
+      "offers_added",
+      "added_count",
+      "jobs_added",
+      "new_offers",
+    ]);
+    const messageColumn = pickFirstAvailable(columns, [
+      "message",
+      "error",
+      "details",
+    ]);
+    const timestampColumn = pickFirstAvailable(columns, [
+      "started_at",
+      "finished_at",
+      "executed_at",
+      "run_at",
+      "created_at",
+      "updated_at",
+    ]);
+
+    const selectedColumns = [
+      statusColumn
+        ? `${quoteIdentifier(statusColumn)} AS status`
+        : `'' AS status`,
+      addedColumn
+        ? `${quoteIdentifier(addedColumn)} AS "offersAdded"`
+        : `NULL AS "offersAdded"`,
+      messageColumn
+        ? `${quoteIdentifier(messageColumn)} AS message`
+        : `NULL AS message`,
+      timestampColumn
+        ? `${quoteIdentifier(timestampColumn)} AS "lastRunAt"`
+        : `NULL AS "lastRunAt"`,
+    ];
+
+    const orderBy = timestampColumn
+      ? `${quoteIdentifier(timestampColumn)} DESC`
+      : "rowid DESC";
+
+    const rows = db
+      .prepare(
+        `SELECT ${selectedColumns.join(", ")} FROM ${quoteIdentifier(scraperTable)} ORDER BY ${orderBy} LIMIT $limit`,
+      )
+      .all({ $limit: Math.min(Math.max(limit, 1), 50) }) as SqliteRow[];
+
+    return rows.map((row) => ({
+      status: normaliseRunStatus(row.status),
+      lastRunAt: asIsoDate(row.lastRunAt),
+      offersAdded:
+        row.offersAdded === null || row.offersAdded === undefined
+          ? null
+          : numberFromUnknown(row.offersAdded),
+      message: row.message ? String(row.message) : null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export function getAdminDashboardData(): AdminDashboardData {
   const db = openDatabase();
   const offers = db ? getOfferRows(db) : [];
@@ -503,6 +618,8 @@ export function getAdminDashboardData(): AdminDashboardData {
     } catch {}
   }
 
+  // Statistiques honnêtes : 0 tant que la table de mesure n'existe pas.
+  // (Avant, on affichait des valeurs fictives 1240/85/430 — supprimées.)
   const stats: DashboardStats = {
     totalActiveOffers: offers.filter((offer) => offer.status !== "Expirées").length,
     newOffersThisWeek: offers.filter((offer) => {
@@ -514,9 +631,9 @@ export function getAdminDashboardData(): AdminDashboardData {
       return Number.isFinite(parsed) && parsed >= oneWeekAgo;
     }).length,
     totalClicks: totalClicks || (db ? getFallbackClicksFromStatsTables(db) : 0),
-    totalVisits: totalVisits || totalClicks || 1240, // fallback sample if empty
-    visitsToday: visitsToday || 85,
-    visitsThisWeek: visitsThisWeek || 430,
+    totalVisits: totalVisits || 0,
+    visitsToday: visitsToday || 0,
+    visitsThisWeek: visitsThisWeek || 0,
   };
 
   const scraperHealth = db

@@ -1,7 +1,7 @@
 import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getAdminSessionFromRequest } from '@/lib/adminSession';
+import { requireAdminApi } from '@/lib/adminSession';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
 import type { JobContractType, JobOfferSchemaInsert, JobOfferSchemaStatus } from '@/types';
 
@@ -20,14 +20,6 @@ const ALLOWED_STATUSES: JobOfferSchemaStatus[] = [
   'rejected',
   'archived',
 ];
-
-async function ensureAdmin(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
-  if (!session && process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Accès administrateur requis.' }, { status: 401 });
-  }
-  return null;
-}
 
 function normalizePatch(body: Record<string, unknown>): Partial<JobOfferSchemaInsert> {
   const patch: Record<string, any> = {};
@@ -97,8 +89,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const denial = await ensureAdmin(request);
-  if (denial) return denial;
+  const auth = await requireAdminApi(request);
+  if (auth.error) return auth.error;
 
   const { id } = await params;
 
@@ -121,8 +113,14 @@ export async function PATCH(
     revalidateAdminPages(id);
     return NextResponse.json({ ok: true, job: updated });
   } catch (err) {
+    console.error('PATCH /api/admin/jobs/[id] error:', err);
     return NextResponse.json(
-      { error: 'Impossible de mettre à jour cette offre.' },
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : 'Impossible de mettre à jour cette offre.',
+      },
       { status: 500 }
     );
   }
@@ -132,16 +130,30 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const denial = await ensureAdmin(request);
-  if (denial) return denial;
+  const auth = await requireAdminApi(request);
+  if (auth.error) return auth.error;
 
   const { id } = await params;
-  const removed = await JobOfferSchemaService.remove(id);
 
-  if (!removed) {
-    return NextResponse.json({ error: 'Offre introuvable.' }, { status: 404 });
+  try {
+    const removed = await JobOfferSchemaService.remove(id);
+
+    if (!removed) {
+      return NextResponse.json({ error: 'Offre introuvable.' }, { status: 404 });
+    }
+
+    revalidateAdminPages(id);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error('DELETE /api/admin/jobs/[id] error:', err);
+    return NextResponse.json(
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : 'Impossible de supprimer cette offre.',
+      },
+      { status: 500 }
+    );
   }
-
-  revalidateAdminPages(id);
-  return NextResponse.json({ ok: true });
 }

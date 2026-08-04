@@ -188,6 +188,12 @@ function ensureSchema(db: DatabaseSyncInstance) {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON job_offers (created_at DESC);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_verified   ON job_offers (is_verified DESC, created_at DESC);`);
 
+  // Auto-guérison : un ancien trigger AFTER UPDATE (récursion infinie en
+  // SQLite) rendait TOUTE mise à jour impossible (erreur 500). On le supprime
+  // systématiquement au démarrage pour que la BDD soit auto-réparée, même si
+  // le fichier .sqlite3 provient d'une version antérieure au fix.
+  db.exec(`DROP TRIGGER IF EXISTS trigger_jobs_set_updated_at;`);
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS scraper_logs (
       id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -370,6 +376,27 @@ export class JobOfferSchemaService {
     const db = await getDb();
     if (!db) return false;
     return (db.prepare('DELETE FROM job_offers WHERE id = $id').run({ $id: id }).changes || 0) > 0;
+  }
+
+  /**
+   * Détection de doublons : offres partageant le même (titre + entreprise)
+   * normalisé (minuscules, espaces trimés). Retourne la liste des ids
+   * concernés avec leur clé de groupe, pour l'affichage d'un badge de
+   * modération « doublon probable ».
+   */
+  static async findDuplicates(): Promise<Array<{ id: string; group: string }>> {
+    const db = await getDb();
+    if (!db) return [];
+    const rows = db
+      .prepare(
+        `SELECT id, lower(trim(title)) || '||' || lower(trim(company)) AS key FROM job_offers`
+      )
+      .all() as Array<{ id: string; key: string }>;
+    const counts = new Map<string, number>();
+    rows.forEach((r) => counts.set(r.key, (counts.get(r.key) || 0) + 1));
+    return rows
+      .filter((r) => (counts.get(r.key) || 0) > 1)
+      .map((r) => ({ id: r.id, group: r.key }));
   }
 
   static async addScraperLog(status: 'success' | 'error' | 'running', offers_added: number, message: string): Promise<number> {

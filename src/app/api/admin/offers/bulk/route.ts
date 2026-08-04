@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import type { NextRequest } from 'next/server';
+import { requireAdminApi } from '@/lib/adminSession';
 import {
   applyBulkAction,
   getAdminDashboardData,
@@ -12,7 +14,9 @@ type BulkRoutePayload = {
   ids?: unknown;
 };
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const auth = await requireAdminApi(request);
+  if (auth.error) return auth.error;
   try {
     const body = (await request.json()) as BulkRoutePayload;
 

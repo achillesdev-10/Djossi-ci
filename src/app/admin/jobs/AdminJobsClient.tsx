@@ -6,8 +6,10 @@ import type { JobOfferSchema, JobOfferSchemaStatus } from '@/types';
 
 export default function AdminJobsClient({
   initialJobs,
+  duplicateIds = [],
 }: {
   initialJobs: JobOfferSchema[];
+  duplicateIds?: string[];
 }) {
   const router = useRouter();
   const [jobs, setJobs] = useState<JobOfferSchema[]>(initialJobs);
@@ -15,6 +17,7 @@ export default function AdminJobsClient({
   const [statusFilter, setStatusFilter] = useState<'all' | JobOfferSchemaStatus | 'verified' | 'unverified'>('pending');
   const [contractFilter, setContractFilter] = useState<string>('all');
   const [cityFilter, setCityFilter] = useState<string>('all');
+  const [duplicatesOnly, setDuplicatesOnly] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
 
@@ -34,6 +37,20 @@ export default function AdminJobsClient({
     source_url: '',
     source_website: '',
   });
+
+  async function readError(res: Response): Promise<string> {
+    try {
+      const data = await res.json();
+      if (data?.error) return data.error;
+    } catch {
+      // réponse non-JSON
+    }
+    return `Erreur serveur (${res.status}).`;
+  }
+
+  function redirectToLogin() {
+    router.replace('/admin/login?next=/admin/jobs');
+  }
 
   const filteredJobs = jobs.filter((job) => {
     const matchesSearch =
@@ -62,7 +79,9 @@ export default function AdminJobsClient({
     const matchesCity =
       cityFilter === 'all' ? true : job.location.toLowerCase().includes(cityFilter.toLowerCase());
 
-    return matchesSearch && matchesStatus && matchesContract && matchesCity;
+    const matchesDuplicate = duplicatesOnly ? duplicateIds.includes(job.id) : true;
+
+    return matchesSearch && matchesStatus && matchesContract && matchesCity && matchesDuplicate;
   });
 
   async function handleUpdateStatus(job: JobOfferSchema, newStatus: JobOfferSchemaStatus) {
@@ -78,13 +97,21 @@ export default function AdminJobsClient({
         body: JSON.stringify({ status: newStatus, is_verified: isVerified }),
       });
 
-      if (!res.ok) throw new Error('Échec de la mise à jour du statut');
+      if (res.status === 401) {
+        setJobs((prev) =>
+          prev.map((j) => (j.id === job.id ? { ...j, status: job.status, is_verified: job.is_verified } : j))
+        );
+        redirectToLogin();
+        return;
+      }
+
+      if (!res.ok) throw new Error(await readError(res));
       startTransition(() => { router.refresh(); });
-    } catch {
+    } catch (err) {
       setJobs((prev) =>
         prev.map((j) => (j.id === job.id ? { ...j, status: job.status, is_verified: job.is_verified } : j))
       );
-      alert('Impossible de modifier le statut de l’offre.');
+      alert(err instanceof Error && err.message ? err.message : 'Impossible de modifier le statut de l’offre.');
     }
   }
 
@@ -94,11 +121,16 @@ export default function AdminJobsClient({
     setJobs((prev) => prev.filter((j) => j.id !== id));
     try {
       const res = await fetch(`/api/admin/jobs/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Échec de suppression');
+      if (res.status === 401) {
+        setJobs(previousJobs);
+        redirectToLogin();
+        return;
+      }
+      if (!res.ok) throw new Error(await readError(res));
       startTransition(() => { router.refresh(); });
-    } catch {
+    } catch (err) {
       setJobs(previousJobs);
-      alert('Impossible de supprimer cette offre.');
+      alert(err instanceof Error && err.message ? err.message : 'Impossible de supprimer cette offre.');
     }
   }
 
@@ -119,7 +151,12 @@ export default function AdminJobsClient({
         }),
       });
 
-      if (!res.ok) throw new Error('Erreur lors de l’action en masse');
+      if (res.status === 401) {
+        redirectToLogin();
+        return;
+      }
+
+      if (!res.ok) throw new Error(await readError(res));
 
       if (action === 'delete') {
         setJobs((prev) => prev.filter((j) => !selectedIds.includes(j.id)));
@@ -190,6 +227,11 @@ export default function AdminJobsClient({
         body: JSON.stringify(editForm),
       });
       const data = await res.json();
+      if (res.status === 401) {
+        setEditingJob(null);
+        redirectToLogin();
+        return;
+      }
       if (!res.ok) throw new Error(data.error || 'Erreur lors de la modification');
       setJobs((prev) =>
         prev.map((j) => (j.id === editingJob.id ? { ...j, ...editForm } : j))
@@ -202,6 +244,7 @@ export default function AdminJobsClient({
   }
 
   const pendingCount = jobs.filter((j) => j.status === 'pending').length;
+  const duplicateCount = jobs.filter((j) => duplicateIds.includes(j.id)).length;
 
   return (
     <div className="space-y-8 pb-24">
@@ -262,6 +305,21 @@ export default function AdminJobsClient({
           }`}
         >
           Archivées
+        </button>
+        <button
+          onClick={() => { setStatusFilter('all'); setDuplicatesOnly((v) => !v); }}
+          className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+            duplicatesOnly
+              ? 'bg-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/20'
+              : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+          }`}
+        >
+          <span>Doublons</span>
+          {duplicateCount > 0 && (
+            <span className="bg-slate-950/40 px-2 py-0.5 rounded-full text-[10px] text-white">
+              {duplicateCount}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setStatusFilter('all')}
@@ -354,7 +412,14 @@ export default function AdminJobsClient({
                       />
                     </td>
                     <td className="py-4 px-6">
-                      <div className="font-bold text-white max-w-xs truncate">{job.title}</div>
+                      <div className="font-bold text-white max-w-xs truncate flex items-center gap-2">
+                        {job.title}
+                        {duplicateIds.includes(job.id) && (
+                          <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-fuchsia-500/15 border border-fuchsia-500/30 px-2 py-0.5 text-[10px] font-bold text-fuchsia-400">
+                            Doublon probable
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-slate-400 truncate mt-0.5">
                         {job.company} {job.source_website && <span className="text-primary/80 font-medium">· Source: {job.source_website}</span>}
                       </div>

@@ -8,12 +8,16 @@ import type {
   DashboardOffer,
   ScraperHealth,
 } from "../../lib/admin-dashboard";
+import type { JobOffersActivityPoint } from "@/services/jobOfferSchemaService";
 
 type AdminDashboardClientProps = {
   initialData: AdminDashboardData;
+  activity: JobOffersActivityPoint[];
 };
 
 const STATUS_OPTIONS = ["Toutes", "En attente", "Vérifiées", "Expirées"] as const;
+
+const PAGE_SIZE = 10;
 
 const BULK_ACTIONS: Array<{
   action: BulkAction;
@@ -91,8 +95,91 @@ function scraperStatusClasses(status: ScraperHealth["status"]) {
   }
 }
 
+/** Petit graphique en barres SVG pur (aucune dépendance externe). */
+function ActivityChart({ activity }: { activity: JobOffersActivityPoint[] }) {
+  const max = Math.max(1, ...activity.map((a) => a.total));
+
+  if (activity.length === 0) {
+    return (
+      <p className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">
+        Aucune donnée d'activité sur la période.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex h-44 items-end gap-1.5 sm:gap-3">
+      {activity.map((point) => (
+        <div
+          key={point.date}
+          className="group relative flex h-full flex-1 flex-col items-center justify-end gap-1.5"
+        >
+          <div className="relative flex w-full flex-1 items-end">
+            <div
+              className="w-full rounded-t-lg bg-gradient-to-t from-sky-600 to-sky-400 transition-all group-hover:from-sky-500 group-hover:to-sky-300"
+              style={{ height: `${Math.max(3, (point.total / max) * 100)}%` }}
+            />
+            <div className="pointer-events-none absolute -top-9 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-700 shadow-lg group-hover:block dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+              {point.label} · {point.total} offre{point.total > 1 ? "s" : ""} (
+              {point.verified} vérif.)
+            </div>
+          </div>
+          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+            {point.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Échappe une cellule CSV contre l'injection de formule (= + - @ tab CR).
+ *  Les titres proviennent de sources scrapées (non fiables) : un titre commençant
+ *  par « = » s'exécuterait comme formule dans Excel/LibreOffice.
+ */
+function csvCell(value: string) {
+  const escaped = value.replace(/"/g, '""');
+  if (/^[=+\-@\t\r]/.test(value)) {
+    return `"'${escaped}"`;
+  }
+  return `"${escaped}"`;
+}
+
+function exportCsv(offers: DashboardOffer[]) {
+  const header = [
+    "Titre",
+    "Entreprise",
+    "Ville",
+    "Statut",
+    "Ajoutee le",
+    "Clics",
+    "Source",
+  ];
+  const rows = offers.map((offer) => [
+    csvCell(offer.title),
+    csvCell(offer.company),
+    csvCell(offer.city),
+    csvCell(offer.status),
+    offer.createdAt ? csvCell(formatDate(offer.createdAt)) : csvCell(""),
+    String(offer.clicks),
+    csvCell(offer.sourceUrl || ""),
+  ]);
+
+  const csv = [header.join(";"), ...rows.map((row) => row.join(";"))].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `offres-travaillerenci-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export default function AdminDashboardClient({
   initialData,
+  activity,
 }: AdminDashboardClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -103,21 +190,41 @@ export default function AdminDashboardClient({
   const [statusFilter, setStatusFilter] =
     useState<(typeof STATUS_OPTIONS)[number]>("Toutes");
   const [cityFilter, setCityFilter] = useState("Toutes");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{
     tone: "success" | "error";
     text: string;
   } | null>(null);
 
+  function redirectToLogin() {
+    router.replace("/admin/login?next=/admin");
+  }
+
   const filteredOffers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
     return offers.filter((offer) => {
       const matchesStatus =
         statusFilter === "Toutes" || offer.status === statusFilter;
       const matchesCity = cityFilter === "Toutes" || offer.city === cityFilter;
+      const matchesSearch =
+        !query ||
+        offer.title.toLowerCase().includes(query) ||
+        offer.company.toLowerCase().includes(query) ||
+        offer.city.toLowerCase().includes(query);
 
-      return matchesStatus && matchesCity;
+      return matchesStatus && matchesCity && matchesSearch;
     });
-  }, [cityFilter, offers, statusFilter]);
+  }, [cityFilter, offers, search, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredOffers.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageOffers = useMemo(
+    () => filteredOffers.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [filteredOffers, safePage],
+  );
 
   const filteredIds = filteredOffers.map((offer) => offer.id);
   const allVisibleSelected =
@@ -147,6 +254,11 @@ export default function AdminDashboardClient({
         ids: selectedIds,
       }),
     });
+
+    if (response.status === 401) {
+      redirectToLogin();
+      return;
+    }
 
     const payload = (await response.json()) as
       | (AdminDashboardData & { message?: string })
@@ -185,6 +297,11 @@ export default function AdminDashboardClient({
       method: "POST",
     });
 
+    if (response.status === 401) {
+      redirectToLogin();
+      return;
+    }
+
     const payload = (await response.json()) as
       | { scraperHealth: ScraperHealth; message?: string }
       | { error?: string };
@@ -214,6 +331,21 @@ export default function AdminDashboardClient({
     });
   }
 
+  function handleExportCsv() {
+    if (filteredOffers.length === 0) {
+      setFeedback({
+        tone: "error",
+        text: "Aucune offre à exporter avec les filtres actuels.",
+      });
+      return;
+    }
+    exportCsv(filteredOffers);
+    setFeedback({
+      tone: "success",
+      text: `${filteredOffers.length} offre${filteredOffers.length > 1 ? "s" : ""} exportée${filteredOffers.length > 1 ? "s" : ""} en CSV.`,
+    });
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-slate-100 px-4 py-6 text-slate-900 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-50 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -221,7 +353,7 @@ export default function AdminDashboardClient({
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
               <p className="text-sm font-medium uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300">
-                Djossi.ci Admin
+                TravaillerenCi Admin
               </p>
               <div>
                 <h1 className="text-2xl font-semibold sm:text-3xl">
@@ -234,14 +366,24 @@ export default function AdminDashboardClient({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleTriggerScraper}
-              disabled={isPending}
-              className="inline-flex items-center justify-center rounded-2xl bg-sky-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isPending ? "Traitement..." : "Déclencher le scraper"}
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                disabled={isPending}
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Exporter CSV
+              </button>
+              <button
+                type="button"
+                onClick={handleTriggerScraper}
+                disabled={isPending}
+                className="inline-flex items-center justify-center rounded-2xl bg-sky-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isPending ? "Traitement..." : "Déclencher le scraper"}
+              </button>
+            </div>
           </div>
 
           {feedback ? (
@@ -344,26 +486,54 @@ export default function AdminDashboardClient({
         </section>
 
         <section className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/70">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-lg font-semibold">Activité des 7 derniers jours</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Offres ajoutées et vérifiées par jour (source : base locale).
+            </p>
+          </div>
+          <div className="mt-6">
+            <ActivityChart activity={activity} />
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-white/70 bg-white/80 p-5 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/70">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Liste des offres</h2>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                 {filteredOffers.length} offre
                 {filteredOffers.length > 1 ? "s" : ""} affichée
-                {filteredOffers.length > 1 ? "s" : ""} sur {offers.length}.
+                {filteredOffers.length > 1 ? "s" : ""} sur {offers.length} — page{" "}
+                {safePage}/{totalPages}.
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-2 text-sm">
+                <span className="text-slate-500 dark:text-slate-400">Rechercher</span>
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="Titre, entreprise, ville..."
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-sky-500 dark:border-slate-700 dark:bg-slate-950"
+                />
+              </label>
+
+              <label className="space-y-2 text-sm">
                 <span className="text-slate-500 dark:text-slate-400">Statut</span>
                 <select
                   value={statusFilter}
-                  onChange={(event) =>
+                  onChange={(event) => {
                     setStatusFilter(
                       event.target.value as (typeof STATUS_OPTIONS)[number],
-                    )
-                  }
+                    );
+                    setPage(1);
+                  }}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-500 dark:border-slate-700 dark:bg-slate-950"
                 >
                   {STATUS_OPTIONS.map((option) => (
@@ -378,7 +548,10 @@ export default function AdminDashboardClient({
                 <span className="text-slate-500 dark:text-slate-400">Ville</span>
                 <select
                   value={cityFilter}
-                  onChange={(event) => setCityFilter(event.target.value)}
+                  onChange={(event) => {
+                    setCityFilter(event.target.value);
+                    setPage(1);
+                  }}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-500 dark:border-slate-700 dark:bg-slate-950"
                 >
                   <option value="Toutes">Toutes</option>
@@ -426,7 +599,7 @@ export default function AdminDashboardClient({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-800 dark:bg-slate-900">
-                  {filteredOffers.length === 0 ? (
+                  {pageOffers.length === 0 ? (
                     <tr>
                       <td
                         colSpan={7}
@@ -437,7 +610,7 @@ export default function AdminDashboardClient({
                     </tr>
                   ) : null}
 
-                  {filteredOffers.map((offer) => {
+                  {pageOffers.map((offer) => {
                     const isSelected = selectedIds.includes(offer.id);
 
                     return (
@@ -509,6 +682,30 @@ export default function AdminDashboardClient({
               </table>
             </div>
           </div>
+
+          {totalPages > 1 ? (
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setPage(Math.max(1, safePage - 1))}
+                disabled={safePage <= 1}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                ← Précédent
+              </button>
+              <span className="text-sm text-slate-500 dark:text-slate-400">
+                Page {safePage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage(Math.min(totalPages, safePage + 1))}
+                disabled={safePage >= totalPages}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Suivant →
+              </button>
+            </div>
+          ) : null}
         </section>
       </div>
 

@@ -1,18 +1,25 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import type { NextRequest } from 'next/server';
+import { requireAdminApi } from '@/lib/adminSession';
 import {
   getAdminDashboardData,
+  getScraperRunHistory,
   triggerScraperRun,
 } from "../../../../lib/admin-dashboard";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireAdminApi(request);
+  if (auth.error) return auth.error;
   const payload = getAdminDashboardData();
-  return NextResponse.json(payload);
+  return NextResponse.json({ ...payload, runHistory: getScraperRunHistory(10) });
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const auth = await requireAdminApi(request);
+  if (auth.error) return auth.error;
   try {
     const scraperHealth = await triggerScraperRun();
 

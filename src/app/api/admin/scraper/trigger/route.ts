@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getAdminSessionFromRequest } from '@/lib/adminSession';
+import { requireAdminApi } from '@/lib/adminSession';
 import { launchScraperProcess } from '@/lib/admin-dashboard';
 
 export async function POST(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
-  if (!session && process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-  }
+  const auth = await requireAdminApi(request);
+  if (auth.error) return auth.error;
 
   // Lance le scraper Python en arrière-plan. Le pipeline Python écrit ses
   // propres journaux dans `scraper_logs` (running → success/error), lus par

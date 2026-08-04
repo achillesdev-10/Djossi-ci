@@ -1,20 +1,12 @@
 import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getAdminSessionFromRequest } from '@/lib/adminSession';
+import { requireAdminApi } from '@/lib/adminSession';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
 
-async function ensureAdmin(request: NextRequest) {
-  const session = await getAdminSessionFromRequest(request);
-  if (!session && process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Accès administrateur requis.' }, { status: 401 });
-  }
-  return null;
-}
-
 export async function POST(request: NextRequest) {
-  const denial = await ensureAdmin(request);
-  if (denial) return denial;
+  const auth = await requireAdminApi(request);
+  if (auth.error) return auth.error;
 
   try {
     const { action, ids, data } = await request.json();
