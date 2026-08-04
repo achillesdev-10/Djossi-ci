@@ -26,7 +26,18 @@ export async function POST(request: NextRequest) {
     if (action === 'delete') {
       await Promise.all(ids.map((id) => JobOfferSchemaService.remove(id)));
     } else if (action === 'update') {
-      await Promise.all(ids.map((id) => JobOfferSchemaService.update(id, data)));
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        return NextResponse.json(
+          { error: 'Les données de mise à jour sont invalides.' },
+          { status: 400 },
+        );
+      }
+      // Cohérence : publier une offre la marque automatiquement vérifiée.
+      const patch: Record<string, unknown> = { ...data };
+      if (patch.status === 'published' && typeof patch.is_verified !== 'boolean') {
+        patch.is_verified = true;
+      }
+      await Promise.all(ids.map((id) => JobOfferSchemaService.update(id, patch)));
     } else {
       return NextResponse.json({ error: 'Action non reconnue.' }, { status: 400 });
     }

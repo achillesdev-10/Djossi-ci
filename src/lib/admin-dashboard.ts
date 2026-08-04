@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { spawn } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 
 export type DashboardOffer = {
@@ -118,7 +119,8 @@ function normaliseStatus(rawStatus: unknown, archived = false) {
   if (
     value.includes("verif") ||
     value.includes("approved") ||
-    value.includes("valid")
+    value.includes("valid") ||
+    value.includes("publish")
   ) {
     return "Vérifiées" as const;
   }
@@ -175,7 +177,7 @@ function stringFromUnknown(value: unknown, fallback: string) {
 
 function getOfferRows(db: SqliteDb) {
   const tables = getTableNames(db);
-  const offerTable = findExistingTable(tables, ["jobs", "offers"]);
+  const offerTable = findExistingTable(tables, ["job_offers", "jobs", "offers"]);
 
   if (!offerTable) {
     return [];
@@ -219,6 +221,7 @@ function getOfferRows(db: SqliteDb) {
   ]);
   const clicksColumn = pickFirstAvailable(columns, [
     "clicks",
+    "clicks_count",
     "click_count",
     "total_clicks",
     "views",
@@ -385,6 +388,7 @@ function writeStoredScraperHealth(scraperHealth: ScraperHealth) {
 function getScraperHealthFromDatabase(db: SqliteDb): ScraperHealth | null {
   const tables = getTableNames(db);
   const scraperTable = findExistingTable(tables, [
+    "scraper_logs",
     "scraper_runs",
     "scrape_runs",
     "scraper_health",
@@ -414,6 +418,7 @@ function getScraperHealthFromDatabase(db: SqliteDb): ScraperHealth | null {
     "details",
   ]);
   const timestampColumn = pickFirstAvailable(columns, [
+    "started_at",
     "finished_at",
     "executed_at",
     "run_at",
@@ -528,7 +533,7 @@ export function getAdminDashboardData(): AdminDashboardData {
 
 function getOfferTableMeta(db: SqliteDb) {
   const tables = getTableNames(db);
-  const offerTable = findExistingTable(tables, ["jobs", "offers"]);
+  const offerTable = findExistingTable(tables, ["job_offers", "jobs", "offers"]);
 
   if (!offerTable) {
     return null;
@@ -579,22 +584,40 @@ export function applyBulkAction(action: BulkAction, ids: string[]) {
     return { updated: numberFromUnknown(result.changes) };
   }
 
+  // Schéma "strict" (job_offers) : status codifié + flags is_verified/is_archived.
+  // Schéma "libre" (jobs/offers) : colonne status en texte libre.
+  const isStrictSchema =
+    meta.columns.has("is_verified") && meta.columns.has("is_archived");
+
   if (action === "verify") {
     const statusColumn = pickFirstAvailable(meta.columns, ["status", "state"]);
+    const verifiedColumn = pickFirstAvailable(meta.columns, ["is_verified"]);
 
-    if (!statusColumn) {
+    if (!statusColumn && !verifiedColumn) {
       throw new Error("La colonne de statut est introuvable.");
     }
 
+    const assignments: string[] = [];
+    const values: Array<string | number> = [];
+    if (verifiedColumn) {
+      assignments.push(`${quoteIdentifier(verifiedColumn)} = ?`);
+      values.push(1);
+    }
+    if (statusColumn) {
+      assignments.push(`${quoteIdentifier(statusColumn)} = ?`);
+      values.push(isStrictSchema ? "published" : "Vérifiées");
+    }
+
     const statement = db.prepare(
-      `UPDATE ${tableName} SET ${quoteIdentifier(statusColumn)} = ? WHERE ${idColumn} IN (${placeholders})`,
+      `UPDATE ${tableName} SET ${assignments.join(", ")} WHERE ${idColumn} IN (${placeholders})`,
     );
-    const result = statement.run("Vérifiées", ...uniqueIds) as { changes?: number };
+    const result = statement.run(...values, ...uniqueIds) as { changes?: number };
     return { updated: numberFromUnknown(result.changes) };
   }
 
   const archivedFlagColumn = pickFirstAvailable(meta.columns, ["is_archived", "archived"]);
   const archivedAtColumn = pickFirstAvailable(meta.columns, ["archived_at"]);
+  const expiredColumn = pickFirstAvailable(meta.columns, ["is_expired"]);
   const statusColumn = pickFirstAvailable(meta.columns, ["status", "state"]);
 
   if (archivedFlagColumn || archivedAtColumn) {
@@ -605,15 +628,17 @@ export function applyBulkAction(action: BulkAction, ids: string[]) {
       assignments.push(`${quoteIdentifier(archivedFlagColumn)} = ?`);
       values.push(1);
     }
-
+    if (expiredColumn) {
+      assignments.push(`${quoteIdentifier(expiredColumn)} = ?`);
+      values.push(1);
+    }
     if (archivedAtColumn) {
       assignments.push(`${quoteIdentifier(archivedAtColumn)} = ?`);
       values.push(new Date().toISOString());
     }
-
     if (statusColumn) {
       assignments.push(`${quoteIdentifier(statusColumn)} = ?`);
-      values.push("Expirées");
+      values.push(isStrictSchema ? "archived" : "Expirées");
     }
 
     const statement = db.prepare(
@@ -627,11 +652,60 @@ export function applyBulkAction(action: BulkAction, ids: string[]) {
     const statement = db.prepare(
       `UPDATE ${tableName} SET ${quoteIdentifier(statusColumn)} = ? WHERE ${idColumn} IN (${placeholders})`,
     );
-    const result = statement.run("Expirées", ...uniqueIds) as { changes?: number };
+    const result = statement.run(
+      isStrictSchema ? "archived" : "Expirées",
+      ...uniqueIds,
+    ) as { changes?: number };
     return { updated: numberFromUnknown(result.changes) };
   }
 
   throw new Error("Impossible d'archiver les offres avec le schéma actuel.");
+}
+
+/**
+ * Lance le scraper Python en arrière-plan (fire-and-forget).
+ * Le pipeline Python écrit lui-même ses logs dans `scraper_logs` ; en cas
+ * d'échec de lancement, l'état de santé est passé en "error" pour que le
+ * dashboard ne reste pas bloqué sur "running" indéfiniment.
+ */
+export function launchScraperProcess() {
+  const python = process.platform === "win32" ? "python" : "python3";
+  const sites = process.env.SCRAPER_SITES || "educarriere,emploici,orange,mtn";
+  const maxPerSite = process.env.SCRAPER_MAX_PER_SITE || "5";
+  const script = path.join(process.cwd(), "scraper", "scraper.py");
+
+  const fail = (message: string) => {
+    writeStoredScraperHealth({
+      status: "error",
+      lastRunAt: new Date().toISOString(),
+      offersAdded: null,
+      message,
+    });
+  };
+
+  let child: ReturnType<typeof spawn>;
+  try {
+    child = spawn(
+      python,
+      [script, "--sites", sites, "--max-per-site", maxPerSite],
+      {
+        cwd: process.cwd(),
+        detached: true,
+        stdio: "ignore",
+        windowsHide: true,
+      },
+    );
+  } catch {
+    fail("Impossible de lancer le scraper Python en arrière-plan.");
+    return;
+  }
+
+  // Erreur asynchrone (ex: binaire Python introuvable) → état "error".
+  child.on("error", () => {
+    fail("Échec du lancement du scraper Python (binaire introuvable).");
+  });
+  // Le processus tourne en arrière-plan, on ne bloque pas la réponse HTTP.
+  child.unref();
 }
 
 function extractOffersAdded(payload: unknown) {
@@ -679,13 +753,14 @@ export async function triggerScraperRun() {
 
   if (!automationUrl) {
     const state: ScraperHealth = {
-      status: "success",
+      status: "running",
       lastRunAt: new Date().toISOString(),
-      offersAdded: 3,
+      offersAdded: null,
       message:
-        "Scraper exécuté avec succès (simulation locale). 3 nouvelles offres synchronisées.",
+        "Scraper lancé en arrière-plan. Le statut sera mis à jour à la fin de l'exécution.",
     };
     writeStoredScraperHealth(state);
+    launchScraperProcess();
     return state;
   }
 

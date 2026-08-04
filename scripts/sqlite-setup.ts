@@ -189,6 +189,7 @@ function runMigration(db: DatabaseSync) {
       is_verified     INTEGER NOT NULL DEFAULT 0,
       is_archived     INTEGER NOT NULL DEFAULT 0,
       is_expired      INTEGER NOT NULL DEFAULT 0,
+      clicks_count    INTEGER NOT NULL DEFAULT 0,
       created_at      TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
 

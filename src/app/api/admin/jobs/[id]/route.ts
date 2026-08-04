@@ -49,9 +49,9 @@ function normalizePatch(body: Record<string, unknown>): Partial<JobOfferSchemaIn
     patch.apply_email = null;
   }
 
-  if (!patch.apply_link && !patch.apply_email) {
-    patch.apply_email = 'contact@travaillerenci.ci';
-  }
+  // NB : pas de fallback ici — la contrainte `valid_apply_method` est garantie
+  // dans JobOfferSchemaService.update() qui connaît l'offre existante. Cela
+  // évite d'écraser un apply_email déjà renseigné lors d'une édition banale.
 
   if (typeof body.source_url === 'string') patch.source_url = body.source_url.trim() ? body.source_url.trim() : null;
   if (typeof body.source_website === 'string') patch.source_website = body.source_website.trim() ? body.source_website.trim() : null;

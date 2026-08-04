@@ -198,6 +198,14 @@ function ensureSchema(db: DatabaseSyncInstance) {
       finished_at     TEXT
     );
   `);
+
+  // Migration défensive : la table peut avoir été créée avant l'ajout de
+  // `clicks_count` (ex: scripts/sqlite-setup.ts). On l'ajoute si absente.
+  const cols = db.prepare('PRAGMA table_info(job_offers)').all() as Array<{ name: string }>;
+  const existingColumns = new Set(cols.map((c) => String(c.name)));
+  if (!existingColumns.has('clicks_count')) {
+    db.exec('ALTER TABLE job_offers ADD COLUMN clicks_count INTEGER NOT NULL DEFAULT 0');
+  }
 }
 
 function rowToSchema(row: any): JobOfferSchema {
@@ -301,14 +309,59 @@ export class JobOfferSchemaService {
     };
   }
 
+  /** Colonnes autorisées pour les mises à jour (protection contre les injections SQL). */
+  private static readonly UPDATE_COLUMNS = new Set([
+    'title',
+    'company',
+    'location',
+    'contract_type',
+    'description',
+    'apply_link',
+    'apply_email',
+    'source_url',
+    'source_website',
+    'status',
+    'seo_title',
+    'seo_description',
+    'seo_keywords',
+    'slug',
+    'is_verified',
+    'is_archived',
+    'is_expired',
+  ]);
+
   static async update(id: string, patch: Partial<JobOfferSchemaInsert>): Promise<JobOfferSchema | null> {
     const db = await getDb();
     if (!db) return null;
     const existing = await this.getById(id);
     if (!existing) return null;
-    const fields = Object.keys(patch).map(k => `${k} = $${k}`).join(', ');
-    const params: any = { $id: id };
-    Object.entries(patch).forEach(([k, v]) => params[`$${k}`] = typeof v === 'boolean' ? (v ? 1 : 0) : v);
+
+    // 1. Ne retenir que les colonnes connues et converties (bool → 0/1).
+    const clean: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(patch)) {
+      if (!JobOfferSchemaService.UPDATE_COLUMNS.has(key)) continue;
+      clean[key] = typeof value === 'boolean' ? (value ? 1 : 0) : value;
+    }
+
+    // 2. Garantir la contrainte `valid_apply_method` : une offre doit toujours
+    //    proposer apply_link OU apply_email (fallback uniquement si les deux
+    //    restent vides après l'application du patch).
+    const finalApplyLink =
+      clean.apply_link !== undefined ? clean.apply_link : existing.apply_link;
+    const finalApplyEmail =
+      clean.apply_email !== undefined ? clean.apply_email : existing.apply_email;
+    if (!finalApplyLink && !finalApplyEmail) {
+      clean.apply_email = 'contact@travaillerenci.ci';
+    }
+
+    // 3. Patch vide → aucune requête (évite un UPDATE SQL invalide).
+    if (Object.keys(clean).length === 0) {
+      return existing;
+    }
+
+    const fields = Object.keys(clean).map((k) => `${k} = $${k}`).join(', ');
+    const params: Record<string, unknown> = { $id: id };
+    Object.entries(clean).forEach(([k, v]) => (params[`$${k}`] = v));
     db.prepare(`UPDATE job_offers SET ${fields} WHERE id = $id`).run(params);
     return this.getById(id);
   }
