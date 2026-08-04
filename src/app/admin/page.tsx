@@ -5,8 +5,10 @@ import { JobOfferSchemaService } from "@/services/jobOfferSchemaService";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const initialData = getAdminDashboardData();
-  const adminStats = await JobOfferSchemaService.getAdminStats(7);
+  const [initialData, adminStats] = await Promise.all([
+    getAdminDashboardData(),
+    JobOfferSchemaService.getAdminStats(7),
+  ]);
 
   return (
     <AdminDashboardClient

@@ -39,8 +39,10 @@ export async function POST(request: NextRequest) {
     }
 
     const ids = body.ids.map((id) => String(id));
-    const result = applyBulkAction(body.action, ids);
-    const payload = getAdminDashboardData();
+    const [result, payload] = await Promise.all([
+      applyBulkAction(body.action, ids),
+      getAdminDashboardData(),
+    ]);
 
     revalidatePath("/admin");
 

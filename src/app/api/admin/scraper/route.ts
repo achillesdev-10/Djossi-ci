@@ -13,8 +13,11 @@ export const runtime = "nodejs";
 export async function GET(request: NextRequest) {
   const auth = await requireAdminApi(request);
   if (auth.error) return auth.error;
-  const payload = getAdminDashboardData();
-  return NextResponse.json({ ...payload, runHistory: getScraperRunHistory(10) });
+  const [payload, runHistory] = await Promise.all([
+    getAdminDashboardData(),
+    getScraperRunHistory(10),
+  ]);
+  return NextResponse.json({ ...payload, runHistory });
 }
 
 export async function POST(request: NextRequest) {

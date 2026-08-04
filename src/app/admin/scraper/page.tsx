@@ -3,9 +3,11 @@ import ScraperClient from "./ScraperClient";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminScraperPage() {
-  const dashboard = getAdminDashboardData();
-  const runHistory = getScraperRunHistory(10);
+export default async function AdminScraperPage() {
+  const [dashboard, runHistory] = await Promise.all([
+    getAdminDashboardData(),
+    getScraperRunHistory(10),
+  ]);
 
   const sources = (process.env.SCRAPER_SITES || "educarriere,emploici,orange,mtn")
     .split(",")

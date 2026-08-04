@@ -101,6 +101,7 @@ export interface JobOfferSchema {
   is_verified: boolean;
   is_archived: boolean;
   is_expired: boolean;
+  clicks_count?: number;
   created_at: string;
   updated_at: string;
 }

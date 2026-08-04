@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -16,11 +17,39 @@ from typing import Optional, List, Dict, Any
 
 from scraper.models.job import Job
 
+# Supabase (optionnel) : si `supabase` n'est pas installé ou si les clés ne
+# sont pas fournies, le repository continue de fonctionner en SQLite seul.
+try:
+    from supabase import create_client, Client as SupabaseClient
+except ImportError:  # pragma: no cover
+    SupabaseClient = None  # type: ignore
+
+
+def _log_warning(message: str) -> None:
+    try:
+        import logging
+        logging.getLogger("scraper.repository").warning(message)
+    except Exception:
+        print(f"[repository] {message}")
+
 
 class JobRepository:
-    def __init__(self, db_path: Path):
+    def __init__(
+        self,
+        db_path: Path,
+        supabase_url: Optional[str] = None,
+        supabase_key: Optional[str] = None,
+    ):
         self.db_path = db_path
         self.conn: sqlite3.Connection | None = None
+
+        # Miroir Supabase (production) : le workflow GitHub Actions fournit
+        # déjà SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY en variables d'env.
+        self.supabase_url = supabase_url or os.getenv("SUPABASE_URL")
+        self.supabase_key = supabase_key or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        self.supabase: Optional[SupabaseClient] = None
+        if SupabaseClient is not None and self.supabase_url and self.supabase_key:
+            self.supabase = create_client(self.supabase_url, self.supabase_key)
 
     def __enter__(self) -> JobRepository:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -84,7 +113,23 @@ class JobRepository:
         )
         res = cur.fetchone()
         # Commit effectué par le gestionnaire de contexte (__exit__).
-        return int(res["id"]) if res else 0
+        log_id = int(res["id"]) if res else 0
+
+        # Miroir Supabase (ne doit jamais faire échouer le pipeline SQLite).
+        self._supabase_insert_log(status, offers_added, message)
+        return log_id
+
+    def _supabase_insert_log(self, status: str, offers_added: int, message: str) -> None:
+        if self.supabase is None:
+            return
+        try:
+            self.supabase.table("scraper_logs").insert({
+                "status": status,
+                "offers_added": int(offers_added),
+                "message": message,
+            }).execute()
+        except Exception as exc:
+            _log_warning(f"Échec de l'insertion du log Supabase : {exc}")
 
     def finish_scraper_log(self, log_id: int, status: str, offers_added: int, message: str) -> None:
         assert self.conn is not None
@@ -92,6 +137,29 @@ class JobRepository:
             "UPDATE scraper_logs SET status = ?, offers_added = ?, message = ?, finished_at = datetime('now') WHERE id = ?",
             (status, offers_added, message, log_id)
         )
+
+        # Miroir Supabase : ferme la ligne « running » la plus récente
+        # (il n'y a en pratique qu'un seul run en cours à la fois).
+        if self.supabase is not None:
+            try:
+                data = (
+                    self.supabase.table("scraper_logs")
+                    .select("id")
+                    .eq("status", "running")
+                    .order("started_at", desc=True)
+                    .limit(1)
+                    .execute()
+                )
+                rows = data.data or []
+                if rows:
+                    self.supabase.table("scraper_logs").update({
+                        "status": status,
+                        "offers_added": int(offers_added),
+                        "message": message,
+                        "finished_at": datetime.utcnow().isoformat(),
+                    }).eq("id", rows[0]["id"]).execute()
+            except Exception as exc:
+                _log_warning(f"Échec de la finalisation du log Supabase : {exc}")
 
     def upsert(self, job: Job) -> tuple[str, bool]:
         """Insère ou met à jour une offre. Retourne (id, was_created)."""
@@ -132,6 +200,8 @@ class JobRepository:
                 apply_link, apply_email, now, job_id
             ))
             self.conn.commit()
+            # Miroir Supabase (ne doit jamais faire échouer le pipeline SQLite).
+            self._supabase_upsert(job, apply_link, apply_email, target_status)
             return job_id, False
 
         # Insertion nouvelle offre
@@ -152,8 +222,62 @@ class JobRepository:
         res = cur.fetchone()
         self.conn.commit()
         if res:
+            # Miroir Supabase (ne doit jamais faire échouer le pipeline SQLite).
+            self._supabase_upsert(job, apply_link, apply_email, job.status)
             return res["id"], True
         return "", False
+
+    def _supabase_upsert(self, job: Job, apply_link: Any, apply_email: Any, target_status: str) -> None:
+        """
+        Miroir Supabase de `upsert` : insère ou met à jour l'offre dans
+        public.job_offers en reproduisant la déduplication SQLite
+        (source_url OU combinaison titre + entreprise).
+        """
+        if self.supabase is None:
+            return
+        try:
+            table = self.supabase.table("job_offers")
+
+            # 1. Recherche d'une offre existante (source_url d'abord, puis titre+entreprise)
+            existing: Dict[str, Any] | None = None
+            if job.source_url:
+                resp = table.select("id,status").eq("source_url", job.source_url).maybe_single().execute()
+                existing = resp.data
+            if existing is None and job.title and job.company:
+                resp = (
+                    table.select("id,status")
+                    .eq("title", job.title)
+                    .eq("company", job.company)
+                    .limit(1)
+                    .execute()
+                )
+                rows = resp.data or []
+                if rows:
+                    existing = rows[0]
+
+            payload = {
+                "title": job.title,
+                "company": job.company,
+                "location": job.location,
+                "contract_type": job.contract_type,
+                "description": job.description,
+                "apply_link": apply_link,
+                "apply_email": apply_email,
+                "source_url": job.source_url,
+                "source_website": job.source,
+                "status": target_status,
+                "seo_title": job.seo_title,
+                "seo_description": job.seo_description,
+                "seo_keywords": job.seo_keywords,
+                "slug": job.slug,
+            }
+
+            if existing:
+                table.update(payload).eq("id", existing["id"]).execute()
+            else:
+                table.insert(payload).execute()
+        except Exception as exc:
+            _log_warning(f"Échec de l'upsert Supabase : {exc}")
 
     def mark_stale_as_expired(self, active_source_urls: list[str], source_name: str) -> int:
         """Marque comme expirées/archivées les offres de cette source qui n'ont pas été revues."""

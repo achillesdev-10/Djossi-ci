@@ -2,6 +2,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
+import {
+  getSupabaseClient,
+  isSupabaseConfigured,
+} from "@/lib/supabase";
 
 export type DashboardOffer = {
   id: string;
@@ -498,7 +502,26 @@ export type ScraperRunRecord = {
  * Historique des exécutions du scraper (table scraper_logs / scraper_runs / …).
  * Trié du plus récent au plus ancien, limité à `limit` entrées.
  */
-export function getScraperRunHistory(limit = 10): ScraperRunRecord[] {
+export async function getScraperRunHistory(limit = 10): Promise<ScraperRunRecord[]> {
+  const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("scraper_logs")
+      .select("id,status,offers_added,message,started_at,finished_at")
+      .order("started_at", { ascending: false })
+      .limit(Math.min(Math.max(limit, 1), 50));
+    if (error) return [];
+    return (data || []).map((row) => ({
+      status: normaliseRunStatus(row.status),
+      lastRunAt: asIsoDate(row.started_at ?? row.finished_at),
+      offersAdded:
+        row.offers_added === null || row.offers_added === undefined
+          ? null
+          : numberFromUnknown(row.offers_added),
+      message: row.message ? String(row.message) : null,
+    }));
+  }
+
   const db = openDatabase();
   if (!db) {
     return [];
@@ -584,7 +607,12 @@ export function getScraperRunHistory(limit = 10): ScraperRunRecord[] {
   }
 }
 
-export function getAdminDashboardData(): AdminDashboardData {
+export async function getAdminDashboardData(): Promise<AdminDashboardData> {
+  const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+  if (supabase) {
+    return getAdminDashboardDataFromSupabase(supabase);
+  }
+
   const db = openDatabase();
   const offers = db ? getOfferRows(db) : [];
   const cities = Array.from(
@@ -670,11 +698,16 @@ function getOfferTableMeta(db: SqliteDb) {
   };
 }
 
-export function applyBulkAction(action: BulkAction, ids: string[]) {
+export async function applyBulkAction(action: BulkAction, ids: string[]): Promise<{ updated: number }> {
   const uniqueIds = Array.from(new Set(ids.map((id) => String(id).trim()).filter(Boolean)));
 
   if (uniqueIds.length === 0) {
     return { updated: 0 };
+  }
+
+  const supabase = isSupabaseConfigured() ? getSupabaseClient() : null;
+  if (supabase) {
+    return applyBulkActionFromSupabase(supabase, action, uniqueIds);
   }
 
   const db = openDatabase();
@@ -777,6 +810,138 @@ export function applyBulkAction(action: BulkAction, ids: string[]) {
   }
 
   throw new Error("Impossible d'archiver les offres avec le schéma actuel.");
+}
+
+/** Variante Supabase : lit les offres + stats pour la vue d'ensemble. */
+async function getAdminDashboardDataFromSupabase(
+  supabase: NonNullable<ReturnType<typeof getSupabaseClient>>,
+): Promise<AdminDashboardData> {
+  const { data, error } = await supabase
+    .from("job_offers")
+    .select(
+      "id,title,company,location,status,source_url,created_at,clicks_count,is_archived",
+    );
+
+  if (error) {
+    return {
+      offers: [],
+      cities: [],
+      stats: {
+        totalActiveOffers: 0,
+        newOffersThisWeek: 0,
+        totalClicks: 0,
+        totalVisits: 0,
+        visitsToday: 0,
+        visitsThisWeek: 0,
+      },
+      scraperHealth: {
+        status: "error",
+        lastRunAt: null,
+        offersAdded: null,
+        message: "Impossible de lire les offres (Supabase).",
+      },
+    };
+  }
+
+  const rows = data || [];
+  const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+  const offers: DashboardOffer[] = rows.map((row) => ({
+    id: String(row.id),
+    title: stringFromUnknown(row.title, "Titre indisponible"),
+    company: stringFromUnknown(row.company, "Entreprise indisponible"),
+    city: stringFromUnknown(row.location, "Non renseignée"),
+    status: normaliseStatus(row.status, Boolean(row.is_archived)),
+    sourceUrl: stringFromUnknown(row.source_url, ""),
+    createdAt: asIsoDate(row.created_at),
+    clicks: numberFromUnknown(row.clicks_count),
+  }));
+
+  const cities = Array.from(
+    new Set(
+      offers
+        .map((offer) => offer.city)
+        .filter((city) => city && city !== "Non renseignée"),
+    ),
+  ).sort((left, right) => left.localeCompare(right, "fr"));
+
+  const totalClicks = offers.reduce((sum, offer) => sum + offer.clicks, 0);
+
+  const stats: DashboardStats = {
+    totalActiveOffers: offers.filter((offer) => offer.status !== "Expirées").length,
+    newOffersThisWeek: offers.filter((offer) => {
+      if (!offer.createdAt) return false;
+      const parsed = new Date(offer.createdAt).getTime();
+      return Number.isFinite(parsed) && parsed >= oneWeekAgo;
+    }).length,
+    totalClicks,
+    // Pas de table de visites côté Supabase : valeurs honnêtes à 0.
+    totalVisits: 0,
+    visitsToday: 0,
+    visitsThisWeek: 0,
+  };
+
+  const { data: log } = await supabase
+    .from("scraper_logs")
+    .select("status,offers_added,message,started_at")
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let scraperHealth: ScraperHealth;
+  if (!log) {
+    scraperHealth = {
+      status: "idle",
+      lastRunAt: null,
+      offersAdded: null,
+      message: "Aucune exécution enregistrée pour le moment.",
+    };
+  } else {
+    scraperHealth = {
+      status: normaliseRunStatus(log.status),
+      lastRunAt: asIsoDate(log.started_at),
+      offersAdded:
+        log.offers_added === null || log.offers_added === undefined
+          ? null
+          : numberFromUnknown(log.offers_added),
+      message: log.message ? String(log.message) : null,
+    };
+  }
+
+  return { offers, cities, stats, scraperHealth };
+}
+
+/** Variante Supabase des actions en masse (verify / archive / delete). */
+async function applyBulkActionFromSupabase(
+  supabase: NonNullable<ReturnType<typeof getSupabaseClient>>,
+  action: BulkAction,
+  uniqueIds: string[],
+): Promise<{ updated: number }> {
+  if (action === "delete") {
+    const { data, error } = await supabase
+      .from("job_offers")
+      .delete()
+      .in("id", uniqueIds)
+      .select("id");
+    return { updated: error ? 0 : (data?.length ?? 0) };
+  }
+
+  if (action === "verify") {
+    const { data, error } = await supabase
+      .from("job_offers")
+      .update({ status: "published", is_verified: true })
+      .in("id", uniqueIds)
+      .select("id");
+    return { updated: error ? 0 : (data?.length ?? 0) };
+  }
+
+  // archive
+  const { data, error } = await supabase
+    .from("job_offers")
+    .update({ status: "archived", is_archived: true, is_expired: true })
+    .in("id", uniqueIds)
+    .select("id");
+  return { updated: error ? 0 : (data?.length ?? 0) };
 }
 
 /**
