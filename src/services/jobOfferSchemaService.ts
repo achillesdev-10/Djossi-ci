@@ -21,6 +21,7 @@ import {
   getSupabaseClient,
   isSupabaseConfigured,
 } from '@/lib/supabase';
+import { cleanDescription as cleanRawDescription } from '@/lib/descriptionCleaner';
 
 // -----------------------------------------------------------------------------
 // Données de fallback
@@ -400,6 +401,69 @@ export class JobOfferSchemaService {
   }
 
   /**
+   * Création d'une offre (admin) : status par défaut 'pending'.
+   * Garantit la contrainte `valid_apply_method` (apply_link OU apply_email).
+   */
+  static async create(data: Partial<JobOfferSchemaInsert>): Promise<JobOfferSchema | null> {
+    if (isSupabaseConfigured()) return this.createSupabase(data);
+    const db = await getDb();
+    if (!db) return null;
+
+    const title = String(data.title || '').trim();
+    const company = String(data.company || '').trim();
+    const location = String(data.location || 'Abidjan').trim();
+    const contract_type = (data.contract_type || 'CDI') as string;
+    const description = String(data.description || '').trim();
+
+    const applyLink = data.apply_link ? String(data.apply_link).trim() : null;
+    const applyEmail = data.apply_email ? String(data.apply_email).trim() : null;
+    const fallbackEmail = applyLink ? null : 'contact@travaillerenci.ci';
+
+    const res = db
+      .prepare(
+        `INSERT INTO job_offers (
+          title, company, location, contract_type, description,
+          apply_link, apply_email, source_url, source_website, status,
+          seo_title, seo_description, seo_keywords, slug, is_verified,
+          created_at, updated_at
+        ) VALUES (
+          $title, $company, $location, $contract_type, $description,
+          $apply_link, $apply_email, $source_url, $source_website, $status,
+          $seo_title, $seo_description, $seo_keywords, $slug, $is_verified,
+          datetime('now'), datetime('now')
+        ) RETURNING id`
+      )
+      .get({
+        $title: title,
+        $company: company,
+        $location: location,
+        $contract_type: contract_type,
+        $description: description,
+        $apply_link: applyLink,
+        $apply_email: applyEmail || fallbackEmail,
+        $source_url: data.source_url ? String(data.source_url).trim() : null,
+        $source_website: data.source_website ? String(data.source_website).trim() : null,
+        $status: data.status || 'pending',
+        $seo_title: data.seo_title ? String(data.seo_title).trim() : null,
+        $seo_description: data.seo_description ? String(data.seo_description).trim() : null,
+        $seo_keywords: data.seo_keywords ? String(data.seo_keywords).trim() : null,
+        $slug: data.slug ? String(data.slug).trim() : null,
+        $is_verified: data.status === 'published' ? 1 : 0,
+      }) as any;
+
+    return res?.id ? this.getById(res.id) : null;
+  }
+
+  /** Nettoyage de la description d'une offre existante (admin). */
+  static async cleanDescription(id: string): Promise<JobOfferSchema | null> {
+    const existing = await this.getById(id);
+    if (!existing) return null;
+    const cleaned = cleanRawDescription(existing.description, existing.title);
+    if (cleaned === existing.description) return existing;
+    return this.update(id, { description: cleaned });
+  }
+
+  /**
    * Détection de doublons : offres partageant le même (titre + entreprise)
    * normalisé (minuscules, espaces trimés). Retourne la liste des ids
    * concernés avec leur clé de groupe, pour l'affichage d'un badge de
@@ -668,6 +732,45 @@ export class JobOfferSchemaService {
       .eq('id', id)
       .select('id');
     return !error && Array.isArray(data) && data.length > 0;
+  }
+
+  private static async createSupabase(data: Partial<JobOfferSchemaInsert>): Promise<JobOfferSchema | null> {
+    const supabase = getSupabaseClient();
+    if (!supabase) return null;
+
+    const applyLink = data.apply_link ? String(data.apply_link).trim() : null;
+    const applyEmail = data.apply_email ? String(data.apply_email).trim() : null;
+    const fallbackEmail = applyLink ? null : 'contact@travaillerenci.ci';
+
+    const payload = {
+      title: String(data.title || '').trim(),
+      company: String(data.company || '').trim(),
+      location: String(data.location || 'Abidjan').trim(),
+      contract_type: (data.contract_type || 'CDI') as string,
+      description: String(data.description || '').trim(),
+      apply_link: applyLink,
+      apply_email: applyEmail || fallbackEmail,
+      source_url: data.source_url ? String(data.source_url).trim() : null,
+      source_website: data.source_website ? String(data.source_website).trim() : null,
+      status: data.status || 'pending',
+      seo_title: data.seo_title ? String(data.seo_title).trim() : null,
+      seo_description: data.seo_description ? String(data.seo_description).trim() : null,
+      seo_keywords: data.seo_keywords ? String(data.seo_keywords).trim() : null,
+      slug: data.slug ? String(data.slug).trim() : null,
+      is_verified: data.status === 'published',
+    };
+
+    const { data: created, error } = await supabase
+      .from('job_offers')
+      .insert(payload)
+      .select()
+      .maybeSingle();
+
+    if (error || !created) {
+      console.error('createSupabase error:', error?.message);
+      return null;
+    }
+    return rowToSchemaFromSupabase(created);
   }
 
   private static async findDuplicatesSupabase(): Promise<Array<{ id: string; group: string }>> {

@@ -17,6 +17,9 @@ export async function POST(request: NextRequest) {
 
     if (action === 'delete') {
       await Promise.all(ids.map((id) => JobOfferSchemaService.remove(id)));
+    } else if (action === 'clean') {
+      // Nettoyage des descriptions (retire header/footer/publicités).
+      await Promise.all(ids.map((id) => JobOfferSchemaService.cleanDescription(id)));
     } else if (action === 'update') {
       if (!data || typeof data !== 'object' || Array.isArray(data)) {
         return NextResponse.json(
@@ -42,6 +45,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, count: ids.length });
   } catch (err) {
     console.error('Bulk action error:', err);
+    const message = err instanceof Error ? err.message : '';
+    if (/UNIQUE constraint|duplicate key/i.test(message)) {
+      return NextResponse.json(
+        { error: 'Conflit : même titre + entreprise sur une offre de la sélection.' },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: 'Erreur lors de l’action en masse.' }, { status: 500 });
   }
 }

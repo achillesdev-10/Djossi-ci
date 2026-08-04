@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { JobOfferSchema, JobOfferSchemaStatus } from '@/types';
+import { cleanDescription } from '@/lib/descriptionCleaner';
 
 export default function AdminJobsClient({
   initialJobs,
@@ -23,6 +24,9 @@ export default function AdminJobsClient({
 
   // Modal d'édition & SEO
   const [editingJob, setEditingJob] = useState<JobOfferSchema | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [modalNotice, setModalNotice] = useState<string | null>(null);
+  const [isAiRewriting, setIsAiRewriting] = useState(false);
   const [editForm, setEditForm] = useState({
     title: '',
     company: '',
@@ -134,9 +138,10 @@ export default function AdminJobsClient({
     }
   }
 
-  async function handleBulkAction(action: 'delete' | 'publish' | 'archive') {
+  async function handleBulkAction(action: 'delete' | 'publish' | 'archive' | 'clean') {
     if (selectedIds.length === 0) return;
     if (action === 'delete' && !confirm(`Supprimer ${selectedIds.length} offres ?`)) return;
+    if (action === 'clean' && !confirm(`Nettoyer la description de ${selectedIds.length} offre(s) ?`)) return;
 
     const targetStatus: JobOfferSchemaStatus = action === 'publish' ? 'published' : action === 'archive' ? 'archived' : 'pending';
 
@@ -144,11 +149,15 @@ export default function AdminJobsClient({
       const res = await fetch('/api/admin/jobs/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: action === 'delete' ? 'delete' : 'update',
-          ids: selectedIds,
-          data: action === 'delete' ? {} : { status: targetStatus, is_verified: action === 'publish' },
-        }),
+        body: JSON.stringify(
+          action === 'clean'
+            ? { action: 'clean', ids: selectedIds }
+            : {
+                action: action === 'delete' ? 'delete' : 'update',
+                ids: selectedIds,
+                data: action === 'delete' ? {} : { status: targetStatus, is_verified: action === 'publish' },
+              }
+        ),
       });
 
       if (res.status === 401) {
@@ -160,6 +169,11 @@ export default function AdminJobsClient({
 
       if (action === 'delete') {
         setJobs((prev) => prev.filter((j) => !selectedIds.includes(j.id)));
+      } else if (action === 'clean') {
+        // La liste locale ne reflète pas les descriptions → on recharge.
+        startTransition(() => { router.refresh(); });
+        setSelectedIds([]);
+        return;
       } else {
         setJobs((prev) =>
           prev.map((j) =>
@@ -199,8 +213,36 @@ export default function AdminJobsClient({
     return parts[0].trim();
   }))).sort();
 
+  function closeModal() {
+    setEditingJob(null);
+    setIsCreating(false);
+    setModalNotice(null);
+  }
+
+  function openCreateModal() {
+    setIsCreating(true);
+    setEditingJob(null);
+    setModalNotice(null);
+    setEditForm({
+      title: '',
+      company: '',
+      location: 'Abidjan',
+      contract_type: 'CDI',
+      description: '',
+      status: 'pending',
+      seo_title: '',
+      seo_description: '',
+      seo_keywords: '',
+      slug: '',
+      source_url: '',
+      source_website: '',
+    });
+  }
+
   function openEditModal(job: JobOfferSchema) {
     setEditingJob(job);
+    setIsCreating(false);
+    setModalNotice(null);
     setEditForm({
       title: job.title,
       company: job.company,
@@ -219,27 +261,84 @@ export default function AdminJobsClient({
 
   async function handleSaveEdit(e: React.FormEvent) {
     e.preventDefault();
-    if (!editingJob) return;
+    if (!editingJob && !isCreating) return;
     try {
-      const res = await fetch(`/api/admin/jobs/${editingJob.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
-      });
+      const res = await fetch(
+        isCreating ? '/api/admin/jobs' : `/api/admin/jobs/${editingJob!.id}`,
+        {
+          method: isCreating ? 'POST' : 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(editForm),
+        }
+      );
       const data = await res.json();
       if (res.status === 401) {
-        setEditingJob(null);
+        closeModal();
         redirectToLogin();
         return;
       }
-      if (!res.ok) throw new Error(data.error || 'Erreur lors de la modification');
-      setJobs((prev) =>
-        prev.map((j) => (j.id === editingJob.id ? { ...j, ...editForm } : j))
-      );
-      setEditingJob(null);
+      if (!res.ok) {
+        throw new Error(
+          data.error || (isCreating ? 'Erreur lors de la création' : 'Erreur lors de la modification')
+        );
+      }
+      if (isCreating && data.job) {
+        setJobs((prev) => [data.job, ...prev]);
+      } else if (!isCreating && editingJob) {
+        setJobs((prev) =>
+          prev.map((j) => (j.id === editingJob.id ? { ...j, ...editForm } : j))
+        );
+      }
+      closeModal();
       startTransition(() => { router.refresh(); });
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Erreur inconnue');
+    }
+  }
+
+  /** Nettoie la description (retire header/footer/publicités) côté client. */
+  function handleCleanDescription() {
+    const cleaned = cleanDescription(editForm.description, editForm.title);
+    if (cleaned === editForm.description.trim()) {
+      setModalNotice('La description semble déjà propre.');
+      return;
+    }
+    setEditForm((f) => ({ ...f, description: cleaned }));
+    setModalNotice('✓ Description nettoyée — vérifiez le résultat puis enregistrez.');
+  }
+
+  /** Réécriture IA (optionnelle — nécessite GEMINI_API_KEY côté serveur). */
+  async function handleAiRewrite() {
+    if (isAiRewriting) return;
+    if (!editForm.title || !editForm.company || !editForm.description) {
+      setModalNotice('Renseignez d’abord titre, entreprise et description.');
+      return;
+    }
+    setIsAiRewriting(true);
+    setModalNotice(null);
+    try {
+      const res = await fetch('/api/admin/jobs/ai-rewrite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editForm.title,
+          company: editForm.company,
+          description: editForm.description,
+        }),
+      });
+      const data = await res.json();
+      if (res.status === 401) {
+        closeModal();
+        redirectToLogin();
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || 'Erreur IA inconnue.');
+      setEditForm((f) => ({ ...f, description: data.rewritten }));
+      setModalNotice('✓ Description réécrite par l’IA — vérifiez puis enregistrez.');
+    } catch (err) {
+      setModalNotice(err instanceof Error ? err.message : 'Erreur IA inconnue.');
+    } finally {
+      setIsAiRewriting(false);
     }
   }
 
@@ -257,6 +356,16 @@ export default function AdminJobsClient({
             Examinez les offres collectées par le scraper, modérez le contenu et gérez le référencement SEO.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={openCreateModal}
+          className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-xs font-bold text-slate-950 hover:brightness-110 transition-all shadow-lg shadow-primary/20"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Créer une offre
+        </button>
       </div>
 
       {/* Onglets de Statut */}
@@ -499,6 +608,7 @@ export default function AdminJobsClient({
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <button onClick={() => handleBulkAction('publish')} className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs font-bold border border-emerald-500/20">Publier</button>
+              <button onClick={() => handleBulkAction('clean')} className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 text-xs font-bold border border-sky-500/20">Nettoyer</button>
               <button onClick={() => handleBulkAction('archive')} className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-bold border border-slate-700">Archiver</button>
               <button onClick={() => handleBulkAction('delete')} className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs font-bold border border-rose-500/20">Supprimer</button>
               <button onClick={() => setSelectedIds([])} className="p-2.5 rounded-2xl bg-slate-800 text-slate-400 hover:text-white transition-colors">
@@ -509,16 +619,22 @@ export default function AdminJobsClient({
         </div>
       )}
 
-      {/* Modal d'édition & Panneau SEO */}
-      {editingJob && (
+      {/* Modal d'édition / création & Panneau SEO */}
+      {(editingJob || isCreating) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="w-full max-w-3xl rounded-3xl border border-slate-800 bg-slate-900 p-6 lg:p-8 shadow-2xl space-y-6 my-8">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div>
-                <h3 className="text-xl font-bold text-white font-[var(--font-display)]">Examiner & Éditer l'offre</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Modifiez le contenu réécrit par l'IA et ajustez les paramètres SEO.</p>
+                <h3 className="text-xl font-bold text-white font-[var(--font-display)]">
+                  {isCreating ? 'Créer une offre' : "Examiner & Éditer l'offre"}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {isCreating
+                    ? 'Publiez directement une offre ou créez-la en attente de validation.'
+                    : 'Modifiez le contenu, nettoyez ou réécrivez la description, ajustez le SEO.'}
+                </p>
               </div>
-              <button type="button" onClick={() => setEditingJob(null)} className="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+              <button type="button" onClick={closeModal} className="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-6">
@@ -559,7 +675,37 @@ export default function AdminJobsClient({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Description (Markdown réécrit par IA)</label>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5 ml-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Description (Markdown)</label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCleanDescription}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-200 hover:bg-slate-700 transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                        </svg>
+                        Nettoyer la description
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAiRewrite}
+                        disabled={isAiRewriting}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-fuchsia-500/15 border border-fuchsia-500/30 px-3 py-1.5 text-[11px] font-bold text-fuchsia-300 hover:bg-fuchsia-500/25 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 3l1.9 5.7a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z" />
+                        </svg>
+                        {isAiRewriting ? 'Réécriture…' : 'Réécrire avec l’IA'}
+                      </button>
+                    </div>
+                  </div>
+                  {modalNotice && (
+                    <p className="text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 mb-2">
+                      {modalNotice}
+                    </p>
+                  )}
                   <textarea rows={6} required value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 p-4 text-sm text-white focus:outline-none focus:border-primary font-mono text-xs" />
                 </div>
               </div>
@@ -604,8 +750,10 @@ export default function AdminJobsClient({
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-                <button type="button" onClick={() => setEditingJob(null)} className="rounded-2xl bg-slate-800 px-5 py-3 text-xs font-bold text-slate-300 hover:bg-slate-700 transition-colors">Annuler</button>
-                <button type="submit" className="rounded-2xl bg-primary px-6 py-3 text-xs font-bold text-slate-950 hover:brightness-110 transition-all shadow-lg shadow-primary/20">Enregistrer les modifications</button>
+                <button type="button" onClick={closeModal} className="rounded-2xl bg-slate-800 px-5 py-3 text-xs font-bold text-slate-300 hover:bg-slate-700 transition-colors">Annuler</button>
+                <button type="submit" className="rounded-2xl bg-primary px-6 py-3 text-xs font-bold text-slate-950 hover:brightness-110 transition-all shadow-lg shadow-primary/20">
+                  {isCreating ? 'Créer l’offre' : 'Enregistrer les modifications'}
+                </button>
               </div>
             </form>
           </div>

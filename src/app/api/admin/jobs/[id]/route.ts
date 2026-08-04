@@ -114,12 +114,20 @@ export async function PATCH(
     return NextResponse.json({ ok: true, job: updated });
   } catch (err) {
     console.error('PATCH /api/admin/jobs/[id] error:', err);
+    const message = err instanceof Error ? err.message : '';
+    // Contrainte UNIQUE (title, company) violée lors d'un renommage : 409.
+    if (/UNIQUE constraint|duplicate key/i.test(message)) {
+      return NextResponse.json(
+        {
+          error:
+            'Une offre existe déjà avec ce titre et cette entreprise.',
+        },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
       {
-        error:
-          err instanceof Error
-            ? err.message
-            : 'Impossible de mettre à jour cette offre.',
+        error: message || 'Impossible de mettre à jour cette offre.',
       },
       { status: 500 }
     );

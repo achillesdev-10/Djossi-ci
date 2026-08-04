@@ -41,6 +41,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from scraper.core.logger import setup_logger
 from scraper.core.http_client import HttpClient
 from scraper.core.duplicate_detector import DuplicateDetector
+from scraper.core.cleaner import clean_job
 from scraper.core.base_scraper import BaseScraper
 from scraper.core.scheduler import JobScheduler
 from scraper.models.job import Job
@@ -128,18 +129,26 @@ def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: boo
             logger.info(f"  ✓ [{name}] {len(jobs)} offres brutes collectées.")
 
             for job in jobs:
-                # 1. Validation ivoirienne
+                # 1. Nettoyage & structuration de la description (retire le
+                #    header/footer de la page source, structure en Markdown).
+                #    → les offres stockées sont propres AVANT d'être validées.
+                try:
+                    clean_job(job)
+                except Exception as exc:
+                    logger.warning(f"  ⚠ Nettoyage impossible pour {job.title}: {exc}")
+
+                # 2. Validation ivoirienne
                 ok, reason = job.is_valid_ivorian()
                 if not ok:
                     logger.debug(f"  🚫 Offre rejetée ({reason}): {job.title} @ {job.company}")
                     continue
 
-                # 2. Détection doublons
+                # 3. Détection doublons
                 if dup_detector.is_duplicate(job):
                     logger.debug(f"  🔁 Doublon détecté : {job.title}")
                     continue
 
-                # 3. Slug & SEO par défaut si absent
+                # 4. Slug & SEO par défaut si absent
                 if not job.slug:
                     from slugify import slugify
                     job.slug = slugify(f"{job.title}-{job.company}-{job.city}", separator="-")
