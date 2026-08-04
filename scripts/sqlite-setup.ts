@@ -221,15 +221,8 @@ function runMigration(db: DatabaseSync) {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON job_offers (created_at DESC);`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_jobs_verified   ON job_offers (is_verified DESC, created_at DESC);`);
 
-  // Trigger updated_at (émulé en SQLite avec TRIGGER AFTER UPDATE)
-  db.exec(`
-    CREATE TRIGGER IF NOT EXISTS trigger_jobs_set_updated_at
-    AFTER UPDATE ON job_offers
-    FOR EACH ROW
-    BEGIN
-      UPDATE job_offers SET updated_at = datetime('now') WHERE rowid = NEW.rowid;
-    END;
-  `);
+  // Suppression d'un éventuel trigger obsolète (évite la récursion infinie en SQLite)
+  db.exec(`DROP TRIGGER IF EXISTS trigger_jobs_set_updated_at;`);
 
   console.log('   ✓ Schéma `job_offers` prêt.');
 }

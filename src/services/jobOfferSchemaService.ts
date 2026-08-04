@@ -362,7 +362,7 @@ export class JobOfferSchemaService {
     const fields = Object.keys(clean).map((k) => `${k} = $${k}`).join(', ');
     const params: Record<string, unknown> = { $id: id };
     Object.entries(clean).forEach(([k, v]) => (params[`$${k}`] = v));
-    db.prepare(`UPDATE job_offers SET ${fields} WHERE id = $id`).run(params);
+    db.prepare(`UPDATE job_offers SET ${fields}, updated_at = datetime('now') WHERE id = $id`).run(params);
     return this.getById(id);
   }
 
