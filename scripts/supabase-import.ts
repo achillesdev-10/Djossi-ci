@@ -41,6 +41,7 @@ function loadEnvLocal() {
 
 loadEnvLocal();
 
+async function main() {
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
@@ -173,3 +174,9 @@ db.close();
 console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 console.log(`✅ Import terminé : ${inserted} ajoutée(s), ${updated} mise(s) à jour, ${failed} échec(s).`);
 console.log('Vous pouvez vérifier dans Supabase Dashboard > Table Editor > job_offers.');
+}
+
+main().catch((err) => {
+  console.error('❌ Erreur fatale :', err instanceof Error ? err.message : String(err));
+  process.exit(1);
+});
