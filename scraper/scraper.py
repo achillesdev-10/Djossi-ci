@@ -13,6 +13,7 @@ import argparse
 import io
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Type
 
@@ -31,6 +32,7 @@ HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 DATA_DIR = PROJECT_ROOT / "data"
 DB_PATH = DATA_DIR / "travaillerenci.sqlite3"
+SCRAPER_HEALTH_JSON = DATA_DIR / "admin-scraper-health.json"
 
 # Permet l'exécution directe `python scraper/scraper.py` (le CWD n'étant pas
 # automatiquement dans sys.path, le package `scraper` ne serait pas résolu).
@@ -93,6 +95,33 @@ def _is_demo_source_url(url: str) -> bool:
     return "/demo" in u or "demo-data" in u or u.startswith("demo-") or "-demo-" in u
 
 
+def _write_admin_health(
+    status: str,
+    offers_added: int | None = None,
+    message: str | None = None,
+) -> None:
+    """Écrit l'état du scraper dans data/admin-scraper-health.json.
+
+    Ce fichier est lu par le dashboard Next.js quand la table SQLite
+    scraper_logs n'est pas disponible ou quand le cache mémoire est actif.
+    Il garantit que le statut « running » n'est pas conservé à vie.
+    """
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "status": status,
+            "lastRunAt": datetime.utcnow().isoformat() + "Z",
+            "offersAdded": offers_added if offers_added is not None else None,
+            "message": message,
+        }
+        import json
+        tmp = SCRAPER_HEALTH_JSON.with_suffix(".tmp")
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(SCRAPER_HEALTH_JSON)
+    except Exception as exc:
+        logger.debug(f"Écriture admin-scraper-health.json impossible : {exc}")
+
+
 def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: bool, demo_data: bool = False) -> int:
     logger.info("=" * 60)
     logger.info("🚀 Démarrage du pipeline de scraping TravaillerEnCi")
@@ -104,11 +133,13 @@ def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: boo
 
     # Journal d'exécution visible depuis le dashboard admin (scraper_logs)
     run_log_id = None
+    start_msg = f"Scraping lancé : {', '.join(site_names)} (max {max_per_site}/site)"
     if not dry_run:
+        _write_admin_health("running", None, start_msg)
         try:
             with JobRepository(DB_PATH) as repo:
                 run_log_id = repo.add_scraper_log(
-                    "running", 0, f"Scraping lancé : {', '.join(site_names)} (max {max_per_site}/site)"
+                    "running", 0, start_msg
                 )
         except Exception as exc:
             logger.warning(f"Impossible d'écrire le log de démarrage : {exc}")
@@ -194,12 +225,14 @@ def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: boo
             st = repo.stats()
     except Exception as exc:
         logger.error(f"❌ Erreur d'enregistrement en BDD : {exc}", exc_info=True)
+        err_msg = f"Erreur BDD : {exc}"
         if run_log_id is not None:
             try:
                 with JobRepository(DB_PATH) as repo:
-                    repo.finish_scraper_log(run_log_id, "error", created_count, f"Erreur BDD : {exc}")
+                    repo.finish_scraper_log(run_log_id, "error", created_count, err_msg)
             except Exception:
                 pass
+        _write_admin_health("error", created_count, err_msg)
         return 1
 
     logger.info(f"✅ Enregistrement BDD terminé !")
@@ -207,6 +240,7 @@ def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: boo
     logger.info(f"   Offres mises à jour        : {updated_count}")
     logger.info(f"   Statistiques BDD globale   : Total={st['total']}, En attente={st['pending']}, Publiées={st['published']}")
 
+    end_msg = f"Scraping terminé : {created_count} nouvelle(s) offre(s), {updated_count} mise(s) à jour."
     if run_log_id is not None:
         try:
             with JobRepository(DB_PATH) as repo:
@@ -214,10 +248,11 @@ def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: boo
                     run_log_id,
                     "success",
                     created_count,
-                    f"Scraping terminé : {created_count} nouvelle(s) offre(s), {updated_count} mise(s) à jour."
+                    end_msg,
                 )
         except Exception as exc:
             logger.warning(f"Impossible de finaliser le log : {exc}")
+    _write_admin_health("success", created_count, end_msg)
     return 0
 
 

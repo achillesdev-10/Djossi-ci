@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { label: 'Offres d\'emploi', href: '/jobs' },
   { label: 'Entreprises', href: '/companies' },
   { label: 'Candidats', href: '/candidates' },
+  { label: 'Générateur CV', href: '/generateur-de-cv', isCV: true },
 ];
 
 export default function Header() {
@@ -71,9 +72,14 @@ export default function Header() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary transition-colors"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary transition-colors flex items-center"
               >
                 {link.label}
+                {(link as any).isCV && (
+                  <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded-full font-semibold ml-1.5">
+                    IA ✨
+                  </span>
+                )}
               </Link>
             ))}
             {user ? (
@@ -176,9 +182,14 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className="block px-2 py-3 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-800 dark:text-gray-200"
+                className="block px-2 py-3 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-800 dark:text-gray-200 flex items-center"
               >
                 {link.label}
+                {(link as any).isCV && (
+                  <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded-full font-semibold ml-1.5">
+                    IA ✨
+                  </span>
+                )}
               </Link>
             ))}
             {user ? (

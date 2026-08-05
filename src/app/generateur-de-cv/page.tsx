@@ -1,0 +1,248 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import type { CVData } from '@/types/cv';
+import { createEmptyCV, createEmptyExperience, createEmptyEducation } from '@/types/cv';
+import dynamic from 'next/dynamic';
+
+const CVFormDynamic = dynamic(() => import('@/components/cv/CVForm'), { ssr: false });
+const CVPreviewDynamic = dynamic(() => import('@/components/cv/CVPreview'), { ssr: false });
+
+const sampleCV: CVData = {
+  fullName: 'KOUASSI Jean-Paul',
+  jobTitle: 'Développeur Full-Stack Senior',
+  email: 'jeanpaul.kouassi@email.ci',
+  phone: '+225 07 12 34 56 78',
+  city: 'Abidjan, Cocody',
+  summary:
+    "Développeur Full-Stack passionné avec 6+ années d'expérience dans la conception et le déploiement d'applications web modernes en Côte d'Ivoire. Spécialisé dans les écosystèmes React / Node.js et Java / Spring Boot, j'accompagne les entreprises locales dans leur transformation numérique avec des solutions robustes, scalables et adaptées au marché africain.",
+  experiences: [
+    {
+      id: '1',
+      position: 'Développeur Full-Stack Senior',
+      company: 'Orange Digital Center Côte d\'Ivoire',
+      period: 'Mars 2023 - Aujourd\'hui',
+      description:
+        "Piloter le développement d'une plateforme de services bancaires mobiles utilisée par +200 000 utilisateurs. Concevoir l'architecture microservices (Spring Boot + Node.js) et superviser une équipe de 5 développeurs juniors. Optimiser les performances APIs qui a réduit la latence moyenne de 40%.",
+    },
+    {
+      id: '2',
+      position: 'Développeur Frontend React',
+      company: 'MTN Côte d\'Ivoire',
+      period: 'Juin 2020 - Février 2023',
+      description:
+        "Concevoir et déployer les tableaux de bord d'analyse de données pour le département Marketing. Implémenter +30 interfaces réactives avec Next.js et Tailwind CSS. Automatiser les tests E2E avec Cypress, améliorant la qualité de livraison de 60%.",
+    },
+  ],
+  educations: [
+    {
+      id: '1',
+      degree: 'Master en Génie Logiciel',
+      school: 'Institut National Polytechnique Félix Houphouët-Boigny (INP-HB)',
+      year: '2018 - 2020',
+    },
+    {
+      id: '2',
+      degree: 'Licence en Informatique',
+      school: 'Université Félix Houphouët-Boigny',
+      year: '2015 - 2018',
+    },
+  ],
+  skills: [
+    'TypeScript',
+    'React / Next.js',
+    'Node.js / Express',
+    'Java / Spring Boot',
+    'PostgreSQL',
+    'MongoDB',
+    'Docker',
+    'AWS',
+    'Gestion de projet',
+    'Travail d\'équipe',
+  ],
+};
+
+export default function CVGeneratorPage() {
+  const [cvData, setCVData] = useState<CVData>(createEmptyCV);
+  const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
+  const [isExporting, setIsExporting] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setCVData({
+      ...sampleCV,
+      experiences: sampleCV.experiences.map((e) => ({ ...e, id: crypto.randomUUID() })),
+      educations: sampleCV.educations.map((e) => ({ ...e, id: crypto.randomUUID() })),
+    });
+    setHydrated(true);
+  }, []);
+
+  const exportPDF = async () => {
+    setIsExporting(true);
+    try {
+      const html2pdfModule = await import('html2pdf.js');
+      const html2pdf = html2pdfModule.default;
+      const element = document.getElementById('cv-preview');
+      if (!element) throw new Error('Aperçu CV introuvable.');
+
+      const opt = {
+        margin: 0 as any,
+        filename: `CV_${cvData.fullName.replace(/\s+/g, '_') || 'travaillerenci'}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
+      };
+      await html2pdf().set(opt as any).from(element).save();
+    } catch (err) {
+      console.error(err);
+      alert('Erreur lors de l\'export PDF. Veuillez réessayer.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const resetCV = () => {
+    if (window.confirm('Réinitialiser tout le CV ? Les données actuelles seront perdues.')) {
+      setCVData({
+        ...createEmptyCV(),
+        experiences: [createEmptyExperience()],
+        educations: [createEmptyEducation()],
+      });
+    }
+  };
+
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <section className="relative overflow-hidden border-b border-gray-100 dark:border-slate-800 bg-gradient-to-br from-primary/5 via-white to-emerald-50/30 dark:from-primary/10 dark:via-slate-900 dark:to-emerald-900/10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.08),transparent_60%)]" />
+        <div className="container mx-auto px-4 py-10 md:py-14 relative">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold mb-4 border border-emerald-200/60 dark:border-emerald-800/40">
+                <span>✨</span> Propulsé par l'IA — Optimisé pour la Côte d'Ivoire
+              </div>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-gray-900 dark:text-white font-[var(--font-display)]">
+                Générateur de CV IA —{' '}
+                <span className="bg-gradient-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
+                  travaillerenci
+                </span>
+              </h1>
+              <p className="mt-3 text-gray-600 dark:text-gray-300 text-base md:text-lg leading-relaxed">
+                Créez un CV professionnel en quelques minutes. Optimisez votre contenu avec l'IA
+                pour maximiser vos chances auprès des recruteurs ivoiriens.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={resetCV}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all shadow-sm inline-flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Réinitialiser
+              </button>
+              <button
+                onClick={exportPDF}
+                disabled={isExporting || !hydrated}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary to-emerald-500 text-white text-sm font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed transition-all inline-flex items-center gap-2"
+              >
+                {isExporting ? (
+                  <>
+                    <svg className="w-4.5 h-4.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    Génération du PDF...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Télécharger mon CV (PDF)
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="container mx-auto px-4 py-6 md:py-8">
+        <div className="lg:hidden mb-5">
+          <div className="inline-flex p-1.5 rounded-xl bg-gray-100 dark:bg-slate-800 w-full">
+            <button
+              onClick={() => setActiveTab('edit')}
+              className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all inline-flex items-center justify-center gap-2 ${
+                activeTab === 'edit'
+                  ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-white shadow'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              ✏️ Éditer
+            </button>
+            <button
+              onClick={() => setActiveTab('preview')}
+              className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all inline-flex items-center justify-center gap-2 ${
+                activeTab === 'preview'
+                  ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-white shadow'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              👁️ Aperçu
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+          <div className={`lg:col-span-5 ${activeTab === 'preview' ? 'hidden lg:block' : ''}`}>
+            <div className="lg:sticky lg:top-24 overflow-y-auto max-h-[calc(100vh-8rem)] lg:pr-2 custom-scrollbar">
+              {hydrated && <CVFormDynamic cvData={cvData} onChange={setCVData} />}
+            </div>
+          </div>
+
+          <div className={`lg:col-span-7 ${activeTab === 'edit' ? 'hidden lg:block' : ''}`}>
+            <div className="lg:sticky lg:top-24">
+              <div className="bg-gray-100 dark:bg-slate-800/50 rounded-2xl p-3 md:p-6 border border-gray-200 dark:border-slate-800 shadow-inner">
+                <div className="text-center text-xs text-gray-500 dark:text-gray-400 mb-3 font-semibold">
+                  Format A4 — Aperçu en temps réel
+                </div>
+                <div className="overflow-auto max-h-[calc(100vh-14rem)] custom-scrollbar rounded-xl shadow-inner bg-slate-200/50 dark:bg-slate-900 p-4">
+                  <div className="flex justify-center origin-top-left scale-[0.65] md:scale-[0.75] lg:scale-[0.85] xl:scale-100">
+                    {hydrated && <CVPreviewDynamic cvData={cvData} />}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(100,116,139,0.3);
+          border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(100,116,139,0.5);
+        }
+        @media print {
+          body * { visibility: hidden; }
+          #cv-preview, #cv-preview * { visibility: visible; }
+          #cv-preview {
+            position: absolute;
+            left: 0; top: 0;
+            width: 210mm;
+            min-height: 297mm;
+            padding: 18mm 16mm;
+            box-shadow: none !important;
+            margin: 0 !important;
+          }
+        }
+      `}</style>
+    </main>
+  );
+}

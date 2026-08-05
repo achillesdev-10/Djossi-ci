@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, openSync, closeSync } from "node:fs";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 import {
   getSupabaseClient,
@@ -389,7 +389,17 @@ function getFallbackClicksFromStatsTables(db: SqliteDb) {
 
 function readStoredScraperHealth(): ScraperHealth {
   if (inMemoryScraperHealth) {
-    return inMemoryScraperHealth;
+    // Protection anti-blocage : si le statut en mémoire est "running" depuis
+    // plus de 30 minutes, on considère que c'est un run orphelin (process
+    // tué sans avoir écrit sa terminaison) et on force une relecture disque.
+    if (inMemoryScraperHealth.status === "running" && inMemoryScraperHealth.lastRunAt) {
+      const ageMs = Date.now() - new Date(inMemoryScraperHealth.lastRunAt).getTime();
+      if (ageMs > 30 * 60 * 1000) {
+        inMemoryScraperHealth = null;
+      }
+    } else {
+      return inMemoryScraperHealth;
+    }
   }
 
   if (!existsSync(SCRAPER_HEALTH_PATH)) {
@@ -404,15 +414,28 @@ function readStoredScraperHealth(): ScraperHealth {
   try {
     const parsed = JSON.parse(readFileSync(SCRAPER_HEALTH_PATH, "utf8")) as Partial<ScraperHealth>;
 
-    inMemoryScraperHealth = {
-      status: normaliseRunStatus(parsed.status),
-      lastRunAt: parsed.lastRunAt ? String(parsed.lastRunAt) : null,
-      offersAdded:
-        parsed.offersAdded === null || parsed.offersAdded === undefined
-          ? null
-          : numberFromUnknown(parsed.offersAdded),
-      message: parsed.message ? String(parsed.message) : null,
-    };
+    // Même logique de timeout sur la valeur lue du fichier.
+    const status = normaliseRunStatus(parsed.status);
+    let lastRunAt = parsed.lastRunAt ? String(parsed.lastRunAt) : null;
+    let offersAdded =
+      parsed.offersAdded === null || parsed.offersAdded === undefined
+        ? null
+        : numberFromUnknown(parsed.offersAdded);
+    let message = parsed.message ? String(parsed.message) : null;
+
+    if (status === "running" && lastRunAt) {
+      const ageMs = Date.now() - new Date(lastRunAt).getTime();
+      if (ageMs > 30 * 60 * 1000) {
+        return {
+          status: "error",
+          lastRunAt,
+          offersAdded,
+          message: `Run orphelin détecté (${Math.floor(ageMs / 60000)} min). Consultez data/scraper-last-run.log.`,
+        };
+      }
+    }
+
+    inMemoryScraperHealth = { status, lastRunAt, offersAdded, message };
     return inMemoryScraperHealth;
   } catch {
     return {
@@ -1027,17 +1050,41 @@ async function applyBulkActionFromSupabase(
   return { updated: error ? 0 : (data?.length ?? 0) };
 }
 
+function resolvePythonBinary(): string | null {
+  const candidates: Array<[string, string[]]> = [
+    ["py", ["-3", "-c", "import sys; print(sys.executable)"]],
+    ["python", ["-c", "import sys; print(sys.executable)"]],
+    ["python3", ["-c", "import sys; print(sys.executable)"]],
+  ];
+  for (const [bin, args] of candidates) {
+    try {
+      const out = execSync(`"${bin}" ${args.join(" ")}`, {
+        timeout: 4000,
+        stdio: ["ignore", "pipe", "ignore"],
+      })
+        .toString()
+        .trim();
+      if (out) return bin;
+    } catch {
+      // candidate non disponible, on continue
+    }
+  }
+  return null;
+}
+
 /**
  * Lance le scraper Python en arrière-plan (fire-and-forget).
- * Le pipeline Python écrit lui-même ses logs dans `scraper_logs` ; en cas
- * d'échec de lancement, l'état de santé est passé en "error" pour que le
- * dashboard ne reste pas bloqué sur "running" indéfiniment.
+ * Le pipeline Python écrit ses propres journaux dans scraper_logs ET dans
+ * `data/admin-scraper-health.json`. On écrit aussi stdout/stderr du process
+ * dans `data/scraper-last-run.log` pour déboguer les échecs de démarrage.
  */
 export function launchScraperProcess() {
-  const python = process.platform === "win32" ? "python" : "python3";
+  const python = resolvePythonBinary();
   const sites = process.env.SCRAPER_SITES || "educarriere,jobivoire2,novojob,rmo,emploiivoire,emploici,orange,mtn";
   const maxPerSite = process.env.SCRAPER_MAX_PER_SITE || "5";
   const script = path.join(process.cwd(), "scraper", "scraper.py");
+  const dataDir = path.join(process.cwd(), "data");
+  const logFile = path.join(dataDir, "scraper-last-run.log");
 
   const fail = (message: string) => {
     writeStoredScraperHealth({
@@ -1048,29 +1095,107 @@ export function launchScraperProcess() {
     });
   };
 
-  let child: ReturnType<typeof spawn>;
-  try {
-    child = spawn(
-      python,
-      [script, "--sites", sites, "--max-per-site", maxPerSite],
-      {
-        cwd: process.cwd(),
-        detached: true,
-        stdio: "ignore",
-        windowsHide: true,
-      },
-    );
-  } catch {
-    fail("Impossible de lancer le scraper Python en arrière-plan.");
+  if (!python) {
+    fail("Aucun interpréteur Python trouvé (essayé : py -3, python, python3).");
+    return;
+  }
+  if (!existsSync(script)) {
+    fail(`Script scraper introuvable : ${script}`);
     return;
   }
 
-  // Erreur asynchrone (ex: binaire Python introuvable) → état "error".
-  child.on("error", () => {
-    fail("Échec du lancement du scraper Python (binaire introuvable).");
+  try {
+    mkdirSync(dataDir, { recursive: true });
+    const stamp = new Date().toISOString();
+    writeFileSync(
+      logFile,
+      `[${stamp}] Démarrage du scraper via ${python} ${script}\n`,
+      "utf8",
+    );
+  } catch {
+    // Échec création fichier de log → on continue quand même
+  }
+
+  const logFd = (() => {
+    try {
+      return openSync(logFile, "a");
+    } catch {
+      return "ignore" as const;
+    }
+  })();
+
+  const childArgs = [script, "--sites", sites, "--max-per-site", String(maxPerSite)];
+
+  let child: ReturnType<typeof spawn>;
+  try {
+    child = spawn(python, childArgs, {
+      cwd: process.cwd(),
+      // Sur Windows, on évite detached:true + unref() immédiat car le process
+      // est souvent tué par le gestionnaire de processus Node. On le garde
+      // rattaché brièvement ; le stdout/stderr redirigés vers un fichier
+      // empêchent Node de le garder en vie indéfiniment.
+      detached: process.platform !== "win32",
+      stdio: ["ignore", typeof logFd === "number" ? logFd : "ignore", typeof logFd === "number" ? logFd : "ignore"],
+      windowsHide: true,
+      windowsVerbatimArguments: false,
+    });
+  } catch (err) {
+    if (typeof logFd === "number") try { closeSync(logFd); } catch {}
+    fail(`Impossible de lancer le scraper Python : ${err instanceof Error ? err.message : String(err)}`);
+    return;
+  }
+
+  // Erreur asynchrone (ex: binaire Python introuvable au moment du spawn)
+  child.on("error", (err) => {
+    try {
+      if (typeof logFd === "number") closeSync(logFd);
+    } catch {}
+    fail(`Échec du lancement du scraper Python : ${err.message}`);
   });
-  // Le processus tourne en arrière-plan, on ne bloque pas la réponse HTTP.
-  child.unref();
+
+  // On attend 2 secondes pour vérifier que le process ne meurt pas
+  // immédiatement (ex: erreur de syntaxe, module manquant). S'il est toujours
+  // vivant au bout de 2 s, on considère que le lancement est réussi. Sinon
+  // on lit le log pour remonter l'erreur.
+  const startedAt = Date.now();
+  const checkInterval = setInterval(() => {
+    try {
+      // closed: true OU exitCode !== null => process terminé
+      const exited = (child as any).closed === true || (child as any).exitCode !== null && (child as any).exitCode !== undefined;
+      if (exited) {
+        clearInterval(checkInterval);
+        const code = (child as any).exitCode;
+        try {
+          if (typeof logFd === "number") closeSync(logFd);
+        } catch {}
+        // On laisse Python écrire sa propre santé (success/error) via son
+        // code. Mais si exitCode != 0 et que rien n'a été écrit, on écrit
+        // l'erreur.
+        if (code !== 0) {
+          let tailLog = "";
+          try { tailLog = readFileSync(logFile, "utf8").slice(-600); } catch {}
+          fail(
+            `Le scraper a échoué au démarrage (code ${code}). ` +
+            (tailLog ? `Log : ${tailLog.replace(/\s+/g, " ").slice(0, 400)}` : "Consultez data/scraper-last-run.log."),
+          );
+        }
+        return;
+      }
+      const elapsed = Date.now() - startedAt;
+      if (elapsed >= 2500) {
+        clearInterval(checkInterval);
+        // Process toujours en vie : le lancement est considéré réussi.
+        try {
+          if (typeof logFd === "number") closeSync(logFd);
+        } catch {}
+        if (process.platform !== "win32") {
+          try { child.unref(); } catch {}
+        }
+      }
+    } catch {
+      clearInterval(checkInterval);
+    }
+  }, 300);
 }
 
 function extractOffersAdded(payload: unknown) {
@@ -1116,13 +1241,18 @@ export async function triggerScraperRun() {
     process.env.SCRAPER_TRIGGER_URL ||
     process.env.N8N_SCRAPER_WEBHOOK_URL;
 
+  // Réinitialise le cache mémoire pour forcer une relecture du fichier / DB
+  // au prochain appel (sinon l'ancien statut "running" reste en mémoire
+  // indéfiniment même après la fin du scraper).
+  inMemoryScraperHealth = null;
+
   if (!automationUrl) {
     const state: ScraperHealth = {
       status: "running",
       lastRunAt: new Date().toISOString(),
       offersAdded: null,
       message:
-        "Scraper lancé en arrière-plan. Le statut sera mis à jour à la fin de l'exécution.",
+        "Scraper lancé en arrière-plan. Le statut sera mis à jour à la fin de l'exécution. (Logs dans data/scraper-last-run.log)",
     };
     writeStoredScraperHealth(state);
     launchScraperProcess();
