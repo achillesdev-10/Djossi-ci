@@ -1,5 +1,5 @@
 -- ============================================================================
---  Djossi.ci — Migration Supabase 0006
+--  TravaillerEnCi — Migration Supabase 0006
 --  Description : table `site_visits` (analytics) — alimentée par la route
 --  /api/analytics/track, lue par la page admin /admin/analytics.
 --

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/core/parser.py
+  TravaillerEnCi — scraper/core/parser.py
   Parser HTML unifié utilisant selectolax et BeautifulSoup4
 ===============================================================================
 """

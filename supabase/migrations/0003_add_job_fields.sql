@@ -1,5 +1,5 @@
 -- ============================================================================
---  Djossi.ci — Migration Supabase (PostgreSQL)
+--  TravaillerEnCi — Migration Supabase (PostgreSQL)
 --  Fichier : 0003_add_job_fields.sql
 --  Description : Ajout des nouveaux champs et contraintes pour la table `job_offers`
 -- ============================================================================

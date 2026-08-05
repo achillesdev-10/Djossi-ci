@@ -10,7 +10,7 @@
  */
 
 export const ADMIN_SESSION_COOKIE = 'travaillerenci_admin_session';
-export const LEGACY_ADMIN_SESSION_COOKIE = 'djossi_admin_session';
+export const LEGACY_ADMIN_SESSION_COOKIE = 'travaillerenci_admin_session';
 export const SESSION_DURATION_HOURS = Number(
   process.env.ADMIN_SESSION_TTL_HOURS || 12
 );
@@ -26,7 +26,7 @@ export function getSessionSecret(): string {
   return (
     process.env.ADMIN_SESSION_SECRET ||
     process.env.JWT_SECRET ||
-    'djossi-admin-dev-secret'
+    'travaillerenci-admin-dev-secret'
   );
 }
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/novojob.py
+  TravaillerEnCi — scraper/scrapers/novojob.py
   Scraper pour Novojob Côte d'Ivoire (www.novojob.com/cote-d-ivoire)
 
   Note : l'ancienne cible « ci.novojob.com » était un site de démonstration

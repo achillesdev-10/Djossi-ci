@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/database/repository.py
+  TravaillerEnCi — scraper/database/repository.py
   Repository de stockage et synchronisation BDD (SQLite / SQLAlchemy compatible)
 ===============================================================================
 """

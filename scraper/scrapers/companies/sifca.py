@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/companies/sifca.py
+  TravaillerEnCi — scraper/scrapers/companies/sifca.py
   Scraper pour Groupe SIFCA (groupesifca.com)
 
   Structure vérifiée (2026-08) : www.sifca.ci/recrutement redirige vers

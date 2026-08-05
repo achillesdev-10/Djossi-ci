@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/companies/sgci.py
+  TravaillerEnCi — scraper/scrapers/companies/sgci.py
   Scraper pour Société Générale Côte d'Ivoire (www.societegenerale.ci)
 
   ⚠️ DÉSACTIVÉ : le site societegenerale.ci n'expose aucune page carrières

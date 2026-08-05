@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/companies/orange.py
+  TravaillerEnCi — scraper/scrapers/companies/orange.py
   Scraper pour Orange Côte d'Ivoire (orange.jobs)
 
   Note : les offres Orange CI sont publiées sur la plateforme Phenom People

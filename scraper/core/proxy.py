@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/core/proxy.py
+  TravaillerEnCi — scraper/core/proxy.py
   Gestion et rotation des proxys et User-Agents
 ===============================================================================
 """

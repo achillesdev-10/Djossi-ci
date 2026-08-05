@@ -33,7 +33,7 @@ export type AdminUsersData = {
 
 type SqliteDb = InstanceType<typeof DatabaseSync>;
 
-const DB_PATH = path.join(process.cwd(), "data", "djossi-ci.sqlite3");
+const DB_PATH = path.join(process.cwd(), "data", "travaillerenci.sqlite3");
 
 function asIsoDate(value: unknown) {
   if (!value) return null;
@@ -43,6 +43,8 @@ function asIsoDate(value: unknown) {
   return parsed.toISOString();
 }
 
+function stringFromUnknown(value: unknown, fallback: string): string;
+function stringFromUnknown(value: unknown, fallback: string | null): string | null;
 function stringFromUnknown(value: unknown, fallback: string | null = null) {
   const text = String(value ?? "").trim();
   return text || fallback;

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/companies/pfo.py
+  TravaillerEnCi — scraper/scrapers/companies/pfo.py
   Scraper pour PFO Africa (www.pfo-africa.com)
 
   ⚠️ DÉSACTIVÉ : le site pfo-africa.com est injoignable et n'expose pas de

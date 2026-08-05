@@ -7,7 +7,7 @@ import {
   isSupabaseConfigured,
 } from "@/lib/supabase";
 
-const DB_PATH = path.join(process.cwd(), "data", "djossi-ci.sqlite3");
+const DB_PATH = path.join(process.cwd(), "data", "travaillerenci.sqlite3");
 
 export const dynamic = "force-dynamic";
 

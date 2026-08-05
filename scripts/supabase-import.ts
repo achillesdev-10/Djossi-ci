@@ -2,7 +2,7 @@
  *  TravaillerenCi — scripts/supabase-import.ts
  *
  *  IMPORT ONE-SHOT : copie les offres existantes du SQLite local
- *  (data/djossi-ci.sqlite3) vers Supabase (public.job_offers).
+ *  (data/travaillerenci.sqlite3) vers Supabase (public.job_offers).
  *
  *  Prérequis :
  *    - Le projet Supabase est créé et les migrations 0001→0004 appliquées.
@@ -58,7 +58,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const dbPath = path.join(process.cwd(), 'data', 'djossi-ci.sqlite3');
+const dbPath = path.join(process.cwd(), 'data', 'travaillerenci.sqlite3');
 const db = new DatabaseSync(dbPath);
 
 type SqliteOffer = Record<string, unknown>;

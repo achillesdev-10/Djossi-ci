@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/core/cleaner.py
+  TravaillerEnCi — scraper/core/cleaner.py
   Nettoyage & structuration des descriptions scrapées (avant stockage)
 
   Problème : les pages d'annonces sont scrapées en un blob brut contenant

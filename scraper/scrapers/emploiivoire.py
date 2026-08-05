@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/emploiivoire.py
+  TravaillerEnCi — scraper/scrapers/emploiivoire.py
   Scraper pour EmploiIvoire.ci
 
   Structure vérifiée (2026-08) :

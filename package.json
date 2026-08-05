@@ -1,7 +1,7 @@
 {
-  "name": "djossi-ci",
+  "name": "travaillerenci",
   "version": "1.0.0",
-  "description": "Djossi.ci - Plateforme d'offres d'emploi en Côte d'Ivoire",
+  "description": "TravaillerEnCi - Plateforme d'offres d'emploi en Côte d'Ivoire",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -20,7 +20,7 @@
     "offres",
     "travail"
   ],
-  "author": "Djossi.ci Team",
+  "author": "TravaillerEnCi Team",
   "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.112.0",

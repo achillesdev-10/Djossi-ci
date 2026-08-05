@@ -26,7 +26,7 @@ const COLUMNS = [
     links: [
       { label: 'Qui sommes-nous ?', href: '/about' },
       { label: 'Blog', href: '/blog' },
-      { label: 'Carrières chez Djossi', href: '#' },
+      { label: 'Carrières chez TravaillerEnCi', href: '#' },
       { label: 'Nous contacter', href: '/contact' },
     ],
   },

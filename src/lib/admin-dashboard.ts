@@ -48,7 +48,7 @@ export type BulkAction = "delete" | "verify" | "archive";
 type SqliteDb = InstanceType<typeof DatabaseSync>;
 type SqliteRow = Record<string, unknown>;
 
-const DB_PATH = path.join(process.cwd(), "data", "djossi-ci.sqlite3");
+const DB_PATH = path.join(process.cwd(), "data", "travaillerenci.sqlite3");
 const SCRAPER_HEALTH_PATH = path.join(
   process.cwd(),
   "data",

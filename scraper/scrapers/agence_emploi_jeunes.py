@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/agence_emploi_jeunes.py
+  TravaillerEnCi — scraper/scrapers/agence_emploi_jeunes.py
   Scraper pour Agence Emploi Jeunes (agenceemploijeunes.ci)
 
   Note : la plateforme officielle (agenceemploijeunes.ci) est une SPA —

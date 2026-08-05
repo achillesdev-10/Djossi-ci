@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/emploi_ci.py
+  TravaillerEnCi — scraper/scrapers/emploi_ci.py
   Scraper pour Emploi.ci
 
   Note : www.emploi.ci est protégé par Cloudflare (« Just a moment… ») — les

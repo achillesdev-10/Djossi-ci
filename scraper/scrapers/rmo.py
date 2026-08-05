@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/rmo.py
+  TravaillerEnCi — scraper/scrapers/rmo.py
   Scraper pour RMO Job Center (www.rmo-jobcenter.com)
 
   Structure vérifiée (2026-08) :

@@ -26,7 +26,7 @@ export default function AdminSettingsPage() {
             <input
               type="email"
               disabled
-              value={process.env.ADMIN_EMAIL || 'admin@djossi.ci'}
+              value={process.env.ADMIN_EMAIL || 'achillesdev10@gmail.com'}
               className="w-full rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-400 cursor-not-allowed"
             />
             <p className="text-[11px] text-slate-500 mt-1">

@@ -22,7 +22,7 @@ export {
 };
 
 function getExpectedAdminEmail(): string {
-  return process.env.ADMIN_EMAIL || 'admin@djossi.ci';
+  return process.env.ADMIN_EMAIL || 'achillesdev10@gmail.com';
 }
 
 function getExpectedAdminPassword(): string {

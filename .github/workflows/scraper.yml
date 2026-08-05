@@ -1,4 +1,4 @@
-name: Djossi.ci Scraper Automation
+name: TravaillerEnCi Scraper Automation
 
 on:
   schedule:

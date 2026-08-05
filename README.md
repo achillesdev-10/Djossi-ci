@@ -1,6 +1,6 @@
-# Djossi.ci — Plateforme d'emploi en Côte d'Ivoire
+# TravaillerEnCi — Plateforme d'emploi en Côte d'Ivoire
 
-> **Djossi.ci** est la première plateforme de recrutement 100% ivoirienne. Elle permet aux **candidats** de trouver l'emploi de leurs rêves et aux **entreprises** de recruter les meilleurs talents partout en Côte d'Ivoire.
+> **TravaillerEnCi** est la première plateforme de recrutement 100% ivoirienne. Elle permet aux **candidats** de trouver l'emploi de leurs rêves et aux **entreprises** de recruter les meilleurs talents partout en Côte d'Ivoire.
 
 ---
 
@@ -85,7 +85,7 @@
 ## 📁 Structure des dossiers
 
 ```
-djossi-ci/
+travaillerenci/
 ├── public/                      ← Assets statiques servis à la racine
 │   └── favicon.ico
 │
@@ -328,8 +328,8 @@ Référence complète : voir `.env.example`.
 
 ## 📮 Support & contact
 
-- Site : [djossi.ci](https://djossi.ci)
-- Email : contact@djossi.ci
+- Site : [travaillerenci.vercel.app](https://travaillerenci.vercel.app)
+- Email : achillesdev10@gmail.com
 - Côte d'Ivoire 🇨🇮 — Abidjan
 
 ---

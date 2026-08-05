@@ -13,11 +13,11 @@ export default function MentionsLegalesPage() {
           <section className="space-y-3">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">1. Éditeur du site</h2>
             <p>
-              Le site <strong>Djossi.ci</strong> (ci-après « la Plateforme ») est édité et exploité en tant que plateforme numérique de mise en relation professionnelle et d'offres d'emploi en Côte d'Ivoire.
+              Le site <strong>TravaillerEnCi</strong> (ci-après « la Plateforme ») est édité et exploité en tant que plateforme numérique de mise en relation professionnelle et d'offres d'emploi en Côte d'Ivoire.
             </p>
             <p>
               <strong>Contact officiel :</strong><br />
-              Email : <a href="mailto:contact@djossi.ci" className="text-primary hover:underline">contact@djossi.ci</a><br />
+              Email : <a href="mailto:achillesdev10@gmail.com" className="text-primary hover:underline">achillesdev10@gmail.com</a><br />
               Téléphone : +225 07 00 00 00 00<br />
               Siège social : Abidjan, Côte d'Ivoire
             </p>
@@ -35,14 +35,14 @@ export default function MentionsLegalesPage() {
           <section className="space-y-3">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">3. Propriété intellectuelle</h2>
             <p>
-              L'ensemble des éléments graphiques, textuels, de structure, ainsi que les bases de données intégrées sur Djossi.ci sont protégés par les lois en vigueur sur la propriété intellectuelle. Toute reproduction, représentation, modification ou exploitation non autorisée de tout ou partie des éléments du site est strictement interdite.
+              L'ensemble des éléments graphiques, textuels, de structure, ainsi que les bases de données intégrées sur TravaillerEnCi sont protégés par les lois en vigueur sur la propriété intellectuelle. Toute reproduction, représentation, modification ou exploitation non autorisée de tout ou partie des éléments du site est strictement interdite.
             </p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">4. Limitation de responsabilité</h2>
             <p>
-              Djossi.ci agit en tant qu'agrégateur d'offres d'emploi et intermédiaire technologique. Les annonces diffusées proviennent soit de sources publiques (scraping automatisé), soit d'offres directement publiées par des entreprises partenaires. Djossi.ci ne saurait être tenu responsable de l'exactitude, de la véracité ou de la disponibilité des offres d'emploi publiées par des tiers.
+              TravaillerEnCi agit en tant qu'agrégateur d'offres d'emploi et intermédiaire technologique. Les annonces diffusées proviennent soit de sources publiques (scraping automatisé), soit d'offres directement publiées par des entreprises partenaires. TravaillerEnCi ne saurait être tenu responsable de l'exactitude, de la véracité ou de la disponibilité des offres d'emploi publiées par des tiers.
             </p>
           </section>
         </div>

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/companies/mtn.py
+  TravaillerEnCi — scraper/scrapers/companies/mtn.py
   Scraper pour MTN Côte d'Ivoire (www.mtn.ci/careers/)
 
   Note : l'archive carrières de mtn.ci est rendue en JavaScript — aucune

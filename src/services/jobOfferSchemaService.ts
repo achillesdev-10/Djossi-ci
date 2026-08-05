@@ -1,9 +1,9 @@
 /**
- *  Djossi.ci — Service jobOffers (schéma SQL : job_offers)
+ *  TravaillerEnCi — Service jobOffers (schéma SQL : job_offers)
  *  Chemin : src/services/jobOfferSchemaService.ts
  *
  *  Fournit une couche d'abstraction typée sur la BDD job_offers :
- *   • Local  : via `node:sqlite` (module natif Node 22+, fichier ./data/djossi-ci.sqlite3)
+ *   • Local  : via `node:sqlite` (module natif Node 22+, fichier ./data/travaillerenci.sqlite3)
  *   → Pour Supabase : remplacer les implémentations ci-dessous par le SDK Supabase
  *     (`createClient` sur le serveur + requêtes SQL via `.from('job_offers')`)
  *     — toutes les signatures sont 1:1 compatibles (mêmes types JobOfferSchema / Filters).
@@ -148,7 +148,7 @@ async function getDb(): Promise<DatabaseSyncInstance | null> {
     const { existsSync: exists, mkdirSync: mkdir } = (await import('node:fs')) as typeof import('node:fs');
     const dataDir = resolvePath(process.cwd(), 'data');
     if (!exists(dataDir)) mkdir(dataDir, { recursive: true });
-    const dbPath = resolvePath(dataDir, 'djossi-ci.sqlite3');
+    const dbPath = resolvePath(dataDir, 'travaillerenci.sqlite3');
     cachedDb = new DatabaseSync(dbPath);
     ensureSchema(cachedDb);
     return cachedDb;

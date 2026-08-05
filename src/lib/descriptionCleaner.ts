@@ -1,5 +1,5 @@
 /**
- *  Djossi.ci — src/lib/descriptionCleaner.ts
+ *  TravaillerEnCi — src/lib/descriptionCleaner.ts
  *  Miroir TypeScript de scraper/core/cleaner.py (mêmes heuristiques).
  *
  *  Nettoie une description scrapée brute (header/footer de la page source,

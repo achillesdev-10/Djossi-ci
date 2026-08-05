@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/core/utils.py
+  TravaillerEnCi — scraper/core/utils.py
   Utilitaires de normalisation (HTML, dates, devises, diplômes, contrats,
   entreprise, lieu, date limite)
 ===============================================================================

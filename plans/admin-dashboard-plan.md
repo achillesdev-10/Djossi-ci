@@ -1,6 +1,6 @@
 # Plan d'implémentation du Tableau de Bord Administrateur Sécurisé
 
-Ce document décrit l'architecture et les étapes pour la création du tableau de bord administrateur sous `/app/admin` pour **Djossi.ci**.
+Ce document décrit l'architecture et les étapes pour la création du tableau de bord administrateur sous `/app/admin` pour **TravaillerEnCi**.
 
 ## 1. Structure des dossiers et fichiers
 

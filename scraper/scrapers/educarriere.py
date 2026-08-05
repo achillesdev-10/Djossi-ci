@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/educarriere.py
+  TravaillerEnCi — scraper/scrapers/educarriere.py
   Scraper pour Educarriere.ci (Emplois, Stages, Concours)
 
   Correction : l'ancien filtre (« emploi » dans l'URL) matchait TOUT le site

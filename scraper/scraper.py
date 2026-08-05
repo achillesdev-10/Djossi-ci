@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scraper.py
+  TravaillerEnCi — scraper/scraper.py
   Runner principal du moteur de scraping multi-sources pour la Côte d'Ivoire
 ===============================================================================
 """
@@ -30,7 +30,7 @@ _fix_console()
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
 DATA_DIR = PROJECT_ROOT / "data"
-DB_PATH = DATA_DIR / "djossi-ci.sqlite3"
+DB_PATH = DATA_DIR / "travaillerenci.sqlite3"
 
 # Permet l'exécution directe `python scraper/scraper.py` (le CWD n'étant pas
 # automatiquement dans sys.path, le package `scraper` ne serait pas résolu).
@@ -62,7 +62,7 @@ from scraper.scrapers.companies.nsia import NsiaScraper
 from scraper.scrapers.companies.sifca import SifcaScraper
 from scraper.scrapers.companies.cie import CieScraper
 
-logger = setup_logger("djossi_runner")
+logger = setup_logger("travaillerenci_runner")
 
 # Scrapers réellement actifs. Les anciennes sources ont été retirées :
 #   - jobivoire (jobivoire.com) : SPA sans contenu accessible en HTTP
@@ -95,7 +95,7 @@ def _is_demo_source_url(url: str) -> bool:
 
 def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: bool, demo_data: bool = False) -> int:
     logger.info("=" * 60)
-    logger.info("🚀 Démarrage du pipeline de scraping Djossi.ci")
+    logger.info("🚀 Démarrage du pipeline de scraping TravaillerEnCi")
     logger.info(f"   Sites cibles : {site_names}")
     logger.info(f"   Max par site : {max_per_site}")
     logger.info(f"   Mode Dry-Run : {dry_run}")
@@ -160,7 +160,7 @@ def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: boo
                 if not job.seo_title:
                     job.seo_title = f"{job.title} chez {job.company} - Emploi Côte d'Ivoire"
                 if not job.seo_description:
-                    job.seo_description = f"Découvrez l'offre d'emploi {job.title} à {job.location} sur Djossi.ci."
+                    job.seo_description = f"Découvrez l'offre d'emploi {job.title} à {job.location} sur TravaillerEnCi."
 
                 all_jobs.append(job)
         except Exception as exc:
@@ -234,7 +234,7 @@ def purge_demo_offers() -> int:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Djossi.ci Scraper Engine - Côte d'Ivoire")
+    parser = argparse.ArgumentParser(description="TravaillerEnCi Scraper Engine - Côte d'Ivoire")
     parser.add_argument(
         "--sites",
         type=str,
@@ -263,7 +263,7 @@ def main():
     if "all" in sites:
         sites = list(SCRAPER_REGISTRY.keys())
 
-    demo_data = args.demo or os.getenv("DJOSSI_DEMO_DATA") == "1"
+    demo_data = args.demo or os.getenv("TRAVAILLERENCI_DEMO_DATA") == "1"
     target_func = lambda: run_scraping_pipeline(sites, args.max_per_site, args.dry_run, demo_data)
 
     if args.schedule:

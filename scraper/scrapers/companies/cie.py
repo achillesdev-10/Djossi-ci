@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/companies/cie.py
+  TravaillerEnCi — scraper/scrapers/companies/cie.py
   Scraper pour CIE (Compagnie Ivoirienne d'Électricité)
 
   Les offres CIE sont publiées sur le portail externe Socium Job

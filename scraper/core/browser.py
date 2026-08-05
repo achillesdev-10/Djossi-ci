@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/core/browser.py
+  TravaillerEnCi — scraper/core/browser.py
   Gestionnaire Playwright pour les pages dynamiques / Single Page Applications
 ===============================================================================
 """

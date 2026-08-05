@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/core/scheduler.py
+  TravaillerEnCi — scraper/core/scheduler.py
   Scheduler APScheduler (Toutes les heures, 6h, tous les jours, cron)
 ===============================================================================
 """

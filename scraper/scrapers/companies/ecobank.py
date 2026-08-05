@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/companies/ecobank.py
+  TravaillerEnCi — scraper/scrapers/companies/ecobank.py
   Scraper pour Ecobank (www.ecobank.com/careers)
 
   ⚠️ DÉSACTIVÉ : le portail carrières Ecobank est entièrement dynamique (JS) —

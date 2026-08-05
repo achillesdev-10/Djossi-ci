@@ -1,5 +1,5 @@
 -- ============================================================================
---  Djossi.ci — SEED : 3 fausses offres d'emploi (Côte d'Ivoire)
+--  TravaillerEnCi — SEED : 3 fausses offres d'emploi (Côte d'Ivoire)
 --  Fichier : supabase/seed/001_seed_job_offers.sql
 --
 --  Usage :

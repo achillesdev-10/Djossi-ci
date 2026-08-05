@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/core/http_client.py
+  TravaillerEnCi — scraper/core/http_client.py
   Client HTTP robuste (httpx) avec retry, gestion 403 / Cloudflare, timeouts
 ===============================================================================
 """
@@ -28,7 +28,7 @@ class HttpClient:
         # Vérification TLS : désactivable via l'environnement (certains sites
         # ouest-africains exposent des chaînes de certificats incomplètes).
         if verify_ssl is None:
-            verify_ssl = os.getenv("DJOSSI_VERIFY_SSL", "1").strip().lower() not in ("0", "false", "no")
+            verify_ssl = os.getenv("TRAVAILLERENCI_VERIFY_SSL", "1").strip().lower() not in ("0", "false", "no")
         self.verify_ssl = verify_ssl
 
         self.client = httpx.Client(

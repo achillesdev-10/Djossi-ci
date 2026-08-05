@@ -6,7 +6,7 @@ import type { JobOfferSchema } from '@/types';
 
 export const metadata = {
   title: 'Toutes les offres d\'emploi en Côte d\'Ivoire',
-  description: 'Parcourez, filtrez et recherchez des milliers d\'offres d\'emploi, CDI, CDD et stages à Abidjan et partout en Côte d\'Ivoire sur Djossi.ci.',
+  description: 'Parcourez, filtrez et recherchez des milliers d\'offres d\'emploi, CDI, CDD et stages à Abidjan et partout en Côte d\'Ivoire sur TravaillerEnCi.',
 };
 
 interface JobsPageProps {

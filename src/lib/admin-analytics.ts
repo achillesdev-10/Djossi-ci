@@ -42,7 +42,7 @@ export type AdminAnalyticsData = {
 
 type SqliteDb = InstanceType<typeof DatabaseSync>;
 
-const DB_PATH = path.join(process.cwd(), "data", "djossi-ci.sqlite3");
+const DB_PATH = path.join(process.cwd(), "data", "travaillerenci.sqlite3");
 
 function asIsoDate(value: unknown) {
   if (!value) return null;
@@ -169,7 +169,7 @@ function fromSqliteRows(
     .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")))
     .slice(0, 12)
     .map((r) => {
-      const agent = stringFromUnknown(r.user_agent, null) || null;
+      const agent = stringFromUnknown(r.user_agent, "") || null;
       return {
         path: normalizePath(r.path),
         createdAt: asIsoDate(r.created_at),

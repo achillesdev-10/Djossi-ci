@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/companies/nsia.py
+  TravaillerEnCi — scraper/scrapers/companies/nsia.py
   Scraper pour NSIA Banque Côte d'Ivoire (www.nsiabanque.ci)
 
   La page « Nos offres d'emploi » est sous :

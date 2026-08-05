@@ -19,7 +19,7 @@ export default function JobCard({ job, priority = false }: JobCardProps) {
           <div className="flex flex-wrap items-center gap-2 min-w-0">
             {job.is_verified ? (
               <span
-                aria-label="Offre vérifiée par Djossi.ci"
+                aria-label="Offre vérifiée par TravaillerEnCi"
                 className="inline-flex items-center gap-1 flex-shrink-0 bg-primary/10 text-primary px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-bold leading-none"
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

@@ -13,7 +13,7 @@ export default function PolitiqueConfidentialitePage() {
           <section className="space-y-3">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">1. Données collectées</h2>
             <p>
-              Dans le cadre de l'utilisation de Djossi.ci, nous collectons des données de navigation anonymes (mesure d'audience, visites) ainsi que les informations fournies volontairement lors de la création de compte : nom, email, numéro WhatsApp, CV et informations de profil pour les candidats, ou nom d'entreprise et descriptions pour les recruteurs.
+              Dans le cadre de l'utilisation de TravaillerEnCi, nous collectons des données de navigation anonymes (mesure d'audience, visites) ainsi que les informations fournies volontairement lors de la création de compte : nom, email, numéro WhatsApp, CV et informations de profil pour les candidats, ou nom d'entreprise et descriptions pour les recruteurs.
             </p>
           </section>
 
@@ -27,14 +27,14 @@ export default function PolitiqueConfidentialitePage() {
           <section className="space-y-3">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">3. Conformité réglementaire</h2>
             <p>
-              Djossi.ci s'engage à respecter les principes de protection des données à caractère personnel conformément aux réglementations en vigueur en Côte d'Ivoire (ARTCI) et aux standards internationaux de confidentialité.
+              TravaillerEnCi s'engage à respecter les principes de protection des données à caractère personnel conformément aux réglementations en vigueur en Côte d'Ivoire (ARTCI) et aux standards internationaux de confidentialité.
             </p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">4. Droits des utilisateurs</h2>
             <p>
-              Conformément aux lois applicables, vous disposez d'un droit d'accès, de rectification et de suppression de vos données personnelles. Vous pouvez exercer ces droits à tout moment en contactant notre support à l'adresse email : <a href="mailto:contact@djossi.ci" className="text-primary hover:underline">contact@djossi.ci</a>.
+              Conformément aux lois applicables, vous disposez d'un droit d'accès, de rectification et de suppression de vos données personnelles. Vous pouvez exercer ces droits à tout moment en contactant notre support à l'adresse email : <a href="mailto:achillesdev10@gmail.com" className="text-primary hover:underline">achillesdev10@gmail.com</a>.
             </p>
           </section>
         </div>

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/models/job.py
+  TravaillerEnCi — scraper/models/job.py
   Modèle Pydantic complet pour les offres d'emploi (standard Côte d'Ivoire)
 ===============================================================================
 """

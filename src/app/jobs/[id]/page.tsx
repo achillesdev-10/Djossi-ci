@@ -24,9 +24,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     (job.seo_description || job.description).replace(/\*\*/g, '').replace(/\n/g, ' '),
     170
   );
-  const canonicalUrl = `https://djossi.ci/jobs/${job.slug || job.id}`;
+  const canonicalUrl = `https://travaillerenci.vercel.app/jobs/${job.slug || job.id}`;
   return {
-    title: job.seo_title || `${job.title} — ${job.company} | Djossi.ci`,
+    title: job.seo_title || `${job.title} — ${job.company} | TravaillerEnCi`,
     description: desc,
     keywords: job.seo_keywords || undefined,
     alternates: {
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       type: 'article',
       url: canonicalUrl,
-      siteName: 'Djossi.ci',
+      siteName: 'TravaillerEnCi',
       title: `${job.title} chez ${job.company}`,
       description: desc,
       locale: 'fr_CI',
@@ -86,7 +86,7 @@ export default async function JobDetailPage({ params }: PageProps) {
     hiringOrganization: {
       '@type': 'Organization',
       name: job.company,
-      sameAs: job.source_url || 'https://djossi.ci',
+      sameAs: job.source_url || 'https://travaillerenci.vercel.app',
     },
     jobLocation: {
       '@type': 'Place',
@@ -142,7 +142,7 @@ export default async function JobDetailPage({ params }: PageProps) {
                       <path d="M9 12l2 2 4-4" />
                       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
                     </svg>
-                    Offre vérifiée Djossi
+                    Offre vérifiée TravaillerEnCi
                   </span>
                 ) : (
                   <span className="inline-flex items-center bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold">
@@ -175,7 +175,7 @@ export default async function JobDetailPage({ params }: PageProps) {
               {/* Bouton Partager sur WhatsApp très visible */}
               <div className="pt-1">
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`📢 *${job.title}* chez *${job.company}* (${job.location})\n\nConsultez l'offre complète sur Djossi.ci : https://djossi.ci/jobs/${job.id}`)}`}
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`📢 *${job.title}* chez *${job.company}* (${job.location})\n\nConsultez l'offre complète sur TravaillerEnCi : https://travaillerenci.vercel.app/jobs/${job.id}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all"
@@ -243,7 +243,7 @@ export default async function JobDetailPage({ params }: PageProps) {
                 <MetaRow label="Contrat" value={job.contract_type} />
                 <MetaRow
                   label="Vérifié"
-                  value={job.is_verified ? '✅ Oui — par Djossi.ci' : '⏳ En cours'}
+                  value={job.is_verified ? '✅ Oui — par TravaillerEnCi' : '⏳ En cours'}
                 />
                 <MetaRow label="Publiée le" value={formatDate(job.created_at)} />
                 {job.source_url && (
@@ -287,7 +287,7 @@ function ApplyBox({
       <div className="flex items-stretch gap-2">
         {hasEmail ? (
           <a
-            href={`mailto:${job.apply_email}?subject=${encodeURIComponent(`Candidature : ${job.title} (Djossi.ci)`)}`}
+            href={`mailto:${job.apply_email}?subject=${encodeURIComponent(`Candidature : ${job.title} (TravaillerEnCi)`)}`}
             className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-sm shadow-md shadow-primary/25 active:scale-[0.99] transition-all"
           >
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -344,7 +344,7 @@ function ApplyBox({
       <ApplyActions job={job} />
       <p className="mt-4 text-[11px] text-gray-400 leading-relaxed">
         En postulant, vous acceptez que vos informations soient transmises à {job.company}.
-        Djossi.ci n'est pas l'employeur et ne participe pas au processus de recrutement.
+        TravaillerEnCi n'est pas l'employeur et ne participe pas au processus de recrutement.
       </p>
     </div>
   );
@@ -375,7 +375,7 @@ function ApplyActions({ job }: { job: JobOfferSchema }) {
         </a>
       ) : hasEmail ? (
         <a
-          href={`mailto:${job.apply_email}?subject=${encodeURIComponent(`Candidature : ${job.title} (Djossi.ci)`)}`}
+          href={`mailto:${job.apply_email}?subject=${encodeURIComponent(`Candidature : ${job.title} (TravaillerEnCi)`)}`}
           className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-sm sm:text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.99] transition-all w-full sm:w-auto"
         >
           <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -388,7 +388,7 @@ function ApplyActions({ job }: { job: JobOfferSchema }) {
 
       {hasLink && hasEmail ? (
         <a
-          href={`mailto:${job.apply_email}?subject=${encodeURIComponent(`Candidature : ${job.title} (Djossi.ci)`)}`}
+          href={`mailto:${job.apply_email}?subject=${encodeURIComponent(`Candidature : ${job.title} (TravaillerEnCi)`)}`}
           className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-200 font-semibold text-sm sm:text-base transition-all w-full sm:w-auto"
         >
           <svg className="w-4.5 h-4.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

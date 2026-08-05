@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/core/logger.py
+  TravaillerEnCi — scraper/core/logger.py
   Configuration centralisée des logs détaillés (Console & Fichier)
 ===============================================================================
 """
@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 
-def setup_logger(name: str = "djossi_scraper", log_file: Optional[Path] = None) -> logging.Logger:
+def setup_logger(name: str = "travaillerenci_scraper", log_file: Optional[Path] = None) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
 

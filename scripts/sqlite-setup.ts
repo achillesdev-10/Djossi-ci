@@ -1,5 +1,5 @@
 /**
- *  Djossi.ci — Script de BDD locale (SQLite) : migration + seed
+ *  TravaillerEnCi — Script de BDD locale (SQLite) : migration + seed
  *  Chemin : scripts/sqlite-setup.ts
  *
  *  Utilise le module natif `node:sqlite` disponible depuis Node 22.
@@ -15,7 +15,7 @@
  *    # Effacer complètement la BDD et tout recréer
  *    npx tsx scripts/sqlite-setup.ts --reset
  *
- *  Base de données produite : ./data/djossi-ci.sqlite3
+ *  Base de données produite : ./data/travaillerenci.sqlite3
  */
 
 import { DatabaseSync } from 'node:sqlite';
@@ -27,7 +27,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT = resolve(__dirname, '..');
 const DATA_DIR = resolve(ROOT, 'data');
-const DB_PATH = resolve(DATA_DIR, 'djossi-ci.sqlite3');
+const DB_PATH = resolve(DATA_DIR, 'travaillerenci.sqlite3');
 
 type ContractType = 'CDI' | 'CDD' | 'Stage' | 'Prestation' | 'Alternance' | 'Freelance';
 type JobStatus = 'pending' | 'published' | 'rejected' | 'archived';

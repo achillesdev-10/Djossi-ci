@@ -13,14 +13,14 @@ export default function CguPage() {
           <section className="space-y-3">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">1. Objet</h2>
             <p>
-              Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme <strong>Djossi.ci</strong>, dédiée à la recherche d'emploi, de stages et au recrutement en Côte d'Ivoire. Toute utilisation de la plateforme implique l'acceptation sans réserve des présentes CGU par l'utilisateur (Candidat ou Entreprise).
+              Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme <strong>TravaillerEnCi</strong>, dédiée à la recherche d'emploi, de stages et au recrutement en Côte d'Ivoire. Toute utilisation de la plateforme implique l'acceptation sans réserve des présentes CGU par l'utilisateur (Candidat ou Entreprise).
             </p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">2. Règles d'utilisation et interdictions</h2>
             <p>
-              L'utilisateur s'engage à utiliser Djossi.ci de manière loyale et légale. Il est strictement interdit :
+              L'utilisateur s'engage à utiliser TravaillerEnCi de manière loyale et légale. Il est strictement interdit :
             </p>
             <ul className="list-disc pl-5 space-y-2">
               publishing de fausses annonces d'emploi ou de profils fictifs.
@@ -31,9 +31,9 @@ export default function CguPage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">3. Rôle et Responsabilité de Djossi.ci</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">3. Rôle et Responsabilité de TravaillerEnCi</h2>
             <p>
-              Djossi.ci agit en tant qu'intermédiaire et agrégateur d'opportunités professionnelles. La plateforme ne garantit pas l'exactitude des offres d'emploi tierces ni l'aboutissement des processus de recrutement. La responsabilité du contenu des offres publiées incombe exclusivement aux recruteurs d'origine.
+              TravaillerEnCi agit en tant qu'intermédiaire et agrégateur d'opportunités professionnelles. La plateforme ne garantit pas l'exactitude des offres d'emploi tierces ni l'aboutissement des processus de recrutement. La responsabilité du contenu des offres publiées incombe exclusivement aux recruteurs d'origine.
             </p>
           </section>
 

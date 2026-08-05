@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/core/duplicate_detector.py
+  TravaillerEnCi — scraper/core/duplicate_detector.py
   Détection avancée des doublons (titre, entreprise, ville, hash, similarité)
 ===============================================================================
 """

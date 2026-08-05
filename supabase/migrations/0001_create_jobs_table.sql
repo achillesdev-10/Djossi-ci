@@ -1,5 +1,5 @@
 -- ============================================================================
---  Djossi.ci — Schéma Supabase (PostgreSQL)
+--  TravaillerEnCi — Schéma Supabase (PostgreSQL)
 --  Fichier : 0001_create_jobs_table.sql
 --  Description : Création de la table principale des offres d'emploi.
 --
@@ -10,7 +10,7 @@
 
 -- ----------------------------------------------------------------------------
 --  Table : job_offers
---  Offres d'emploi publiées sur Djossi.ci
+--  Offres d'emploi publiées sur TravaillerEnCi
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.job_offers (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS public.job_offers (
     -- Transparence : URL d'origine de l'annonce (site agrégé, annonce originale…)
     source_url      TEXT,
 
-    -- Badge de confiance : offre vérifiée par l'équipe Djossi
+    -- Badge de confiance : offre vérifiée par l'équipe TravaillerEnCi
     is_verified     BOOLEAN     NOT NULL DEFAULT FALSE,
 
     -- Horodatages
@@ -105,7 +105,7 @@ CREATE POLICY "Modif réservée aux admins"
 -- ============================================================================
 --  Commentaires / Métadonnées
 -- ============================================================================
-COMMENT ON TABLE  public.job_offers                IS 'Offres d''emploi Djossi.ci (Côte d''Ivoire)';
+COMMENT ON TABLE  public.job_offers                IS 'Offres d''emploi TravaillerEnCi (Côte d''Ivoire)';
 COMMENT ON COLUMN public.job_offers.id             IS 'UUID unique de l''offre (gen_random_uuid)';
 COMMENT ON COLUMN public.job_offers.title          IS 'Titre du poste : ex "Développeur Full Stack Senior"';
 COMMENT ON COLUMN public.job_offers.company        IS 'Nom de l''entreprise : ex "MTN Côte d''Ivoire"';
@@ -115,6 +115,6 @@ COMMENT ON COLUMN public.job_offers.description    IS 'Fiche de poste complète 
 COMMENT ON COLUMN public.job_offers.apply_link     IS 'URL de candidature externe (formulaire entreprise, JobTeaser…)';
 COMMENT ON COLUMN public.job_offers.apply_email    IS 'Email de candidature (ex : recrutement@entreprise.ci)';
 COMMENT ON COLUMN public.job_offers.source_url     IS 'Transparence : URL d''origine de l''annonce (agrégation, annonce originale)';
-COMMENT ON COLUMN public.job_offers.is_verified    IS 'Badge de confiance : offre vérifiée par l''équipe Djossi';
+COMMENT ON COLUMN public.job_offers.is_verified    IS 'Badge de confiance : offre vérifiée par l''équipe TravaillerEnCi';
 COMMENT ON COLUMN public.job_offers.created_at     IS 'Date et heure de création (UTC avec fuseau horaire)';
 COMMENT ON COLUMN public.job_offers.updated_at     IS 'Date de dernière mise à jour (trigger auto)';

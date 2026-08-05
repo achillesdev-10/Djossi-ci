@@ -1,4 +1,4 @@
--- Migration: Create profiles, roles, and applications for Djossi.ci
+-- Migration: Create profiles, roles, and applications for TravaillerEnCi
 -- Path: supabase/migrations/0002_create_auth_profiles.sql
 
 CREATE TYPE user_role AS ENUM ('candidate', 'company', 'admin');

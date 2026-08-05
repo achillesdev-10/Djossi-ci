@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AuthService, type AuthState } from '@/services/authService';
 
-const STORAGE_KEY = 'djossi_auth_state';
+const STORAGE_KEY = 'travaillerenci_auth_state';
 
 export function useAuth() {
   const [state, setState] = useState<AuthState>(() => ({

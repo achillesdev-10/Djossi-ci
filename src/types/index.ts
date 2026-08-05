@@ -60,7 +60,7 @@ export type JobLevel = 'Junior' | 'Intermédiaire' | 'Senior' | 'Expert' | 'Mana
 
 // ============================================================================
 //  Types EXACT DU NOUVEAU SCHÉMA "job_offers" (Supabase + SQLite)
-//  → Champs demandés par Djossi.ci :
+//  → Champs demandés par TravaillerEnCi :
 //    id, title, company, location, contract_type, description,
 //    apply_link OU apply_email, source_url, is_verified, created_at (+ updated_at)
 // ============================================================================

@@ -1,6 +1,6 @@
-# 📋 Guide Administrateur — Djossi.ci (Plateforme d'Emploi en Côte d'Ivoire)
+# 📋 Guide Administrateur — TravaillerEnCi (Plateforme d'Emploi en Côte d'Ivoire)
 
-Ce document constitue le rapport complet et le guide opérationnel pour l'administrateur de la plateforme **Djossi.ci**. Il récapitule l'état d'avancement, les configurations requises, la gestion des accès, le moteur de scraping et la liste de contrôle avant le déploiement sur Vercel.
+Ce document constitue le rapport complet et le guide opérationnel pour l'administrateur de la plateforme **TravaillerEnCi**. Il récapitule l'état d'avancement, les configurations requises, la gestion des accès, le moteur de scraping et la liste de contrôle avant le déploiement sur Vercel.
 
 ---
 
@@ -9,15 +9,15 @@ Ce document constitue le rapport complet et le guide opérationnel pour l'admini
 Pour que l'application et ses services (dashboard, authentification admin, scraper, notifications) fonctionnent parfaitement en production, vous devez créer et configurer un fichier `.env.local` (ou `.env`) à la racine du projet en vous basant sur [`.env.example`](.env.example).
 
 ### Variables indispensables :
-- `ADMIN_EMAIL` : Adresse email de l'administrateur principal (ex: `admin@djossi.ci`).
+- `ADMIN_EMAIL` : Adresse email de l'administrateur principal (ex: `achillesdev10@gmail.com`).
 - `ADMIN_PASSWORD` : Mot de passe sécurisé en clair ou haché (selon l'implémentation de [`src/lib/adminSession.ts`](src/lib/adminSession.ts)) utilisé pour se connecter à `/admin/login`.
 - `ADMIN_SESSION_SECRET` : Clé secrète robuste (chaîne aléatoire de 32+ caractères) pour signer le cookie de session chiffré des administrateurs.
 - `ADMIN_SESSION_TTL_HOURS` : Durée de validité de la session admin (ex: `12` ou `24` heures).
-- `NEXT_PUBLIC_APP_URL` : URL publique de production de votre site (ex: `https://djossi.ci`).
+- `NEXT_PUBLIC_APP_URL` : URL publique de production de votre site (ex: `https://travaillerenci.vercel.app`).
 
 ### Variables optionnelles (Notifications & Services) :
 - `WHATSAPP_WEBHOOK_URL` ou `WHATSAPP_META_ACCESS_TOKEN`, `WHATSAPP_META_PHONE_NUMBER_ID`, `WHATSAPP_META_TO` : Pour l'envoi automatique de notifications WhatsApp lors de l'importation de nouvelles offres par le scraper.
-- Variables Supabase (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) : Si vous choisissez de basculer de la base SQLite locale (`./data/djossi-ci.sqlite3`) vers une base cloud Supabase.
+- Variables Supabase (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) : Si vous choisissez de basculer de la base SQLite locale (`./data/travaillerenci.sqlite3`) vers une base cloud Supabase.
 
 ---
 
@@ -90,7 +90,7 @@ Le dossier [`scraper/`](scraper/scraper.py) contient le moteur d'extraction robu
 ## 5. Liste de contrôle (Checklist) de lancement avant déploiement Vercel
 
 1. [ ] **Variables d'environnement** : Renseigner `ADMIN_EMAIL`, `ADMIN_PASSWORD` et `ADMIN_SESSION_SECRET` dans le tableau de bord Vercel (Project Settings > Environment Variables).
-2. [ ] **Initialisation BDD / Seed** : Exécuter la configuration de la base de données locale ou s'assurer que le fichier SQLite [`data/djossi-ci.sqlite3`](data/djossi-ci.sqlite3) est initialisé (via `npm run db:setup` ou `npm run db:seed`).
+2. [ ] **Initialisation BDD / Seed** : Exécuter la configuration de la base de données locale ou s'assurer que le fichier SQLite [`data/travaillerenci.sqlite3`](data/travaillerenci.sqlite3) est initialisé (via `npm run db:setup` ou `npm run db:seed`).
 3. [ ] **Vérification du Dashboard** : Se connecter à `https://votre-domaine.vercel.app/admin` avec vos identifiants admin et tester la modification du statut `is_verified` d'une offre.
 4. [ ] **Test du Scraper** : Lancer une exécution locale du scraper (`python scraper.py --demo`) pour alimenter la base en offres de test fraîches.
 5. [ ] **Build de production** : Lancer un test de build local (`npm run build`) pour valider l'absence d'erreurs TypeScript ou de compilation Next.js avant la mise en ligne.

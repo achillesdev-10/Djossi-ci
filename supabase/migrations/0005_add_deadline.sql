@@ -1,5 +1,5 @@
 -- ============================================================================
---  Djossi.ci — Migration Supabase 0005
+--  TravaillerEnCi — Migration Supabase 0005
 --  Description : ajoute la colonne `deadline` (date limite de candidature)
 --  aux offres, pour l'affichage admin et l'expiration automatique.
 --

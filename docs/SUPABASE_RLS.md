@@ -1,6 +1,6 @@
 # Configuration de la Sécurité & RLS (Row Level Security) sur Supabase
 
-Ce document détaille les requêtes SQL à exécuter dans l'éditeur SQL de votre tableau de bord Supabase pour sécuriser la table `job_offers` de Djossi.ci.
+Ce document détaille les requêtes SQL à exécuter dans l'éditeur SQL de votre tableau de bord Supabase pour sécuriser la table `job_offers` de TravaillerEnCi.
 
 ## 1. Activation de la RLS (Row Level Security)
 

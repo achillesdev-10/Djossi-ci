@@ -28,7 +28,7 @@ export interface RegisterEmployerData {
 }
 
 export class AuthService {
-  private static KEY = 'djossi_auth_state';
+  private static KEY = 'travaillerenci_auth_state';
 
   static getInitialState(): AuthState {
     if (typeof window === 'undefined') {

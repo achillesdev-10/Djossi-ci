@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/core/base_scraper.py
+  TravaillerEnCi — scraper/core/base_scraper.py
   Classe de base abstraite pour tous les scrapers
 ===============================================================================
 """

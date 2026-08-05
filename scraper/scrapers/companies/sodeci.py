@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===============================================================================
-  Djossi.ci — scraper/scrapers/companies/sodeci.py
+  TravaillerEnCi — scraper/scrapers/companies/sodeci.py
   Scraper pour SODECI (www.sodeci.ci/recrutement)
 
   ⚠️ DÉSACTIVÉ : la page recrutement de la SODECI ne présente aucune annonce
