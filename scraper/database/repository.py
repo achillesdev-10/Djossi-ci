@@ -56,6 +56,7 @@ class JobRepository:
         self.conn = sqlite3.connect(str(self.db_path), timeout=30)
         self.conn.row_factory = sqlite3.Row
         self._ensure_schema()
+        self._migrate_schema()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -75,6 +76,7 @@ class JobRepository:
               description     TEXT NOT NULL,
               apply_link      TEXT,
               apply_email     TEXT,
+              deadline        TEXT,
               source_url      TEXT,
               source_website  TEXT,
               status          TEXT NOT NULL DEFAULT 'pending',
@@ -103,6 +105,15 @@ class JobRepository:
               finished_at     TEXT
             );
         """)
+
+    def _migrate_schema(self) -> None:
+        """Migration idempotente : ajoute les colonnes manquantes sur les bases
+        créées par une version antérieure (ex. `deadline`)."""
+        assert self.conn is not None
+        cols = {row["name"] for row in self.conn.execute("PRAGMA table_info(job_offers)")}
+        if "deadline" not in cols:
+            self.conn.execute("ALTER TABLE job_offers ADD COLUMN deadline TEXT")
+            self.conn.commit()
 
     def add_scraper_log(self, status: str, offers_added: int, message: str) -> int:
         assert self.conn is not None
@@ -183,39 +194,51 @@ class JobRepository:
             job_id = row["id"]
             # Ne jamais rétrograder une offre déjà publiée / rejetée / archivée :
             # un re-scrape ne doit pas remettre à 'pending' un statut de modération.
-            cur.execute("SELECT status FROM job_offers WHERE id = ?", (job_id,))
+            cur.execute("SELECT status, is_expired FROM job_offers WHERE id = ?", (job_id,))
             current = cur.fetchone()
             current_status = current["status"] if current else "pending"
-            target_status = job.status if current_status in ("pending",) else current_status
+            current_expired = bool(current["is_expired"]) if current else False
+
+            # Exception à la règle ci-dessus : une offre AUTO-EXPIRÉE (is_expired=1)
+            # retrouvée en ligne avec une date limite future est réactivée — le site
+            # source a prolongé l'annonce, l'expiration n'a plus lieu d'être.
+            if current_expired and job.deadline and job.deadline > datetime.now():
+                target_status = "pending"
+                is_expired_val = 0
+            else:
+                target_status = job.status if current_status in ("pending",) else current_status
+                is_expired_val = 0 if not current_expired else 1
 
             cur.execute("""
                 UPDATE job_offers 
                 SET contract_type = ?, location = ?, description = ?, source_website = ?, 
                     status = ?, seo_title = ?, seo_description = ?, seo_keywords = ?, slug = ?, 
-                    apply_link = ?, apply_email = ?, updated_at = ?
+                    apply_link = ?, apply_email = ?, deadline = ?, is_expired = ?, updated_at = ?
                 WHERE id = ?
             """, (
                 job.contract_type, job.location, job.description, job.source,
                 target_status, job.seo_title, job.seo_description, job.seo_keywords, job.slug,
-                apply_link, apply_email, now, job_id
+                apply_link, apply_email, job.deadline.isoformat() if job.deadline else None,
+                is_expired_val, now, job_id
             ))
             self.conn.commit()
             # Miroir Supabase (ne doit jamais faire échouer le pipeline SQLite).
-            self._supabase_upsert(job, apply_link, apply_email, target_status)
+            self._supabase_upsert(job, apply_link, apply_email, target_status, is_expired_val)
             return job_id, False
 
         # Insertion nouvelle offre
         cur.execute("""
             INSERT INTO job_offers (
                 title, company, location, contract_type, description, apply_link, apply_email,
-                source_url, source_website, status, seo_title, seo_description, seo_keywords,
+                deadline, source_url, source_website, status, seo_title, seo_description, seo_keywords,
                 slug, is_verified, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
             RETURNING id
         """, (
             job.title, job.company, job.location, job.contract_type, job.description,
-            apply_link, apply_email, job.source_url, job.source,
+            apply_link, apply_email, job.deadline.isoformat() if job.deadline else None,
+            job.source_url, job.source,
             job.status, job.seo_title, job.seo_description, job.seo_keywords,
             job.slug, now, now
         ))
@@ -227,7 +250,7 @@ class JobRepository:
             return res["id"], True
         return "", False
 
-    def _supabase_upsert(self, job: Job, apply_link: Any, apply_email: Any, target_status: str) -> None:
+    def _supabase_upsert(self, job: Job, apply_link: Any, apply_email: Any, target_status: str, is_expired: int = 0) -> None:
         """
         Miroir Supabase de `upsert` : insère ou met à jour l'offre dans
         public.job_offers en reproduisant la déduplication SQLite
@@ -241,11 +264,11 @@ class JobRepository:
             # 1. Recherche d'une offre existante (source_url d'abord, puis titre+entreprise)
             existing: Dict[str, Any] | None = None
             if job.source_url:
-                resp = table.select("id,status").eq("source_url", job.source_url).maybe_single().execute()
+                resp = table.select("id,status,is_expired").eq("source_url", job.source_url).maybe_single().execute()
                 existing = resp.data
             if existing is None and job.title and job.company:
                 resp = (
-                    table.select("id,status")
+                    table.select("id,status,is_expired")
                     .eq("title", job.title)
                     .eq("company", job.company)
                     .limit(1)
@@ -255,6 +278,12 @@ class JobRepository:
                 if rows:
                     existing = rows[0]
 
+            # Même logique de réactivation que SQLite : une offre auto-expirée
+            # retrouvée avec une deadline future repasse en 'pending'.
+            if existing and existing.get("is_expired") and job.deadline and job.deadline > datetime.now():
+                target_status = "pending"
+                is_expired = 0
+
             payload = {
                 "title": job.title,
                 "company": job.company,
@@ -263,9 +292,11 @@ class JobRepository:
                 "description": job.description,
                 "apply_link": apply_link,
                 "apply_email": apply_email,
+                "deadline": job.deadline.isoformat() if job.deadline else None,
                 "source_url": job.source_url,
                 "source_website": job.source,
                 "status": target_status,
+                "is_expired": is_expired,
                 "seo_title": job.seo_title,
                 "seo_description": job.seo_description,
                 "seo_keywords": job.seo_keywords,
@@ -278,6 +309,29 @@ class JobRepository:
                 table.insert(payload).execute()
         except Exception as exc:
             _log_warning(f"Échec de l'upsert Supabase : {exc}")
+
+    def purge_demo_offers(self) -> int:
+        """Supprime les anciennes offres « démo » (source_url factice) de la BDD."""
+        assert self.conn is not None
+        cur = self.conn.execute(
+            "DELETE FROM job_offers WHERE source_url LIKE '%demo%'"
+        )
+        deleted = cur.rowcount
+        self.conn.commit()
+        return deleted
+
+    def expire_overdue_offers(self) -> int:
+        """Expiration automatique : passe en `is_expired=1` + `status='archived'`
+        les offres (pending/published) dont la date limite est dépassée."""
+        assert self.conn is not None
+        now = datetime.now().isoformat()
+        cur = self.conn.execute(
+            "UPDATE job_offers SET is_expired = 1, status = 'archived', updated_at = ? "
+            "WHERE deadline IS NOT NULL AND deadline < ? AND status IN ('pending','published')",
+            (now, now)
+        )
+        self.conn.commit()
+        return cur.rowcount
 
     def mark_stale_as_expired(self, active_source_urls: list[str], source_name: str) -> int:
         """Marque comme expirées/archivées les offres de cette source qui n'ont pas été revues."""

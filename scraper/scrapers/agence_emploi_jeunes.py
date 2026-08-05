@@ -3,36 +3,55 @@
 """
 ===============================================================================
   Djossi.ci — scraper/scrapers/agence_emploi_jeunes.py
-  Scraper pour Agence Emploi Jeunes (www.emploijeunes.ci)
+  Scraper pour Agence Emploi Jeunes (agenceemploijeunes.ci)
+
+  Note : la plateforme officielle (agenceemploijeunes.ci) est une SPA —
+  les offres sont chargées en JavaScript, sans contenu statique exploitable
+  via HTTP simple. On tente un parsing best-effort avec un filtre strict
+  (titres plausibles uniquement) ; à défaut, retour vide honnête (pas de
+  fausses offres).
 ===============================================================================
 """
 
 from __future__ import annotations
 
 from typing import List
-from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 from scraper.core.base_scraper import BaseScraper
 from scraper.models.job import Job
 
+# Mots de navigation jamais considérés comme des titres d'offre.
+_NAV_WORDS = ("accueil", "connexion", "inscription", "contact", "à propos", "a propos",
+              "mentions", "politique", "rechercher", "tous les", "offres d'emploi",
+              "nos services", "actualités", "se connecter")
+
 
 class AgenceEmploiJeunesScraper(BaseScraper):
     name = "agence_emploi_jeunes"
-    base_url = "https://www.emploijeunes.ci"
+    base_url = "https://agenceemploijeunes.ci"
+    listing_url = "https://agenceemploijeunes.ci/offres-emploi"
 
     def scrape(self, max_offers: int = 15) -> List[Job]:
-        self.logger.info(f"Scraping {self.name} -> {self.base_url}")
+        self.logger.info(f"Scraping {self.name} -> {self.listing_url}")
         jobs: List[Job] = []
-        try:
-            resp = self.http_client.get(self.base_url)
-            soup = BeautifulSoup(resp.text, "lxml")
-            for item in soup.select(".offre, .stage, article")[:max_offers]:
-                title_el = item.select_one("h2, h3, a")
-                title = title_el.get_text(" ", strip=True) if title_el else "Offre Emploi Jeunes"
-                link = urljoin(self.base_url, title_el.get("href", "")) if title_el and title_el.has_attr("href") else self.base_url
-                text = item.get_text(" ", strip=True)
-                
+
+        soup = self.get_soup(self.listing_url)
+        if soup is None:
+            self.logger.warning("Agence Emploi Jeunes injoignable. Aucune offre récupérée.")
+            return jobs
+
+        # Best-effort : liens d'annonces rendus côté serveur (rare sur cette SPA).
+        for a in soup.select('a[href*="offre"], a[href*="annonce"], a[href*="poste"]'):
+            try:
+                title = a.get_text(" ", strip=True)
+                if len(title) < 15 or len(title) > 120:
+                    continue
+                low = title.lower()
+                if any(w in low for w in _NAV_WORDS):
+                    continue
+                link = urljoin(self.base_url, a.get("href", ""))
+                text = title
                 job = Job(
                     title=title,
                     company="Agence Emploi Jeunes CI",
@@ -43,23 +62,19 @@ class AgenceEmploiJeunesScraper(BaseScraper):
                     source="Agence Emploi Jeunes",
                     source_url=link,
                     application_url=link,
-                    status="pending"
+                    status="pending",
                 )
-                ok, _ = job.is_valid_ivorian()
+                ok, reason = job.is_valid_ivorian()
                 if ok:
                     jobs.append(job)
-        except Exception as exc:
-            self.logger.warning(f"Erreur Agence Emploi Jeunes: {exc}. Fallback démo.")
-            jobs.append(Job(
-                title="Stagiaire Assistant RH (H/F)",
-                company="Ministère / Agence Emploi Jeunes",
-                location="Abidjan - Plateau",
-                contract_type="Stage",
-                education="BAC+3",
-                description="Programme stage école - Appui au département des ressources humaines.",
-                source="Agence Emploi Jeunes",
-                source_url="https://www.emploijeunes.ci/demo-stage-rh",
-                application_url="https://www.emploijeunes.ci/demo-stage-rh",
-                status="pending"
-            ))
+                if len(jobs) >= max_offers:
+                    break
+            except Exception as exc:
+                self.logger.debug(f"Erreur sur un lien AEJ : {exc}")
+
+        if not jobs:
+            self.logger.warning(
+                "Agence Emploi Jeunes : plateforme SPA, aucune offre récupérable en HTTP statique. "
+                "Aucune donnée factice générée."
+            )
         return jobs

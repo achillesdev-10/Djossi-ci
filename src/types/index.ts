@@ -91,6 +91,8 @@ export interface JobOfferSchema {
   description: string;
   apply_link: string | null;
   apply_email: string | null;
+  /** Date limite de candidature (scrapée, ISO 8601) — null si inconnue. */
+  deadline: string | null;
   source_url: string | null;
   source_website: string | null;
   status: JobOfferSchemaStatus;

@@ -3,14 +3,18 @@
 """
 ===============================================================================
   Djossi.ci — scraper/scrapers/jobivoire2.py
-  Scraper pour JobIvoire.ci
+  Scraper pour JobIvoire.ci (www.jobivoire.ci/job)
+
+  Structure vérifiée (2026-08) :
+    - Listing  : https://www.jobivoire.ci/job → cartes `.job-item`
+                 (titre en h2/h3, lien vers /job/details/{slug})
+    - Détail   : /job/details/{slug} → description dans <main>
 ===============================================================================
 """
 
 from __future__ import annotations
 
 from typing import List
-from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 from scraper.core.base_scraper import BaseScraper
@@ -19,47 +23,60 @@ from scraper.models.job import Job
 
 class JobIvoire2Scraper(BaseScraper):
     name = "jobivoire2"
-    base_url = "https://jobivoire.ci"
+    base_url = "https://www.jobivoire.ci"
+    listing_url = "https://www.jobivoire.ci/job"
 
     def scrape(self, max_offers: int = 15) -> List[Job]:
-        self.logger.info(f"Scraping {self.name} -> {self.base_url}")
+        self.logger.info(f"Scraping {self.name} -> {self.listing_url}")
         jobs: List[Job] = []
-        try:
-            resp = self.http_client.get(self.base_url)
-            soup = BeautifulSoup(resp.text, "lxml")
-            for item in soup.select(".job-item, .offer-card")[:max_offers]:
-                title_el = item.select_one("h2, h3, a")
-                title = title_el.get_text(" ", strip=True) if title_el else "Offre JobIvoire.ci"
-                link = urljoin(self.base_url, title_el.get("href", "")) if title_el and title_el.has_attr("href") else self.base_url
-                text = item.get_text(" ", strip=True)
-                
+
+        soup = self.get_soup(self.listing_url)
+        if soup is None:
+            return jobs
+
+        cards = soup.select(".job-item")[:max_offers]
+        for card in cards:
+            try:
+                title_el = card.select_one("h2, h3, h4")
+                title = title_el.get_text(" ", strip=True) if title_el else None
+                link_el = card.select_one('a[href*="/job/details/"]')
+                link = urljoin(self.base_url, link_el.get("href", "")) if link_el else None
+                if not title or not link:
+                    continue
+
+                card_text = card.get_text(" ", strip=True)
+                detail_text = card_text
+                description = card_text
+
+                # Enrichit la description avec la page détail.
+                dsoup = self.get_soup(link)
+                if dsoup is not None:
+                    main_el = dsoup.select_one("main") or dsoup.select_one("article") or dsoup.select_one(".job-details")
+                    if main_el:
+                        detail_text = main_el.get_text(" ", strip=True)
+                        description = detail_text
+
+                company = "Recruteur confidentiel" if "recruteur confidentiel" in detail_text.lower() else "JobIvoire.ci"
+
                 job = Job(
                     title=title,
-                    company="Société Partenaire CI",
-                    location=self.guess_location(text),
-                    contract_type=self.guess_contract(text),
-                    education=self.guess_education(text),
-                    description=text,
+                    company=company,
+                    location=self.guess_location(f"{card_text} {detail_text}"),
+                    contract_type=self.guess_contract(f"{card_text} {detail_text}"),
+                    education=self.guess_education(detail_text or card_text),
+                    description=description,
+                    deadline=self.extract_deadline(f"{card_text} {detail_text}"),
                     source="JobIvoire.ci",
                     source_url=link,
                     application_url=link,
-                    status="pending"
+                    status="pending",
                 )
-                ok, _ = job.is_valid_ivorian()
+                ok, reason = job.is_valid_ivorian()
                 if ok:
                     jobs.append(job)
-        except Exception as exc:
-            self.logger.warning(f"Erreur JobIvoire.ci: {exc}. Fallback démo.")
-            jobs.append(Job(
-                title="Responsable RH et Paie (H/F)",
-                company="Industries Côte d'Ivoire",
-                location="Abidjan - Yopougon",
-                contract_type="CDI",
-                education="BAC+4",
-                description="Gestion de la paie, administration du personnel et recrutement.",
-                source="JobIvoire.ci",
-                source_url="https://jobivoire.ci/demo-rh",
-                application_url="https://jobivoire.ci/demo-rh",
-                status="pending"
-            ))
+                else:
+                    self.logger.debug(f"  🚫 Rejeté ({reason}) : {title}")
+            except Exception as exc:
+                self.logger.debug(f"Erreur sur une carte JobIvoire.ci : {exc}")
+
         return jobs

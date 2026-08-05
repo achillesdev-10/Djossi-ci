@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import io
-import json
 import os
 import sys
 from pathlib import Path
@@ -51,54 +50,56 @@ from scraper.database.repository import JobRepository
 from scraper.scrapers.educarriere import EducarriereScraper
 from scraper.scrapers.emploi_ci import EmploiCiScraper
 from scraper.scrapers.emploiivoire import EmploiIvoireScraper
-from scraper.scrapers.jobivoire import JobIvoireScraper
 from scraper.scrapers.jobivoire2 import JobIvoire2Scraper
 from scraper.scrapers.novojob import NovojobScraper
 from scraper.scrapers.rmo import RmoScraper
-from scraper.scrapers.tectra import TectraScraper
 from scraper.scrapers.agence_emploi_jeunes import AgenceEmploiJeunesScraper
 
 # Import Company Scrapers
 from scraper.scrapers.companies.orange import OrangeScraper
 from scraper.scrapers.companies.mtn import MtnScraper
 from scraper.scrapers.companies.nsia import NsiaScraper
-from scraper.scrapers.companies.ecobank import EcobankScraper
-from scraper.scrapers.companies.sgci import SgciScraper
 from scraper.scrapers.companies.sifca import SifcaScraper
 from scraper.scrapers.companies.cie import CieScraper
-from scraper.scrapers.companies.sodeci import SodeciScraper
-from scraper.scrapers.companies.pfo import PfoScraper
 
 logger = setup_logger("djossi_runner")
 
+# Scrapers réellement actifs. Les anciennes sources ont été retirées :
+#   - jobivoire (jobivoire.com) : SPA sans contenu accessible en HTTP
+#   - tectra (tectra.ci)        : site injoignable
+#   - ecobank / sgci / sodeci / pfo : portails carrières dynamiques (JS)
 SCRAPER_REGISTRY: Dict[str, Type[BaseScraper]] = {
     "educarriere": EducarriereScraper,
     "emploici": EmploiCiScraper,
     "emploiivoire": EmploiIvoireScraper,
-    "jobivoire": JobIvoireScraper,
     "jobivoire2": JobIvoire2Scraper,
     "novojob": NovojobScraper,
     "rmo": RmoScraper,
-    "tectra": TectraScraper,
     "agence_emploi_jeunes": AgenceEmploiJeunesScraper,
     "orange": OrangeScraper,
     "mtn": MtnScraper,
     "nsia": NsiaScraper,
-    "ecobank": EcobankScraper,
-    "sgci": SgciScraper,
     "sifca": SifcaScraper,
     "cie": CieScraper,
-    "sodeci": SodeciScraper,
-    "pfo": PfoScraper,
 }
 
+# Sites par défaut : uniquement les sources réellement scrapables en HTTP.
+DEFAULT_SITES = "educarriere,jobivoire2,novojob,rmo,emploiivoire,emploici,orange,mtn"
 
-def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: bool) -> int:
+
+def _is_demo_source_url(url: str) -> bool:
+    """Détecte les URLs d'annonces « démo » générées par les anciens fallbacks."""
+    u = (url or "").lower()
+    return "/demo" in u or "demo-data" in u or u.startswith("demo-") or "-demo-" in u
+
+
+def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: bool, demo_data: bool = False) -> int:
     logger.info("=" * 60)
     logger.info("🚀 Démarrage du pipeline de scraping Djossi.ci")
     logger.info(f"   Sites cibles : {site_names}")
     logger.info(f"   Max par site : {max_per_site}")
     logger.info(f"   Mode Dry-Run : {dry_run}")
+    logger.info(f"   Données démo autorisées : {demo_data}")
     logger.info("=" * 60)
 
     # Journal d'exécution visible depuis le dashboard admin (scraper_logs)
@@ -129,9 +130,13 @@ def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: boo
             logger.info(f"  ✓ [{name}] {len(jobs)} offres brutes collectées.")
 
             for job in jobs:
+                # 0. Garde-fou : jamais de données « démo » en production.
+                if not demo_data and _is_demo_source_url(job.source_url):
+                    logger.warning(f"  ⛔ Offre de démonstration ignorée : {job.title} ({job.source_url})")
+                    continue
+
                 # 1. Nettoyage & structuration de la description (retire le
                 #    header/footer de la page source, structure en Markdown).
-                #    → les offres stockées sont propres AVANT d'être validées.
                 try:
                     clean_job(job)
                 except Exception as exc:
@@ -181,6 +186,11 @@ def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: boo
                     created_count += 1
                 else:
                     updated_count += 1
+            # Expiration automatique : les offres dont la date limite est
+            # dépassée passent en archivées/expirées.
+            expired_count = repo.expire_overdue_offers()
+            if expired_count:
+                logger.info(f"   ⏰ Offres expirées automatiquement : {expired_count}")
             st = repo.stats()
     except Exception as exc:
         logger.error(f"❌ Erreur d'enregistrement en BDD : {exc}", exc_info=True)
@@ -211,24 +221,50 @@ def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: boo
     return 0
 
 
+def purge_demo_offers() -> int:
+    """Supprime de la BDD les anciennes offres « démo » (source_url factice)."""
+    try:
+        with JobRepository(DB_PATH) as repo:
+            deleted = repo.purge_demo_offers()
+        logger.info(f"🗑  {deleted} offre(s) de démonstration supprimée(s) de la BDD.")
+        return 0
+    except Exception as exc:
+        logger.error(f"❌ Purge impossible : {exc}", exc_info=True)
+        return 1
+
+
 def main():
     parser = argparse.ArgumentParser(description="Djossi.ci Scraper Engine - Côte d'Ivoire")
     parser.add_argument(
         "--sites",
         type=str,
-        default="educarriere,emploici,orange,mtn",
-        help="Liste des scrapers séparés par des virgules (ex: educarriere,emploici,orange,mtn ou 'all')"
+        default=DEFAULT_SITES,
+        help=f"Liste des scrapers séparés par des virgules (défaut: {DEFAULT_SITES} ou 'all')"
     )
     parser.add_argument("--max-per-site", type=int, default=10, help="Nombre max d'offres par site")
     parser.add_argument("--dry-run", action="store_true", help="Afficher sans sauvegarder en BDD")
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Autoriser les offres de démonstration (utile uniquement pour les tests)"
+    )
+    parser.add_argument(
+        "--purge-demo",
+        action="store_true",
+        help="Supprimer les anciennes offres « démo » déjà enregistrées en BDD puis quitter"
+    )
     parser.add_argument("--schedule", type=str, choices=["hourly", "6h", "daily"], help="Lancer via le scheduler")
     args = parser.parse_args()
+
+    if args.purge_demo:
+        sys.exit(purge_demo_offers())
 
     sites = [s.strip().lower() for s in args.sites.split(",") if s.strip()]
     if "all" in sites:
         sites = list(SCRAPER_REGISTRY.keys())
 
-    target_func = lambda: run_scraping_pipeline(sites, args.max_per_site, args.dry_run)
+    demo_data = args.demo or os.getenv("DJOSSI_DEMO_DATA") == "1"
+    target_func = lambda: run_scraping_pipeline(sites, args.max_per_site, args.dry_run, demo_data)
 
     if args.schedule:
         scheduler = JobScheduler(target_func)

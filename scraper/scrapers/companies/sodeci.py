@@ -3,13 +3,19 @@
 """
 ===============================================================================
   Djossi.ci — scraper/scrapers/companies/sodeci.py
-  Scraper pour SODECI (Société de Distribution d'Eau de Côte d'Ivoire)
+  Scraper pour SODECI (www.sodeci.ci/recrutement)
+
+  ⚠️ DÉSACTIVÉ : la page recrutement de la SODECI ne présente aucune annonce
+  exploitable en HTML statique (aucune offre listée, recrutements diffusés
+  par ailleurs). Ce scraper n'est plus enregistré dans le registre principal
+  (scraper/scraper.py).
 ===============================================================================
 """
 
 from __future__ import annotations
 
 from typing import List
+
 from scraper.core.base_scraper import BaseScraper
 from scraper.models.job import Job
 
@@ -19,16 +25,7 @@ class SodeciScraper(BaseScraper):
     base_url = "https://www.sodeci.ci"
 
     def scrape(self, max_offers: int = 10) -> List[Job]:
-        self.logger.info(f"Scraping {self.name} -> {self.base_url}")
-        return [Job(
-            title="Ingénieur Hydraulicien / Traitement des Eaux (H/F)",
-            company="SODECI",
-            location="Abidjan - Treichville",
-            contract_type="CDI",
-            education="BAC+5",
-            description="Gestion des stations de traitement d'eau potable et optimisation du réseau de distribution en Côte d'Ivoire.",
-            source="SODECI",
-            source_url="https://www.sodeci.ci/recrutement",
-            application_url="https://www.sodeci.ci/recrutement",
-            status="pending"
-        )]
+        self.logger.warning(
+            "SODECI : aucune annonce listée sur la page recrutement — scraper désactivé, aucune donnée générée."
+        )
+        return []

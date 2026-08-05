@@ -4,13 +4,22 @@
 ===============================================================================
   Djossi.ci — scraper/scrapers/emploiivoire.py
   Scraper pour EmploiIvoire.ci
+
+  Structure vérifiée (2026-08) :
+    - La page d'accueil liste les offres sous forme de cartes <article> :
+      titre en <h3>, lien direct a[href*="/post/{id}"].
+    - Les cartes « EXCLUSIF » (paywall) n'ont pas de lien /post/ (lien "#")
+      → on itère sur les liens /post/ réels, ce qui exclut naturellement les
+      annonces premium inaccessibles.
+    - Les pages /post/{id} redirigent vers l'accueil (302) : on utilise donc
+      directement le texte riche des cartes (EXCLUSIF, Niveau BAC+5,
+      <Entreprise> recrute…, Profil recherché…).
 ===============================================================================
 """
 
 from __future__ import annotations
 
 from typing import List
-from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 from scraper.core.base_scraper import BaseScraper
@@ -24,54 +33,44 @@ class EmploiIvoireScraper(BaseScraper):
     def scrape(self, max_offers: int = 15) -> List[Job]:
         self.logger.info(f"Scraping {self.name} -> {self.base_url}")
         jobs: List[Job] = []
-        try:
-            resp = self.http_client.get(self.base_url)
-            soup = BeautifulSoup(resp.text, "lxml")
-            links = set()
-            for a in soup.select("a[href]"):
-                href = a.get("href", "")
-                full = urljoin(self.base_url, href)
-                if "emploi" in full.lower() or "offre" in full.lower():
-                    if full.startswith(self.base_url):
-                        links.add(full)
 
-            for link in list(links)[:max_offers]:
-                try:
-                    dresp = self.http_client.get(link)
-                    dsoup = BeautifulSoup(dresp.text, "lxml")
-                    h1 = dsoup.find("h1")
-                    title = h1.get_text(" ", strip=True) if h1 else "Offre Emploi Ivoire"
-                    text = dsoup.get_text(" ", strip=True)
-                    
-                    job = Job(
-                        title=title,
-                        company="Entreprise EmploiIvoire",
-                        location=self.guess_location(text),
-                        contract_type=self.guess_contract(text),
-                        education=self.guess_education(text),
-                        description=self.clean_html(dsoup.select_one("article, main, .content") or dsoup),
-                        source="EmploiIvoire.ci",
-                        source_url=link,
-                        application_url=link,
-                        status="pending"
-                    )
-                    ok, _ = job.is_valid_ivorian()
-                    if ok:
-                        jobs.append(job)
-                except Exception as exc:
-                    self.logger.debug(f"Erreur lien {link}: {exc}")
-        except Exception as exc:
-            self.logger.warning(f"Impossible de joindre EmploiIvoire: {exc}. Fallback démo.")
-            jobs.append(Job(
-                title="Responsable Administratif et Financier (H/F)",
-                company="Holding Ivoire Commerce",
-                location="Abidjan - Marcory",
-                contract_type="CDI",
-                education="BAC+5",
-                description="Supervision de la comptabilité, contrôle de gestion et relations bancaires.",
-                source="EmploiIvoire.ci",
-                source_url="https://emploiivoire.ci/demo-raf",
-                application_url="https://emploiivoire.ci/demo-raf",
-                status="pending"
-            ))
+        soup = self.get_soup(self.base_url)
+        if soup is None:
+            return jobs
+
+        post_links = soup.select('a[href*="/post/"]')
+        for a in post_links[:max_offers]:
+            try:
+                article = a.find_parent("article")
+                h = article.select_one("h1, h2, h3, h4") if article else None
+                title = h.get_text(" ", strip=True) if h else a.get_text(" ", strip=True)
+                link = urljoin(self.base_url, a.get("href", ""))
+                # Texte multi-lignes : le cleaner s'appuie sur les retours à la
+                # ligne pour repérer headers/footers (get_text(" ") aplatirait
+                # toute la carte sur une ligne et ferait échouer le nettoyage).
+                text = article.get_text("\n", strip=True) if article else a.get_text(" ", strip=True)
+                if not title or not link or len(title) < 5:
+                    continue
+
+                job = Job(
+                    title=title,
+                    company=self.guess_company(text, default="EmploiIvoire.ci"),
+                    location=self.guess_location(text),
+                    contract_type=self.guess_contract(text),
+                    education=self.guess_education(text),
+                    description=text,
+                    deadline=self.extract_deadline(text),
+                    source="EmploiIvoire.ci",
+                    source_url=link,
+                    application_url=link,
+                    status="pending",
+                )
+                ok, reason = job.is_valid_ivorian()
+                if ok:
+                    jobs.append(job)
+                else:
+                    self.logger.debug(f"  🚫 Rejeté ({reason}) : {title}")
+            except Exception as exc:
+                self.logger.debug(f"Erreur sur une carte EmploiIvoire : {exc}")
+
         return jobs

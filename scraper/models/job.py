@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field, HttpUrl
@@ -70,14 +71,19 @@ class Job(BaseModel):
         if not self.source_url:
             return False, "source_url obligatoire"
 
-        ivorian_keywords = [
+        # Mots-clés ivoiriens normalisés (sans ponctuation) : « cote-d-ivoire »,
+        # « Côte d'Ivoire », « .ci », « abidjan »… sont comparables après
+        # suppression de tout caractère non alphanumérique.
+        _ivorian_keywords = [
             "côte d'ivoire", "cote d'ivoire", "ivory coast", "abidjan", "yamoussoukro",
             "bouaké", "san-pedro", "san pedro", "daloa", "korhogo", "man", "gagnoa",
             "abobo", "cocody", "plateau", "treichville", "port-bouët", "port bouet",
             "koumassi", "adjamé", "yopougon", "marcory", "anyama", "bingerville", ".ci"
         ]
+        normalized_keywords = [re.sub(r"[^a-z0-9à-ÿ]+", "", kw) for kw in _ivorian_keywords]
         corpus = f"{self.title} {self.location} {self.description} {self.source_url}".lower()
-        if not any(kw in corpus for kw in ivorian_keywords):
+        corpus = re.sub(r"[^a-z0-9à-ÿ]+", "", corpus)
+        if not any(kw and kw in corpus for kw in normalized_keywords):
             return False, "hors ciblage géographique ivoirien"
 
         return True, "ok"

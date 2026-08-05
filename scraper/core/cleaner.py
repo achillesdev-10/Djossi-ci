@@ -107,6 +107,11 @@ def _is_footer(line: str) -> bool:
 
 
 def _is_meta(line: str) -> bool:
+    # Les lignes de métadonnées sont courtes. Une ligne longue qui commence par
+    # « Niveau », « Secteur »… est du contenu réel (ex. « Niveau BAC+5 …
+    # description complète… ») : on ne doit jamais la jeter.
+    if len(line) > 60:
+        return False
     return any(p.match(line) for p in _META_PATTERNS)
 
 

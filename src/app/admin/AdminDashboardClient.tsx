@@ -58,6 +58,27 @@ function formatDate(date: string | null) {
   }).format(parsed);
 }
 
+/** Date limite courte (ex: 30 août 2026) avec état passé → « expirée ». */
+function formatDeadline(date: string | null) {
+  if (!date) return null;
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(parsed);
+}
+
+function isDeadlinePassed(date: string | null) {
+  if (!date) return false;
+  const parsed = new Date(date);
+  return !Number.isNaN(parsed.getTime()) && parsed.getTime() < Date.now();
+}
+
+function deadlineClasses(deadline: string | null) {
+  if (isDeadlinePassed(deadline)) {
+    return "text-rose-600 dark:text-rose-400 font-semibold";
+  }
+  return "text-slate-600 dark:text-slate-300";
+}
+
 function statusClasses(status: DashboardOffer["status"]) {
   switch (status) {
     case "Vérifiées":
@@ -152,6 +173,7 @@ function exportCsv(offers: DashboardOffer[]) {
     "Ville",
     "Statut",
     "Ajoutee le",
+    "Date limite",
     "Clics",
     "Source",
   ];
@@ -161,6 +183,7 @@ function exportCsv(offers: DashboardOffer[]) {
     csvCell(offer.city),
     csvCell(offer.status),
     offer.createdAt ? csvCell(formatDate(offer.createdAt)) : csvCell(""),
+    offer.deadline ? csvCell(formatDate(offer.deadline)) : csvCell(""),
     String(offer.clicks),
     csvCell(offer.sourceUrl || ""),
   ]);
@@ -594,19 +617,19 @@ export default function AdminDashboardClient({
                     <th className="px-4 py-4">Ville</th>
                     <th className="px-4 py-4">Statut</th>
                     <th className="px-4 py-4">Ajoutée le</th>
+                    <th className="px-4 py-4">Date limite</th>
                     <th className="px-4 py-4">Clics</th>
                     <th className="px-4 py-4">Source</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-800 dark:bg-slate-900">
                   {pageOffers.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
-                      >
-                        Aucune offre ne correspond aux filtres actuels.
-                      </td>
+                    <tr>                        <td
+                          colSpan={8}
+                          className="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
+                        >
+                          Aucune offre ne correspond aux filtres actuels.
+                        </td>
                     </tr>
                   ) : null}
 
@@ -655,6 +678,23 @@ export default function AdminDashboardClient({
                         </td>
                         <td className="px-4 py-4 text-sm text-slate-600 dark:text-slate-300">
                           {formatDate(offer.createdAt)}
+                        </td>
+                        <td className={`px-4 py-4 text-sm ${deadlineClasses(offer.deadline)}`}>
+                          {offer.deadline ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              {isDeadlinePassed(offer.deadline) && (
+                                <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                              )}
+                              {formatDeadline(offer.deadline)}
+                              {isDeadlinePassed(offer.deadline) ? (
+                                <span className="text-[10px] font-bold uppercase tracking-wide text-rose-500">
+                                  expirée
+                                </span>
+                              ) : null}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-4 text-sm font-medium">
                           {offer.clicks}

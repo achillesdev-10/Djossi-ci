@@ -41,6 +41,12 @@ function normalizePatch(body: Record<string, unknown>): Partial<JobOfferSchemaIn
     patch.apply_email = null;
   }
 
+  if (typeof body.deadline === 'string') {
+    patch.deadline = body.deadline.trim() ? body.deadline.trim() : null;
+  } else if (body.deadline === null) {
+    patch.deadline = null;
+  }
+
   // NB : pas de fallback ici — la contrainte `valid_apply_method` est garantie
   // dans JobOfferSchemaService.update() qui connaît l'offre existante. Cela
   // évite d'écraser un apply_email déjà renseigné lors d'une édition banale.

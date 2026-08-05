@@ -313,3 +313,17 @@ CREATE POLICY "Modif réservée aux admins"
             SELECT id FROM public.profiles WHERE role = 'admin'
         )
     );
+-- ============================================================================
+--  Djossi.ci — Migration Supabase 0005
+--  Description : ajoute la colonne `deadline` (date limite de candidature)
+--  aux offres, pour l'affichage admin et l'expiration automatique.
+-- ============================================================================
+
+ALTER TABLE public.job_offers
+ADD COLUMN IF NOT EXISTS deadline TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS idx_jobs_deadline
+ON public.job_offers (deadline);
+
+COMMENT ON COLUMN public.job_offers.deadline
+IS 'Date limite de candidature (scrapée ou saisie par un admin). Les offres dont la deadline est dépassée passent automatiquement en expirées/archivées.';

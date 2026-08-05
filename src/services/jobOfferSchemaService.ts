@@ -36,6 +36,7 @@ const FALLBACK_OFFERS: JobOfferSchema[] = [
     description: "**À propos du poste**\n\nRejoignez l'équipe Digital & Tech de MTN Côte d'Ivoire…",
     apply_link: 'https://mtn.ci/recrutement/developpeur-fullstack',
     apply_email: 'recrutement.tech@mtn.ci',
+    deadline: null,
     source_url: 'https://mtn.ci/recrutement',
     source_website: 'MTN CI',
     status: 'published',
@@ -58,6 +59,7 @@ const FALLBACK_OFFERS: JobOfferSchema[] = [
     description: "La Direction Marketing et Communication de Société Générale CI recherche un(e) Chef(fe) de Projet Marketing Digital…",
     apply_link: 'https://sg.ci/fr/carrieres/offre/chef-projet-marketing-digital',
     apply_email: null,
+    deadline: null,
     source_url: 'https://www.linkedin.com/jobs/view/sg-ci-chef-projet-marketing',
     source_website: 'LinkedIn',
     status: 'published',
@@ -80,6 +82,7 @@ const FALLBACK_OFFERS: JobOfferSchema[] = [
     description: "**Offre de stage 6 mois — Paiement : 250 000 FCFA / mois**\n\nEcobank CI propose un stage au sein de la Business Intelligence & Data Team…",
     apply_link: null,
     apply_email: 'stages.data@ecobank.ci',
+    deadline: null,
     source_url: 'https://career.ecobank.com/cotedivoire',
     source_website: 'Ecobank',
     status: 'pending',
@@ -165,6 +168,7 @@ function ensureSchema(db: DatabaseSyncInstance) {
       description     TEXT NOT NULL,
       apply_link      TEXT,
       apply_email     TEXT,
+      deadline        TEXT,
       source_url      TEXT,
       source_website  TEXT,
       status          TEXT NOT NULL DEFAULT 'pending',
@@ -211,11 +215,15 @@ function ensureSchema(db: DatabaseSyncInstance) {
   `);
 
   // Migration défensive : la table peut avoir été créée avant l'ajout de
-  // `clicks_count` (ex: scripts/sqlite-setup.ts). On l'ajoute si absente.
+  // `clicks_count` / `deadline` (ex: scripts/sqlite-setup.ts). On les ajoute
+  // si absentes, sans toucher aux données existantes.
   const cols = db.prepare('PRAGMA table_info(job_offers)').all() as Array<{ name: string }>;
   const existingColumns = new Set(cols.map((c) => String(c.name)));
   if (!existingColumns.has('clicks_count')) {
     db.exec('ALTER TABLE job_offers ADD COLUMN clicks_count INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!existingColumns.has('deadline')) {
+    db.exec('ALTER TABLE job_offers ADD COLUMN deadline TEXT');
   }
 }
 
@@ -223,6 +231,7 @@ function rowToSchema(row: any): JobOfferSchema {
   return {
     ...row,
     status: row.status || 'pending',
+    deadline: row.deadline ?? null,
     is_verified: row.is_verified === 1,
     is_archived: row.is_archived === 1,
     is_expired: row.is_expired === 1,
@@ -234,6 +243,7 @@ function rowToSchemaFromSupabase(row: any): JobOfferSchema {
   return {
     ...row,
     status: row.status || 'pending',
+    deadline: row.deadline ?? null,
     is_verified: row.is_verified === true,
     is_archived: row.is_archived === true,
     is_expired: row.is_expired === true,
@@ -344,6 +354,7 @@ export class JobOfferSchemaService {
     'description',
     'apply_link',
     'apply_email',
+    'deadline',
     'source_url',
     'source_website',
     'status',
@@ -423,12 +434,12 @@ export class JobOfferSchemaService {
       .prepare(
         `INSERT INTO job_offers (
           title, company, location, contract_type, description,
-          apply_link, apply_email, source_url, source_website, status,
+          apply_link, apply_email, deadline, source_url, source_website, status,
           seo_title, seo_description, seo_keywords, slug, is_verified,
           created_at, updated_at
         ) VALUES (
           $title, $company, $location, $contract_type, $description,
-          $apply_link, $apply_email, $source_url, $source_website, $status,
+          $apply_link, $apply_email, $deadline, $source_url, $source_website, $status,
           $seo_title, $seo_description, $seo_keywords, $slug, $is_verified,
           datetime('now'), datetime('now')
         ) RETURNING id`
@@ -441,6 +452,7 @@ export class JobOfferSchemaService {
         $description: description,
         $apply_link: applyLink,
         $apply_email: applyEmail || fallbackEmail,
+        $deadline: data.deadline ? String(data.deadline).trim() || null : null,
         $source_url: data.source_url ? String(data.source_url).trim() : null,
         $source_website: data.source_website ? String(data.source_website).trim() : null,
         $status: data.status || 'pending',
@@ -750,6 +762,7 @@ export class JobOfferSchemaService {
       description: String(data.description || '').trim(),
       apply_link: applyLink,
       apply_email: applyEmail || fallbackEmail,
+      deadline: data.deadline ? String(data.deadline).trim() || null : null,
       source_url: data.source_url ? String(data.source_url).trim() : null,
       source_website: data.source_website ? String(data.source_website).trim() : null,
       status: data.status || 'pending',

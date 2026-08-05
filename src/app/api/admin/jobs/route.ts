@@ -35,6 +35,11 @@ function normalizeInsert(body: Record<string, unknown>): Partial<JobOfferSchemaI
   if (typeof body.apply_email === 'string') {
     data.apply_email = body.apply_email.trim() ? body.apply_email.trim() : null;
   }
+  if (typeof body.deadline === 'string') {
+    data.deadline = body.deadline.trim() ? body.deadline.trim() : null;
+  } else if (body.deadline === null) {
+    data.deadline = null;
+  }
   if (typeof body.source_url === 'string') data.source_url = body.source_url.trim() || null;
   if (typeof body.source_website === 'string') data.source_website = body.source_website.trim() || null;
   if (typeof body.seo_title === 'string') data.seo_title = body.seo_title.trim() || null;

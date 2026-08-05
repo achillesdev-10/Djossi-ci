@@ -3,39 +3,56 @@
 """
 ===============================================================================
   Djossi.ci — scraper/scrapers/novojob.py
-  Scraper pour Novojob Côte d'Ivoire (ci.novojob.com)
+  Scraper pour Novojob Côte d'Ivoire (www.novojob.com/cote-d-ivoire)
+
+  Note : l'ancienne cible « ci.novojob.com » était un site de démonstration
+  factice (« This is Compose/Flask demo »). Le vrai portail Novojob CI se
+  trouve sur www.novojob.com/cote-d-ivoire/offres-d-emploi.
+
+  Structure vérifiée (2026-08) :
+    - Listing : /cote-d-ivoire/offres-d-emploi → cartes `.job-details`
+      « Titre — ENTREPRISE — Ville, Côte d'ivoire — date — expérience »
+    - Lien annonce : .../offre-d-emploi/cote-d-ivoire/{ville}/{id}-{slug}
 ===============================================================================
 """
 
 from __future__ import annotations
 
 from typing import List
-from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 from scraper.core.base_scraper import BaseScraper
+from scraper.core.utils import guess_company_from_card
 from scraper.models.job import Job
 
 
 class NovojobScraper(BaseScraper):
     name = "novojob"
-    base_url = "https://ci.novojob.com"
+    base_url = "https://www.novojob.com"
+    listing_url = "https://www.novojob.com/cote-d-ivoire/offres-d-emploi"
 
     def scrape(self, max_offers: int = 15) -> List[Job]:
-        self.logger.info(f"Scraping {self.name} -> {self.base_url}")
+        self.logger.info(f"Scraping {self.name} -> {self.listing_url}")
         jobs: List[Job] = []
-        try:
-            resp = self.http_client.get(self.base_url)
-            soup = BeautifulSoup(resp.text, "lxml")
-            for card in soup.select(".offer-card, .job-item, article")[:max_offers]:
-                title_el = card.select_one("h2, h3, a")
-                title = title_el.get_text(" ", strip=True) if title_el else "Offre Novojob"
-                link = urljoin(self.base_url, title_el.get("href", "")) if title_el and title_el.has_attr("href") else self.base_url
+
+        soup = self.get_soup(self.listing_url)
+        if soup is None:
+            return jobs
+
+        cards = soup.select(".job-details")[:max_offers]
+        for card in cards:
+            try:
+                a = card.select_one('a[href*="offre-d-emploi"]')
+                if not a:
+                    continue
+                title = a.get_text(" ", strip=True)
+                link = urljoin(self.base_url, a.get("href", ""))
                 text = card.get_text(" ", strip=True)
-                
+                company = guess_company_from_card(text, title, default="Novojob.com")
+
                 job = Job(
                     title=title,
-                    company="Novojob Recrutement CI",
+                    company=company,
                     location=self.guess_location(text),
                     contract_type=self.guess_contract(text),
                     education=self.guess_education(text),
@@ -43,23 +60,14 @@ class NovojobScraper(BaseScraper):
                     source="Novojob.com",
                     source_url=link,
                     application_url=link,
-                    status="pending"
+                    status="pending",
                 )
-                ok, _ = job.is_valid_ivorian()
+                ok, reason = job.is_valid_ivorian()
                 if ok:
                     jobs.append(job)
-        except Exception as exc:
-            self.logger.warning(f"Erreur Novojob: {exc}. Fallback démo.")
-            jobs.append(Job(
-                title="Chef de Projet Digital (H/F)",
-                company="Novojob Partenaires",
-                location="Abidjan - Plateau",
-                contract_type="CDI",
-                education="BAC+5",
-                description="Pilotage de projets digitaux et transformation numérique pour grands comptes en Côte d'Ivoire.",
-                source="Novojob.com",
-                source_url="https://ci.novojob.com/demo-chef-projet",
-                application_url="https://ci.novojob.com/demo-chef-projet",
-                status="pending"
-            ))
+                else:
+                    self.logger.debug(f"  🚫 Rejeté ({reason}) : {title}")
+            except Exception as exc:
+                self.logger.debug(f"Erreur sur une carte Novojob : {exc}")
+
         return jobs

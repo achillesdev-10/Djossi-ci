@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+import os
+
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -19,12 +21,20 @@ logger = setup_logger("http_client")
 
 
 class HttpClient:
-    def __init__(self, timeout: float = 30.0, use_cache: bool = True):
+    def __init__(self, timeout: float = 30.0, use_cache: bool = True, verify_ssl: bool | None = None):
         self.timeout = timeout
         self.proxy_manager = ProxyManager()
+
+        # Vérification TLS : désactivable via l'environnement (certains sites
+        # ouest-africains exposent des chaînes de certificats incomplètes).
+        if verify_ssl is None:
+            verify_ssl = os.getenv("DJOSSI_VERIFY_SSL", "1").strip().lower() not in ("0", "false", "no")
+        self.verify_ssl = verify_ssl
+
         self.client = httpx.Client(
             timeout=timeout,
             follow_redirects=True,
+            verify=verify_ssl,
             headers={
                 "User-Agent": self.proxy_manager.get_random_user_agent(),
                 "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -41,7 +51,7 @@ class HttpClient:
     def get(self, url: str) -> httpx.Response:
         headers = {"User-Agent": self.proxy_manager.get_random_user_agent()}
         resp = self.client.get(url, headers=headers)
-        if resp.status_code == 403 or "cloudflare" in resp.text.lower():
+        if resp.status_code == 403 or "cloudflare" in resp.text.lower() or "just a moment" in resp.text.lower():
             logger.warning(f"⚠️ Blocage potentiel (403 / Cloudflare) détecté sur {url}")
         resp.raise_for_status()
         return resp

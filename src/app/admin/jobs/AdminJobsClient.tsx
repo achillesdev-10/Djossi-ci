@@ -5,6 +5,28 @@ import { useRouter } from 'next/navigation';
 import type { JobOfferSchema, JobOfferSchemaStatus } from '@/types';
 import { cleanDescription } from '@/lib/descriptionCleaner';
 
+/** ISO 8601 → valeur pour un <input type="datetime-local">. */
+function toDatetimeLocal(iso: string) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatDeadline(deadline: string | null) {
+  if (!deadline) return null;
+  const d = new Date(deadline);
+  if (Number.isNaN(d.getTime())) return deadline;
+  return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(d);
+}
+
+function isDeadlinePassed(deadline: string | null) {
+  if (!deadline) return false;
+  const d = new Date(deadline);
+  return !Number.isNaN(d.getTime()) && d.getTime() < Date.now();
+}
+
 export default function AdminJobsClient({
   initialJobs,
   duplicateIds = [],
@@ -34,6 +56,7 @@ export default function AdminJobsClient({
     contract_type: 'CDI' as JobOfferSchema['contract_type'],
     description: '',
     status: 'pending' as JobOfferSchemaStatus,
+    deadline: '',
     seo_title: '',
     seo_description: '',
     seo_keywords: '',
@@ -230,6 +253,7 @@ export default function AdminJobsClient({
       contract_type: 'CDI',
       description: '',
       status: 'pending',
+      deadline: '',
       seo_title: '',
       seo_description: '',
       seo_keywords: '',
@@ -250,6 +274,7 @@ export default function AdminJobsClient({
       contract_type: job.contract_type,
       description: job.description,
       status: job.status || 'pending',
+      deadline: job.deadline || '',
       seo_title: job.seo_title || '',
       seo_description: job.seo_description || '',
       seo_keywords: job.seo_keywords || '',
@@ -502,6 +527,7 @@ export default function AdminJobsClient({
                 <th className="py-4 px-6">Poste / Entreprise / Source</th>
                 <th className="py-4 px-6">Lieu</th>
                 <th className="py-4 px-6">Contrat</th>
+                <th className="py-4 px-6">Date limite</th>
                 <th className="py-4 px-6">Statut</th>
                 <th className="py-4 px-6 text-right">Actions de Modération</th>
               </tr>
@@ -538,6 +564,24 @@ export default function AdminJobsClient({
                       <span className="inline-flex rounded-full bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300">
                         {job.contract_type}
                       </span>
+                    </td>
+                    <td className="py-4 px-6 text-xs whitespace-nowrap">
+                      {job.deadline ? (
+                        <span
+                          className={`inline-flex items-center gap-1.5 ${
+                            isDeadlinePassed(job.deadline)
+                              ? 'text-rose-400'
+                              : 'text-slate-300'
+                          }`}
+                        >
+                          {isDeadlinePassed(job.deadline) && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                          )}
+                          {formatDeadline(job.deadline)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-500">—</span>
+                      )}
                     </td>
                     <td className="py-4 px-6">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${
@@ -672,6 +716,29 @@ export default function AdminJobsClient({
                       <option value="archived">Archivée (Archived)</option>
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">
+                    Date limite de candidature
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={toDatetimeLocal(editForm.deadline)}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        deadline: e.target.value
+                          ? new Date(e.target.value).toISOString()
+                          : '',
+                      })
+                    }
+                    className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary"
+                  />
+                  <p className="mt-1 text-[10px] text-slate-500 ml-1">
+                    Optionnelle — l'offre sera automatiquement marquée comme
+                    expirée après cette date.
+                  </p>
                 </div>
 
                 <div>

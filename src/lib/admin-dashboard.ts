@@ -13,6 +13,8 @@ export type DashboardOffer = {
   company: string;
   city: string;
   status: "En attente" | "Vérifiées" | "Expirées";
+  /** Date limite de candidature (ISO) — null si inconnue. */
+  deadline: string | null;
   sourceUrl: string;
   createdAt: string | null;
   clicks: number;
@@ -229,6 +231,11 @@ function getOfferRows(db: SqliteDb) {
     "address",
   ]);
   const statusColumn = pickFirstAvailable(columns, ["status", "state"]);
+  const deadlineColumn = pickFirstAvailable(columns, [
+    "deadline",
+    "expires_at",
+    "apply_deadline",
+  ]);
   const sourceUrlColumn = pickFirstAvailable(columns, [
     "source_url",
     "url",
@@ -269,6 +276,9 @@ function getOfferRows(db: SqliteDb) {
     sourceUrlColumn
       ? `${quoteIdentifier(sourceUrlColumn)} AS "sourceUrl"`
       : `'' AS "sourceUrl"`,
+    deadlineColumn
+      ? `${quoteIdentifier(deadlineColumn)} AS deadline`
+      : `NULL AS deadline`,
     createdAtColumn
       ? `${quoteIdentifier(createdAtColumn)} AS "createdAt"`
       : `NULL AS "createdAt"`,
@@ -294,13 +304,30 @@ function getOfferRows(db: SqliteDb) {
   return rows.map((row) => {
     const archived =
       Boolean(row.archivedFlag) || row.archivedAt !== null && row.archivedAt !== undefined;
+    const deadline = asIsoDate(row.deadline);
+
+    // Expiration automatique par date limite : une offre dont la deadline est
+    // passée est affichée « Expirées » quel que soit son statut de modération.
+    const status: DashboardOffer["status"] = (() => {
+      const base = normaliseStatus(row.status, archived);
+      if (
+        base !== "Expirées" &&
+        deadline &&
+        !Number.isNaN(new Date(deadline).getTime()) &&
+        new Date(deadline).getTime() < Date.now()
+      ) {
+        return "Expirées";
+      }
+      return base;
+    })();
 
     return {
       id: String(row.id),
       title: stringFromUnknown(row.title, "Titre indisponible"),
       company: stringFromUnknown(row.company, "Entreprise indisponible"),
       city: stringFromUnknown(row.city, "Non renseignée"),
-      status: normaliseStatus(row.status, archived),
+      status,
+      deadline,
       sourceUrl: stringFromUnknown(row.sourceUrl, ""),
       createdAt: asIsoDate(row.createdAt),
       clicks: numberFromUnknown(row.clicks),
@@ -614,6 +641,29 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
   }
 
   const db = openDatabase();
+
+  // Expiration automatique (SQLite) : les offres dont la date limite est
+  // dépassée passent en is_expired=1 / status='archived' — même si le scraper
+  // n'a pas encore tourné.
+  if (db) {
+    try {
+      const tables = getTableNames(db);
+      if (tables.has("job_offers")) {
+        const cols = getTableColumns(db, "job_offers");
+        if (cols.has("deadline") && cols.has("is_expired") && cols.has("status")) {
+          db.prepare(
+            `UPDATE "job_offers"
+             SET is_expired = 1, status = 'archived', updated_at = ?
+             WHERE deadline IS NOT NULL AND deadline < ?
+               AND status IN ('pending','published')`,
+          ).run(new Date().toISOString(), new Date().toISOString());
+        }
+      }
+    } catch {
+      // BDD verrouillée / lecture seule : l'expiration se fera au prochain run.
+    }
+  }
+
   const offers = db ? getOfferRows(db) : [];
   const cities = Array.from(
     new Set(
@@ -816,11 +866,28 @@ export async function applyBulkAction(action: BulkAction, ids: string[]): Promis
 async function getAdminDashboardDataFromSupabase(
   supabase: NonNullable<ReturnType<typeof getSupabaseClient>>,
 ): Promise<AdminDashboardData> {
-  const { data, error } = await supabase
+  // Expiration automatique (Supabase) : idem SQLite, sans faire échouer le
+  // dashboard si la colonne `deadline` n'est pas encore migrée.
+  try {
+    await supabase
+      .from("job_offers")
+      .update({ is_expired: true, status: "archived" })
+      .lt("deadline", new Date().toISOString())
+      .in("status", ["pending", "published"]);
+  } catch {
+    // migration non appliquée → l'expiration se fera côté SQLite/scraper
+  }
+
+  // Sélection avec `deadline` ; repli automatique si la migration 0005 n'a
+  // pas encore été appliquée sur l'instance Supabase.
+  const baseSelect =
+    "id,title,company,location,status,source_url,created_at,clicks_count,is_archived";
+  let { data, error } = await supabase
     .from("job_offers")
-    .select(
-      "id,title,company,location,status,source_url,created_at,clicks_count,is_archived",
-    );
+    .select(`${baseSelect},deadline`);
+  if (error && /deadline/i.test(error.message)) {
+    ({ data, error } = await supabase.from("job_offers").select(baseSelect));
+  }
 
   if (error) {
     return {
@@ -846,16 +913,32 @@ async function getAdminDashboardDataFromSupabase(
   const rows = data || [];
   const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
-  const offers: DashboardOffer[] = rows.map((row) => ({
-    id: String(row.id),
-    title: stringFromUnknown(row.title, "Titre indisponible"),
-    company: stringFromUnknown(row.company, "Entreprise indisponible"),
-    city: stringFromUnknown(row.location, "Non renseignée"),
-    status: normaliseStatus(row.status, Boolean(row.is_archived)),
-    sourceUrl: stringFromUnknown(row.source_url, ""),
-    createdAt: asIsoDate(row.created_at),
-    clicks: numberFromUnknown(row.clicks_count),
-  }));
+  const offers: DashboardOffer[] = rows.map((row) => {
+    const deadline = asIsoDate(row.deadline);
+    const status: DashboardOffer["status"] = (() => {
+      const base = normaliseStatus(row.status, Boolean(row.is_archived));
+      if (
+        base !== "Expirées" &&
+        deadline &&
+        !Number.isNaN(new Date(deadline).getTime()) &&
+        new Date(deadline).getTime() < Date.now()
+      ) {
+        return "Expirées";
+      }
+      return base;
+    })();
+    return {
+      id: String(row.id),
+      title: stringFromUnknown(row.title, "Titre indisponible"),
+      company: stringFromUnknown(row.company, "Entreprise indisponible"),
+      city: stringFromUnknown(row.location, "Non renseignée"),
+      status,
+      deadline,
+      sourceUrl: stringFromUnknown(row.source_url, ""),
+      createdAt: asIsoDate(row.created_at),
+      clicks: numberFromUnknown(row.clicks_count),
+    };
+  });
 
   const cities = Array.from(
     new Set(
@@ -952,7 +1035,7 @@ async function applyBulkActionFromSupabase(
  */
 export function launchScraperProcess() {
   const python = process.platform === "win32" ? "python" : "python3";
-  const sites = process.env.SCRAPER_SITES || "educarriere,emploici,orange,mtn";
+  const sites = process.env.SCRAPER_SITES || "educarriere,jobivoire2,novojob,rmo,emploiivoire,emploici,orange,mtn";
   const maxPerSite = process.env.SCRAPER_MAX_PER_SITE || "5";
   const script = path.join(process.cwd(), "scraper", "scraper.py");
 
