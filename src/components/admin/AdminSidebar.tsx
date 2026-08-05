@@ -8,8 +8,9 @@ const NAV_ITEMS = [
   {
     href: '/admin',
     label: "Vue d'ensemble",
+    description: 'KPIs, offres, scraper',
     icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 13h8V3H3v10Z" />
         <path d="M13 21h8v-6h-8v6Z" />
         <path d="M13 3h8v8h-8V3Z" />
@@ -20,8 +21,9 @@ const NAV_ITEMS = [
   {
     href: '/admin/jobs',
     label: "Offres d'emploi",
+    description: 'Modération & SEO',
     icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
         <path d="M4 9h16v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9Z" />
         <path d="M4 12h16" />
@@ -29,10 +31,35 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: '/admin/analytics',
+    label: 'Analytics',
+    description: 'Visites & trafic',
+    icon: (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v18h18" />
+        <path d="m7 14 4-4 3 3 5-6" />
+      </svg>
+    ),
+  },
+  {
+    href: '/admin/users',
+    label: 'Utilisateurs',
+    description: 'Candidats & entreprises',
+    icon: (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+        <circle cx="17.5" cy="9" r="2.5" />
+        <path d="M16 14.6a5 5 0 0 1 5.5 5" />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/scraper',
     label: 'Scraper',
+    description: 'Pilote des sources',
     icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 8V4" />
         <path d="m9 7 3-3 3 3" />
         <path d="M20 15a4 4 0 0 0-4-4h-1.3A6 6 0 1 0 6 17h10" />
@@ -44,10 +71,11 @@ const NAV_ITEMS = [
   {
     href: '/admin/settings',
     label: 'Paramètres',
+    description: 'Configuration',
     icon: (
-      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7Z" />
-        <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 1 1-4 0v-.2a1 1 0 0 0-.7-.9 1 1 0 0 0-1 .2l-.2.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 1 1 0-4h.2a1 1 0 0 0 .9-.7 1 1 0 0 0-.2-1l-.1-.2a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 1 1 4 0v.2a1 1 0 0 0 .7.9 1 1 0 0 0 1-.2l.2-.1a2 2 0 1 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6h.2a2 2 0 1 1 0 4h-.2a1 1 0 0 0-.9.7Z" />
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.7 1.7 0 0 0 .33 1.9l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.9-.33 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.9.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .33-1.9 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.33-1.9l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.9.33h.01a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55h.01a1.7 1.7 0 0 0 1.9-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.33 1.9v.01a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z" />
       </svg>
     ),
   },
@@ -55,45 +83,59 @@ const NAV_ITEMS = [
 
 export default function AdminSidebar({
   email,
+  onNavigate,
 }: {
   email: string;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
 
   async function handleLogout() {
     await fetch('/api/admin/session', { method: 'DELETE' });
+    onNavigate?.();
     router.replace('/admin/login');
     router.refresh();
   }
 
+  function handleNavigate() {
+    onNavigate?.();
+  }
+
   return (
-    <aside className="flex h-full w-full flex-col border-r border-border bg-slate-950 text-white">
-      <div className="border-b border-white/10 px-6 py-6">
-        <Link href="/admin" className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-black/30">
-            <span className="font-[var(--font-display)] text-xl font-black">T</span>
+    <aside className="flex h-full w-full flex-col border-r border-white/[0.06] bg-slate-950 text-white">
+      {/* Brand */}
+      <div className="border-b border-white/[0.06] px-6 py-6">
+        <Link href="/admin" onClick={handleNavigate} className="flex items-center gap-3">
+          <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25">
+            <span className="font-[var(--font-display)] text-xl font-black text-white">T</span>
+            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-slate-950 bg-emerald-400" />
           </div>
           <div>
             <div className="font-[var(--font-display)] text-lg font-extrabold tracking-tight">
-              TravaillerenCi Admin
+              TravaillerenCi
             </div>
-            <div className="text-xs text-slate-400">Modération et pilotage</div>
+            <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-400/80">
+              Console Admin
+            </div>
           </div>
         </Link>
       </div>
 
-      <div className="px-4 py-5">
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Session</div>
-          <div className="mt-2 truncate text-sm font-medium text-white">{email}</div>
-          <div className="mt-1 inline-flex rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300">
+      {/* Session */}
+      <div className="px-4 pt-5">
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-3">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Session</div>
+          <div className="mt-1.5 truncate text-sm font-medium text-white">{email}</div>
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
             Administrateur
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3">
+      {/* Nav */}
+      <nav className="mt-5 flex-1 space-y-1 overflow-y-auto px-3">
         {NAV_ITEMS.map((item) => {
           const active =
             item.href === '/admin' ? pathname === item.href : pathname.startsWith(item.href);
@@ -102,26 +144,48 @@ export default function AdminSidebar({
             <Link
               key={item.href}
               href={item.href}
+              onClick={handleNavigate}
               className={cn(
-                'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors',
+                'group relative flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all',
                 active
-                  ? 'bg-white text-slate-950 shadow-lg shadow-black/20'
-                  : 'text-slate-300 hover:bg-white/8 hover:text-white'
+                  ? 'bg-white/[0.08] text-white'
+                  : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-100'
               )}
             >
-              <span className={cn(active ? 'text-primary' : 'text-slate-400')}>{item.icon}</span>
-              <span>{item.label}</span>
+              {active && (
+                <span className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-emerald-400" />
+              )}
+              <span
+                className={cn(
+                  'transition-colors',
+                  active ? 'text-emerald-400' : 'text-slate-500 group-hover:text-slate-300'
+                )}
+              >
+                {item.icon}
+              </span>
+              <span className="flex min-w-0 flex-col">
+                <span className={cn('truncate', active && 'font-semibold')}>{item.label}</span>
+                <span className="truncate text-[10px] text-slate-500 group-hover:text-slate-400">
+                  {item.description}
+                </span>
+              </span>
             </Link>
           );
         })}
       </nav>
 
-      <div className="border-t border-white/10 px-4 py-4">
+      {/* Footer */}
+      <div className="border-t border-white/[0.06] px-4 py-4">
         <button
           type="button"
           onClick={handleLogout}
-          className="flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/10"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm font-semibold text-slate-300 transition-colors hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300"
         >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <path d="m16 17 5-5-5-5" />
+            <path d="M21 12H9" />
+          </svg>
           Se déconnecter
         </button>
       </div>
