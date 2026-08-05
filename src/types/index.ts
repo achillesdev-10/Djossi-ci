@@ -1,3 +1,7 @@
+import type { ContentCategory } from '@/types/content-types';
+
+export type { ContentCategory } from '@/types/content-types';
+
 export type UserRole = 'candidate' | 'employer' | 'admin';
 
 export interface User {
@@ -78,12 +82,16 @@ export type JobOfferSchemaStatus = 'pending' | 'published' | 'rejected' | 'archi
  * JobOfferSchema — miroir STRICT de la table `public.job_offers` (Supabase / SQLite).
  * Une offre DOIT avoir AU MOINS un moyen de postuler : apply_link XOR apply_email (ou les deux).
  *
+ * `category` discrimine le type de contenu (dépôt UNIFIÉ) :
+ *   job (défaut) | internship | scholarship | exam
+ *
  * NOTE : renommée volontairement pour ne pas rentrer en conflit avec
  * le type JobOffer "étendu" utilisé par l'ancien JobService mocké.
  * → Utiliser JobOfferSchema pour tout ce qui va écrire / lire dans la table SQL.
  */
 export interface JobOfferSchema {
   id: string;
+  category?: ContentCategory;
   title: string;
   company: string;
   location: string;
@@ -113,6 +121,7 @@ export type JobOfferSchemaInsert = Omit<JobOfferSchema, 'id' | 'created_at' | 'u
 
 /** Filtres supportés par les queries SQL (list / search). */
 export interface JobOfferSchemaFilters {
+  category?: ContentCategory | ContentCategory[];
   keyword?: string;
   location?: string;
   contract_type?: JobContractType | JobContractType[];

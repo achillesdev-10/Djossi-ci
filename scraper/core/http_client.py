@@ -51,8 +51,16 @@ class HttpClient:
     def get(self, url: str) -> httpx.Response:
         headers = {"User-Agent": self.proxy_manager.get_random_user_agent()}
         resp = self.client.get(url, headers=headers)
-        if resp.status_code == 403 or "cloudflare" in resp.text.lower() or "just a moment" in resp.text.lower():
-            logger.warning(f"⚠️ Blocage potentiel (403 / Cloudflare) détecté sur {url}")
+        # Blocage RÉEL : status 403/429 OU page « challenge » Cloudflare
+        # (« Just a moment… »). La simple présence du mot « cloudflare » dans
+        # le HTML n'est PAS un blocage (CDN présent sur beaucoup de sites).
+        blocked = (
+            resp.status_code in (403, 429)
+            or "just a moment" in resp.text[:2000].lower()
+            or "attention required!" in resp.text[:2000].lower()
+        )
+        if blocked:
+            logger.warning(f"⚠️ Blocage potentiel ({resp.status_code}) détecté sur {url}")
         resp.raise_for_status()
         return resp
 

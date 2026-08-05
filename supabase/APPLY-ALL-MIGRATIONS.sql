@@ -369,3 +369,19 @@ COMMENT ON TABLE  public.site_visits             IS 'Visites du site (analytics)
 COMMENT ON COLUMN public.site_visits.path        IS 'Chemin de la page visitée (ex: /jobs, /jobs/abc)';
 COMMENT ON COLUMN public.site_visits.ip_hash     IS 'Empreinte de l''IP (anonymisée, base64 tronqué) pour les visiteurs uniques';
 COMMENT ON COLUMN public.site_visits.user_agent  IS 'User-Agent du navigateur (détection mobile/desktop)';
+
+-- ============================================================================
+--  TravaillerEnCi — Migration Supabase 0007
+--  Description : colonne `category` (dépôt unifié : emplois, stages, bourses, concours)
+-- ============================================================================
+
+ALTER TABLE public.job_offers
+ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'job'
+CONSTRAINT job_offers_category_check
+CHECK (category IN ('job', 'internship', 'scholarship', 'exam'));
+
+CREATE INDEX IF NOT EXISTS idx_job_offers_category
+ON public.job_offers (category);
+
+COMMENT ON COLUMN public.job_offers.category
+IS 'Type de contenu : job (emploi), internship (stage), scholarship (bourse), exam (concours)';

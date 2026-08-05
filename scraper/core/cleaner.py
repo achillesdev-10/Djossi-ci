@@ -296,9 +296,9 @@ def clean_description(raw: str, title: str | None = None, source: str | None = N
     return result.strip()
 
 
-def clean_job(job) -> None:
-    """Nettoie la description (et normalise le titre) d'une offre Job in-place."""
-    if job.description:
-        job.description = clean_description(job.description, title=job.title)
-    if job.title:
-        job.title = re.sub(r"\s+", " ", job.title).strip()
+def clean_item(item) -> None:
+    """Nettoie la description (et normalise le titre) d'un ContentItem in-place."""
+    if item.description:
+        item.description = clean_description(item.description, title=item.title)
+    if item.title:
+        item.title = re.sub(r"\s+", " ", item.title).strip()

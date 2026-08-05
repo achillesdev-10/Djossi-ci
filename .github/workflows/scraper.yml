@@ -2,11 +2,12 @@ name: TravaillerEnCi Scraper Automation
 
 on:
   schedule:
-    - cron: '0 6 * * *' # Tous les jours à 06:00 UTC
-  workflow_dispatch: # Déclenchement manuel
+    # Deux fois par jour : 06:00 et 18:00 UTC (= 06:00 & 18:00 GMT, 07:00 & 19:00 Abidjan)
+    - cron: '0 6,18 * * *'
+  workflow_dispatch: # Déclenchement manuel depuis l'onglet Actions
 
 jobs:
-  scrape-jobs:
+  scrape-content:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,9 +27,14 @@ jobs:
             pip install -r scraper/requirements.txt
           fi
 
-      - name: Run scraper script
+      - name: Run scraper (collecte + réécriture IA + modération pending)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Clé Google AI Studio (https://aistudio.google.com/apikey) :
+          # classification + réécriture Markdown des contenus via Gemini.
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SCRAPER_SITES: ${{ vars.SCRAPER_SITES }}
         run: |
-          python scraper/scraper.py
+          # SCRAPER_SITES (variable de repo) est optionnelle : défaut = educarriere,emploici,boursedetude
+          python scraper/scraper.py --max-per-site 15 ${SCRAPER_SITES:+--sites "$SCRAPER_SITES"}

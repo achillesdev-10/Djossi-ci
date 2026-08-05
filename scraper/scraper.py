@@ -3,7 +3,23 @@
 """
 ===============================================================================
   TravaillerEnCi — scraper/scraper.py
-  Runner principal du moteur de scraping multi-sources pour la Côte d'Ivoire
+  Runner principal du moteur de scraping multi-sources (Côte d'Ivoire)
+
+  PIPELINE :
+      1. Collecte brute (emplois, stages, bourses, concours) — sources réelles
+      2. Nettoyage & structuration des descriptions
+      3. Enrichissement IA (Gemini) : classification + réécriture Markdown
+         (repli heuristique si la clé GEMINI_API_KEY est absente)
+      4. Validation qualité (filtre géographique pour emplois/stages)
+      5. Déduplication
+      6. Enregistrement en statut 'pending' → file de MODÉRATION ADMIN
+
+  Exemples :
+      python scraper/scraper.py                          # tout, 10/site
+      python scraper/scraper.py --dry-run                # affichage seul
+      python scraper/scraper.py --max-per-site 25
+      python scraper/scraper.py --no-ai                  # sans Gemini
+      python scraper/scraper.py --purge-demo             # purge données démo
 ===============================================================================
 """
 
@@ -20,11 +36,12 @@ from typing import List, Dict, Type
 # Fix console encoding for Windows
 def _fix_console() -> None:
     try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace") # type: ignore[attr-defined]
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace") # type: ignore[attr-defined]
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
     except Exception:
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
         sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+
 
 _fix_console()
 
@@ -34,59 +51,44 @@ DATA_DIR = PROJECT_ROOT / "data"
 DB_PATH = DATA_DIR / "travaillerenci.sqlite3"
 SCRAPER_HEALTH_JSON = DATA_DIR / "admin-scraper-health.json"
 
-# Permet l'exécution directe `python scraper/scraper.py` (le CWD n'étant pas
-# automatiquement dans sys.path, le package `scraper` ne serait pas résolu).
+# Permet l'exécution directe `python scraper/scraper.py`
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scraper.core.logger import setup_logger
 from scraper.core.http_client import HttpClient
 from scraper.core.duplicate_detector import DuplicateDetector
-from scraper.core.cleaner import clean_job
+from scraper.core.cleaner import clean_item
 from scraper.core.base_scraper import BaseScraper
+from scraper.core.gemini import GeminiEnricher
 from scraper.core.scheduler import JobScheduler
-from scraper.models.job import Job
+from scraper.models.content_item import ContentItem
 from scraper.database.repository import JobRepository
 
-# Import Job Site Scrapers
+# Scrapers actifs — sources VÉRIFIÉES en HTTP simple (les anciennes sources
+# novojob / rmo / emploiivoire / jobivoire2 / emploi.ci étaient mortes ou
+# bloquées, elles ont été retirées).
 from scraper.scrapers.educarriere import EducarriereScraper
-from scraper.scrapers.emploi_ci import EmploiCiScraper
-from scraper.scrapers.emploiivoire import EmploiIvoireScraper
-from scraper.scrapers.jobivoire2 import JobIvoire2Scraper
-from scraper.scrapers.novojob import NovojobScraper
-from scraper.scrapers.rmo import RmoScraper
-from scraper.scrapers.agence_emploi_jeunes import AgenceEmploiJeunesScraper
-
-# Import Company Scrapers
-from scraper.scrapers.companies.orange import OrangeScraper
-from scraper.scrapers.companies.mtn import MtnScraper
-from scraper.scrapers.companies.nsia import NsiaScraper
-from scraper.scrapers.companies.sifca import SifcaScraper
-from scraper.scrapers.companies.cie import CieScraper
+from scraper.scrapers.emploici import EmploiciScraper
+from scraper.scrapers.boursedetude import BourseDetudeScraper
 
 logger = setup_logger("travaillerenci_runner")
 
-# Scrapers réellement actifs. Les anciennes sources ont été retirées :
-#   - jobivoire (jobivoire.com) : SPA sans contenu accessible en HTTP
-#   - tectra (tectra.ci)        : site injoignable
-#   - ecobank / sgci / sodeci / pfo : portails carrières dynamiques (JS)
 SCRAPER_REGISTRY: Dict[str, Type[BaseScraper]] = {
     "educarriere": EducarriereScraper,
-    "emploici": EmploiCiScraper,
-    "emploiivoire": EmploiIvoireScraper,
-    "jobivoire2": JobIvoire2Scraper,
-    "novojob": NovojobScraper,
-    "rmo": RmoScraper,
-    "agence_emploi_jeunes": AgenceEmploiJeunesScraper,
-    "orange": OrangeScraper,
-    "mtn": MtnScraper,
-    "nsia": NsiaScraper,
-    "sifca": SifcaScraper,
-    "cie": CieScraper,
+    "emploici": EmploiciScraper,
+    "boursedetude": BourseDetudeScraper,
 }
 
-# Sites par défaut : uniquement les sources réellement scrapables en HTTP.
-DEFAULT_SITES = "educarriere,jobivoire2,novojob,rmo,emploiivoire,emploici,orange,mtn"
+# Sites par défaut (ordres de priorité : offres → bourses → concours).
+DEFAULT_SITES = "educarriere,emploici,boursedetude"
+
+CATEGORY_LABELS = {
+    "job": "Emploi",
+    "internship": "Stage",
+    "scholarship": "Bourse",
+    "exam": "Concours",
+}
 
 
 def _is_demo_source_url(url: str) -> bool:
@@ -100,21 +102,17 @@ def _write_admin_health(
     offers_added: int | None = None,
     message: str | None = None,
 ) -> None:
-    """Écrit l'état du scraper dans data/admin-scraper-health.json.
-
-    Ce fichier est lu par le dashboard Next.js quand la table SQLite
-    scraper_logs n'est pas disponible ou quand le cache mémoire est actif.
-    Il garantit que le statut « running » n'est pas conservé à vie.
-    """
+    """État du scraper lu par le dashboard Next.js."""
     try:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         payload = {
             "status": status,
-            "lastRunAt": datetime.utcnow().isoformat() + "Z",
+            "lastRunAt": datetime.now(datetime.UTC).isoformat().replace("+00:00", "Z"),
             "offersAdded": offers_added if offers_added is not None else None,
             "message": message,
         }
         import json
+
         tmp = SCRAPER_HEALTH_JSON.with_suffix(".tmp")
         tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(SCRAPER_HEALTH_JSON)
@@ -122,31 +120,37 @@ def _write_admin_health(
         logger.debug(f"Écriture admin-scraper-health.json impossible : {exc}")
 
 
-def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: bool, demo_data: bool = False) -> int:
+def run_scraping_pipeline(
+    site_names: List[str],
+    max_per_site: int,
+    dry_run: bool,
+    demo_data: bool = False,
+    use_ai: bool = True,
+) -> int:
     logger.info("=" * 60)
     logger.info("🚀 Démarrage du pipeline de scraping TravaillerEnCi")
     logger.info(f"   Sites cibles : {site_names}")
     logger.info(f"   Max par site : {max_per_site}")
     logger.info(f"   Mode Dry-Run : {dry_run}")
     logger.info(f"   Données démo autorisées : {demo_data}")
+    logger.info(f"   Enrichissement IA : {'OUI' if use_ai else 'non (heuristique)'}")
     logger.info("=" * 60)
 
-    # Journal d'exécution visible depuis le dashboard admin (scraper_logs)
     run_log_id = None
     start_msg = f"Scraping lancé : {', '.join(site_names)} (max {max_per_site}/site)"
     if not dry_run:
         _write_admin_health("running", None, start_msg)
         try:
             with JobRepository(DB_PATH) as repo:
-                run_log_id = repo.add_scraper_log(
-                    "running", 0, start_msg
-                )
+                run_log_id = repo.add_scraper_log("running", 0, start_msg)
         except Exception as exc:
             logger.warning(f"Impossible d'écrire le log de démarrage : {exc}")
 
     http_client = HttpClient()
+    enricher = GeminiEnricher() if use_ai else GeminiEnricher(api_key=None)
     dup_detector = DuplicateDetector()
-    all_jobs: List[Job] = []
+    all_items: List[ContentItem] = []
+    per_category: Dict[str, int] = {"job": 0, "internship": 0, "scholarship": 0, "exam": 0}
 
     for name in site_names:
         scraper_class = SCRAPER_REGISTRY.get(name)
@@ -157,71 +161,97 @@ def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: boo
         logger.info(f"▶ Lancement du scraper : {name}")
         try:
             scraper = scraper_class(http_client)
-            jobs = scraper.scrape(max_offers=max_per_site)
-            logger.info(f"  ✓ [{name}] {len(jobs)} offres brutes collectées.")
+            raw_items = scraper.scrape(max_offers=max_per_site)
+            logger.info(f"  ✓ [{name}] {len(raw_items)} contenus bruts collectés.")
 
-            for job in jobs:
+            for item in raw_items:
                 # 0. Garde-fou : jamais de données « démo » en production.
-                if not demo_data and _is_demo_source_url(job.source_url):
-                    logger.warning(f"  ⛔ Offre de démonstration ignorée : {job.title} ({job.source_url})")
+                if not demo_data and _is_demo_source_url(item.source_url):
+                    logger.warning(f"  ⛔ Contenu de démonstration ignoré : {item.title[:50]} ({item.source_url})")
                     continue
 
-                # 1. Nettoyage & structuration de la description (retire le
-                #    header/footer de la page source, structure en Markdown).
+                # 1. Nettoyage & structuration de la description.
                 try:
-                    clean_job(job)
+                    clean_item(item)
                 except Exception as exc:
-                    logger.warning(f"  ⚠ Nettoyage impossible pour {job.title}: {exc}")
+                    logger.warning(f"  ⚠ Nettoyage impossible pour {item.title[:50]}: {exc}")
 
-                # 2. Validation ivoirienne
-                ok, reason = job.is_valid_ivorian()
+                # 2. Enrichissement IA : classification + réécriture (jamais bloquant).
+                #    Sans clé Gemini, `enrich()` retombe sur les heuristiques locales
+                #    pour que stages / concours ne soient jamais classés par défaut
+                #    en « emploi ».
+                try:
+                    enricher.enrich(item)
+                except Exception as exc:
+                    logger.warning(f"  ⚠ Enrichissement IA impossible : {exc}")
+
+                # 3. Validation qualité.
+                ok, reason = item.is_valid()
                 if not ok:
-                    logger.debug(f"  🚫 Offre rejetée ({reason}): {job.title} @ {job.company}")
+                    logger.debug(f"  🚫 Contenu rejeté ({reason}): {item.title[:50]} @ {item.company}")
+                    continue
+                ok, reason = item.is_valid_ivorian()
+                if not ok:
+                    logger.debug(f"  🚫 Contenu hors ciblage ({reason}): {item.title[:50]}")
                     continue
 
-                # 3. Détection doublons
-                if dup_detector.is_duplicate(job):
-                    logger.debug(f"  🔁 Doublon détecté : {job.title}")
+                # 4. Détection doublons (dans ce run).
+                if dup_detector.is_duplicate(item):
+                    logger.debug(f"  🔁 Doublon détecté : {item.title[:50]}")
                     continue
 
-                # 4. Slug & SEO par défaut si absent
-                if not job.slug:
+                # 5. Slug & SEO par défaut si absent.
+                if not item.slug:
                     from slugify import slugify
-                    job.slug = slugify(f"{job.title}-{job.company}-{job.city}", separator="-")
-                if not job.seo_title:
-                    job.seo_title = f"{job.title} chez {job.company} - Emploi Côte d'Ivoire"
-                if not job.seo_description:
-                    job.seo_description = f"Découvrez l'offre d'emploi {job.title} à {job.location} sur TravaillerEnCi."
 
-                all_jobs.append(job)
+                    item.slug = slugify(f"{item.title}-{item.company}", separator="-")
+                if not item.seo_title:
+                    item.seo_title = f"{item.title} | TravaillerEnCi"
+                if not item.seo_description:
+                    item.seo_description = (
+                        f"{item.category} : {item.title} — {item.company} ({item.location}). "
+                        "Découvrez l'opportunité complète sur TravaillerEnCi."
+                    )[:180]
+
+                per_category[item.category_sql()] = per_category.get(item.category_sql(), 0) + 1
+                all_items.append(item)
         except Exception as exc:
             logger.error(f"  ❌ Erreur critique sur le scraper {name}: {exc}", exc_info=True)
 
     http_client.close()
+    enricher.close()
 
-    logger.info(f"\n📊 Bilan collecte : {len(all_jobs)} offres valides uniques prêtes à l'enregistrement.")
+    cat_summary = ", ".join(f"{CATEGORY_LABELS[k]}={v}" for k, v in per_category.items() if v)
+    logger.info(f"\n📊 Bilan collecte : {len(all_items)} contenus valides uniques prêts à l'enregistrement.")
+    if cat_summary:
+        logger.info(f"   Répartition : {cat_summary}")
 
     if dry_run:
-        for idx, job in enumerate(all_jobs, 1):
-            print(f"  {idx}. [{job.contract_type}] {job.title} — {job.company} ({job.location}) [Source: {job.source}]")
+        for idx, item in enumerate(all_items, 1):
+            print(
+                f"  {idx}. [{item.category.upper():10}] {item.title[:60]} — {item.company[:40]} "
+                f"({item.location[:30]}) [Source: {item.source}]"
+            )
         return 0
 
-    # Sauvegarde BDD SQLite (admin dashboard integration)
     created_count = 0
     updated_count = 0
     try:
         with JobRepository(DB_PATH) as repo:
-            for job in all_jobs:
-                _, was_created = repo.upsert(job)
+            # Purge des anciennes données « démo » avant insertion.
+            purged = repo.purge_demo_offers()
+            if purged:
+                logger.info(f"   🗑  {purged} contenu(s) de démonstration purgé(s).")
+
+            for item in all_items:
+                _, was_created = repo.upsert(item)
                 if was_created:
                     created_count += 1
                 else:
                     updated_count += 1
-            # Expiration automatique : les offres dont la date limite est
-            # dépassée passent en archivées/expirées.
             expired_count = repo.expire_overdue_offers()
             if expired_count:
-                logger.info(f"   ⏰ Offres expirées automatiquement : {expired_count}")
+                logger.info(f"   ⏰ Contenus expirés automatiquement : {expired_count}")
             st = repo.stats()
     except Exception as exc:
         logger.error(f"❌ Erreur d'enregistrement en BDD : {exc}", exc_info=True)
@@ -236,20 +266,21 @@ def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: boo
         return 1
 
     logger.info(f"✅ Enregistrement BDD terminé !")
-    logger.info(f"   Nouvelles offres (pending) : {created_count}")
-    logger.info(f"   Offres mises à jour        : {updated_count}")
-    logger.info(f"   Statistiques BDD globale   : Total={st['total']}, En attente={st['pending']}, Publiées={st['published']}")
+    logger.info(f"   Nouveaux contenus (pending) : {created_count}")
+    logger.info(f"   Contenus mis à jour        : {updated_count}")
+    logger.info(
+        f"   Statistiques BDD : Total={st['total']}, En attente={st['pending']}, "
+        f"Publiées={st['published']}, {st.get('by_category', {})}"
+    )
 
-    end_msg = f"Scraping terminé : {created_count} nouvelle(s) offre(s), {updated_count} mise(s) à jour."
+    end_msg = (
+        f"Scraping terminé : {created_count} nouveau(x) contenu(s), {updated_count} mis à jour."
+        + (f" [{cat_summary}]" if cat_summary else "")
+    )
     if run_log_id is not None:
         try:
             with JobRepository(DB_PATH) as repo:
-                repo.finish_scraper_log(
-                    run_log_id,
-                    "success",
-                    created_count,
-                    end_msg,
-                )
+                repo.finish_scraper_log(run_log_id, "success", created_count, end_msg)
         except Exception as exc:
             logger.warning(f"Impossible de finaliser le log : {exc}")
     _write_admin_health("success", created_count, end_msg)
@@ -257,11 +288,11 @@ def run_scraping_pipeline(site_names: List[str], max_per_site: int, dry_run: boo
 
 
 def purge_demo_offers() -> int:
-    """Supprime de la BDD les anciennes offres « démo » (source_url factice)."""
+    """Supprime de la BDD les anciens contenus « démo » (source_url factice)."""
     try:
         with JobRepository(DB_PATH) as repo:
             deleted = repo.purge_demo_offers()
-        logger.info(f"🗑  {deleted} offre(s) de démonstration supprimée(s) de la BDD.")
+        logger.info(f"🗑  {deleted} contenu(s) de démonstration supprimé(s) de la BDD.")
         return 0
     except Exception as exc:
         logger.error(f"❌ Purge impossible : {exc}", exc_info=True)
@@ -274,19 +305,24 @@ def main():
         "--sites",
         type=str,
         default=DEFAULT_SITES,
-        help=f"Liste des scrapers séparés par des virgules (défaut: {DEFAULT_SITES} ou 'all')"
+        help=f"Liste des scrapers séparés par des virgules (défaut: {DEFAULT_SITES} ou 'all')",
     )
-    parser.add_argument("--max-per-site", type=int, default=10, help="Nombre max d'offres par site")
+    parser.add_argument("--max-per-site", type=int, default=10, help="Nombre max de contenus par site")
     parser.add_argument("--dry-run", action="store_true", help="Afficher sans sauvegarder en BDD")
     parser.add_argument(
         "--demo",
         action="store_true",
-        help="Autoriser les offres de démonstration (utile uniquement pour les tests)"
+        help="Autoriser les contenus de démonstration (uniquement pour les tests)",
+    )
+    parser.add_argument(
+        "--no-ai",
+        action="store_true",
+        help="Désactiver l'enrichissement IA (classification heuristique)",
     )
     parser.add_argument(
         "--purge-demo",
         action="store_true",
-        help="Supprimer les anciennes offres « démo » déjà enregistrées en BDD puis quitter"
+        help="Supprimer les anciens contenus « démo » déjà enregistrés en BDD puis quitter",
     )
     parser.add_argument("--schedule", type=str, choices=["hourly", "6h", "daily"], help="Lancer via le scheduler")
     args = parser.parse_args()
@@ -299,7 +335,10 @@ def main():
         sites = list(SCRAPER_REGISTRY.keys())
 
     demo_data = args.demo or os.getenv("TRAVAILLERENCI_DEMO_DATA") == "1"
-    target_func = lambda: run_scraping_pipeline(sites, args.max_per_site, args.dry_run, demo_data)
+    use_ai = not args.no_ai and os.getenv("TRAVAILLERENCI_NO_AI") != "1"
+    target_func = lambda: run_scraping_pipeline(
+        sites, args.max_per_site, args.dry_run, demo_data, use_ai
+    )
 
     if args.schedule:
         scheduler = JobScheduler(target_func)

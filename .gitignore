@@ -43,3 +43,7 @@ __pycache__/
 .vscode/
 *.swp
 *.swo
+
+# Scraper runtime state (réécrits à chaque exécution)
+data/admin-scraper-health.json
+data/scraper-last-run.log

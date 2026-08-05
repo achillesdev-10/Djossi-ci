@@ -9,7 +9,7 @@ export default async function AdminScraperPage() {
     getScraperRunHistory(10),
   ]);
 
-  const sources = (process.env.SCRAPER_SITES || "educarriere,jobivoire2,novojob,rmo,emploiivoire,emploici,orange,mtn")
+  const sources = (process.env.SCRAPER_SITES || "educarriere,emploici,boursedetude")
     .split(",")
     .map((source) => source.trim())
     .filter(Boolean);

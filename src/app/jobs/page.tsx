@@ -25,6 +25,9 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
   const contract = resolvedParams.contract || '';
 
   const { rows: jobs, total } = await JobOfferSchemaService.list({
+    // Seuls les emplois et stages (dépôt unifié) apparaissent sur /jobs —
+    // les bourses (scholarship) et concours (exam) ont leurs propres pages.
+    category: ['job', 'internship'],
     keyword,
     location: city,
     contract_type: contract ? (contract as any) : undefined,

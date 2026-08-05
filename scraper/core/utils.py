@@ -135,15 +135,30 @@ def extract_contract(text: str) -> str:
 
 
 def guess_company(text: str, default: str = "Entreprise") -> str:
-    """Devine le nom de l'entreprise à partir d'un texte d'annonce.
+    """Devine le nom de l'entreprise / organisme à partir d'un texte d'annonce.
 
     Priorités :
-      1. « <Entreprise> recrute / recherche / embauche … » (EmploiIvoire & co).
-      2. « Recruteur confidentiel » (JobIvoire).
-      3. Retourne `default`.
+      1. « Entreprise : <Nom> » (Educarriere, Emploici…).
+      2. « <Entreprise> recrute / recherche / embauche … ».
+      3. « Recruteur confidentiel ».
+      4. Retourne `default`.
     """
     if not text:
         return default
+
+    # 1. Libellé explicite « Entreprise : X » / « Société : X » / « Employeur : X »
+    m = re.search(
+        r"\b(?:entreprise|employeur|soci[ée]t[ée]|organisme|recruteur)\s*[:\u00e0-]\s*([^\n|;]{3,80})",
+        text,
+        re.I,
+    )
+    if m:
+        company = m.group(1).strip().rstrip(":,;-–—|").strip()
+        company = re.sub(r"^[\d\s\W]+", "", company).strip()
+        if company and len(company) >= 2:
+            return company[:80]
+
+    # 2. « <Entreprise> recrute / recherche / embauche »
     m = re.search(r"\b(.{3,80}?)\s+(recrute|recherche|embauche)\b", text, re.I)
     if m:
         company = m.group(1).strip().rstrip(":,;-–—|").strip()
@@ -171,6 +186,35 @@ def guess_company_from_card(text: str, title: str | None = None, default: str = 
     if len(company) >= 2:
         return company
     return guess_company(text, default)
+
+
+def classify_content(title: str, text: str) -> str:
+    """Classification heuristique (fallback sans IA) d'un contenu scrapé.
+
+    Retourne : job | internship | scholarship | exam
+    """
+    corpus = f"{title} {text}".lower()
+    # Bourse d'études
+    if re.search(r"\bbourse(?:s)?\b|\bscholarship\b|bourse d[’']études?", corpus):
+        return "scholarship"
+    # Stage / alternance / apprentissage / trainee
+    if re.search(
+        r"\bstage\b|\binternship\b|\bstagiaire\b|\btrainee\b|\bapprentissage\b|\balternance\b|programme de stage",
+        corpus,
+    ):
+        return "internship"
+    # Concours / examen / fonction publique
+    if re.search(
+        r"\bconcours\b|\bexamen(?:s)?\b|fonction publique|concours de recrutement|\bavis de concours\b|\binscriptions? aux concours\b",
+        corpus,
+    ):
+        return "exam"
+    return "job"
+
+
+def extract_emails(text: str) -> list[str]:
+    """Extrait les emails présents dans un texte brut."""
+    return re.findall(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", text or "")
 
 
 def extract_deadline(text: str) -> Optional[datetime]:

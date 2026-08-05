@@ -10,7 +10,7 @@
     "lint": "next lint",
     "db:setup": "tsx scripts/sqlite-setup.ts",
     "db:reset": "tsx scripts/sqlite-setup.ts --reset",
-    "db:seed": "tsx scripts/sqlite-setup.ts --seed-only",
+    "db:seed": "echo \"Plus de seed : les contenus proviennent du scraper (python scraper/scraper.py)\"",
     "db:dry": "tsx scripts/sqlite-setup.ts --dry-run"
   },
   "keywords": [

@@ -15,14 +15,15 @@ from typing import List, Optional
 
 from bs4 import BeautifulSoup
 
-from scraper.models.job import Job
+from scraper.models.content_item import ContentItem
 from scraper.core.http_client import HttpClient
 from scraper.core.logger import setup_logger
 from scraper.core.utils import (
     clean_html_text,
     extract_contract,
-    extract_education,
     extract_deadline,
+    extract_emails,
+    extract_education,
     guess_company,
     normalize_location,
 )
@@ -37,7 +38,7 @@ class BaseScraper(ABC):
         self.logger = setup_logger(f"scraper.{self.name}")
 
     @abstractmethod
-    def scrape(self, max_offers: int = 20) -> List[Job]:
+    def scrape(self, max_offers: int = 20) -> List[ContentItem]:
         pass
 
     def get_soup(self, url: str) -> BeautifulSoup | None:
@@ -49,6 +50,18 @@ class BaseScraper(ABC):
             self.logger.warning(f"Impossible de joindre {url}: {exc}")
             return None
 
+    def get_text(self, url: str) -> Optional[str]:
+        """Télécharge une page et retourne son texte brut (None en cas d'erreur)."""
+        try:
+            resp = self.http_client.get(url)
+            return resp.text
+        except Exception as exc:
+            self.logger.warning(f"Impossible de joindre {url}: {exc}")
+            return None
+
+    # ------------------------------------------------------------------
+    # Helpers d'extraction (partagés par tous les scrapers)
+    # ------------------------------------------------------------------
     def guess_contract(self, text: str) -> str:
         return extract_contract(text)
 
@@ -63,6 +76,9 @@ class BaseScraper(ABC):
 
     def extract_deadline(self, text: str) -> Optional[datetime]:
         return extract_deadline(text)
+
+    def extract_emails(self, text: str) -> List[str]:
+        return extract_emails(text)
 
     def clean_html(self, html: str) -> str:
         return clean_html_text(html)

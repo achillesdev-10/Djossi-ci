@@ -5,6 +5,8 @@ import { requireAdminApi } from '@/lib/adminSession';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
 import type { JobContractType, JobOfferSchemaInsert, JobOfferSchemaStatus } from '@/types';
 
+import type { ContentCategory } from '@/types';
+
 const ALLOWED_CONTRACTS: JobContractType[] = [
   'CDI',
   'CDD',
@@ -12,6 +14,13 @@ const ALLOWED_CONTRACTS: JobContractType[] = [
   'Prestation',
   'Alternance',
   'Freelance',
+];
+
+const ALLOWED_CATEGORIES: ContentCategory[] = [
+  'job',
+  'internship',
+  'scholarship',
+  'exam',
 ];
 
 const ALLOWED_STATUSES: JobOfferSchemaStatus[] = [
@@ -23,6 +32,13 @@ const ALLOWED_STATUSES: JobOfferSchemaStatus[] = [
 
 function normalizePatch(body: Record<string, unknown>): Partial<JobOfferSchemaInsert> {
   const patch: Record<string, any> = {};
+
+  if (
+    typeof body.category === 'string' &&
+    ALLOWED_CATEGORIES.includes(body.category as ContentCategory)
+  ) {
+    patch.category = body.category as ContentCategory;
+  }
 
   if (typeof body.title === 'string') patch.title = body.title.trim();
   if (typeof body.company === 'string') patch.company = body.company.trim();

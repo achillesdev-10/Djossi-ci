@@ -293,6 +293,7 @@ Référence complète : voir `.env.example`.
 | `NEXT_PUBLIC_SUPABASE_URL` | si Supabase | URL du projet Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | si Supabase | Clé publique Supabase (côté client) |
 | `SUPABASE_SERVICE_ROLE_KEY` | si Supabase | Clé admin (côté serveur uniquement) |
+| `GEMINI_API_KEY` | 🟡 | Réécriture & classification IA des contenus scrapés (Google AI Studio). Sans elle, le scraper reste fonctionnel (heuristiques) |
 | `JWT_SECRET` | si auth locale | Sel JWT (générez via `openssl rand -hex 32`) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | 🟡 | Abonnements entreprise (optionnel MVP) |
 | `STRIPE_SECRET_KEY` | 🟡 | Secret Stripe serveur |
@@ -301,6 +302,14 @@ Référence complète : voir `.env.example`.
 | `WHATSAPP_META_ACCESS_TOKEN` | 🟡 | Token Meta WhatsApp Cloud API si vous envoyez directement sans webhook |
 | `WHATSAPP_META_PHONE_NUMBER_ID` | 🟡 | Identifiant du numéro WhatsApp Business Meta |
 | `WHATSAPP_META_TO` | 🟡 | Numéro destinataire au format international pour l'envoi direct |
+
+### Pipeline du scraper (offres, stages, bourses, concours)
+- Le scraper `scraper/scraper.py` collecte **des données réelles** depuis des sources ivoiriennes vérifiées : `educarriere.ci` (emplois & stages), `emploici.net` (emplois & stages) et `boursedetude.org` (bourses d'études).
+- Chaque contenu est nettoyé, **classifié et réécrit en Markdown par Gemini** (`GEMINI_API_KEY`), puis inséré en statut `pending` dans la table `job_offers` (colonne `category` : `job` / `internship` / `scholarship` / `exam`).
+- **Aucune donnée de démonstration** : `--purge-demo` supprime les anciennes offres « démo ».
+- L'admin modère dans `/admin/jobs` (éditer, valider → publier, rejeter, supprimer) ; les contenus publiés alimentent `/jobs`, `/bourses` et `/concours`.
+- **Automatisation** : le workflow GitHub `scraper.yml` tourne **2× par jour** (06:00 & 18:00 UTC) et est déclenchable à la main ; le dashboard admin (`/admin/scraper`) peut aussi lancer une extraction.
+- **Déclenchement manuel en production (Vercel)** : Vercel n'a pas de Python. Le bouton du dashboard appelle en priorité `SCRAPER_AUTOMATION_URL` si elle est définie (n8n, Make, Google Cloud Scheduler…). En local, il lance directement `python scraper/scraper.py`.
 
 ### Notifications WhatsApp
 - Le scraper `scraper/scraper.py` peut envoyer automatiquement un message formaté quand une **nouvelle offre valide** est créée en base.

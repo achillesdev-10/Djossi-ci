@@ -59,8 +59,8 @@ export default async function JobDetailPage({ params }: PageProps) {
 
   // Suggestions : 3 offres de la même localisation ou du même type de contrat
   const [similarByType, similarByLocation] = await Promise.all([
-    JobOfferSchemaService.list({ contract_type: job.contract_type, limit: 4 }),
-    JobOfferSchemaService.list({ location: job.location.split(',')[0].split(' - ')[0], limit: 4 }),
+    JobOfferSchemaService.list({ category: ['job', 'internship'], contract_type: job.contract_type, limit: 4 }),
+    JobOfferSchemaService.list({ category: ['job', 'internship'], location: job.location.split(',')[0].split(' - ')[0], limit: 4 }),
   ]);
 
   const similarIds = new Set<string>([job.id]);

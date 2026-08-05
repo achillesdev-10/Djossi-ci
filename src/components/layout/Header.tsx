@@ -9,6 +9,8 @@ const NAV_LINKS = [
   { label: 'Offres d\'emploi', href: '/jobs' },
   { label: 'Entreprises', href: '/companies' },
   { label: 'Candidats', href: '/candidates' },
+  { label: 'Bourses d\'études', href: '/bourses' },
+  { label: 'Concours admin.', href: '/concours' },
   { label: 'Générateur CV', href: '/generateur-de-cv', isCV: true },
 ];
 

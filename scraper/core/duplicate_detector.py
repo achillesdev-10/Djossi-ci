@@ -3,7 +3,7 @@
 """
 ===============================================================================
   TravaillerEnCi — scraper/core/duplicate_detector.py
-  Détection avancée des doublons (titre, entreprise, ville, hash, similarité)
+  Détection avancée des doublons (titre, organisme, ville, hash, similarité)
 ===============================================================================
 """
 
@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import hashlib
 from typing import Set
-from scraper.models.job import Job
+
+from scraper.models.content_item import ContentItem
 
 
 class DuplicateDetector:
@@ -19,13 +20,16 @@ class DuplicateDetector:
         self.seen_hashes: Set[str] = set()
         self.seen_keys: Set[str] = set()
 
-    def compute_hash(self, job: Job) -> str:
-        corpus = f"{job.title.lower().strip()}|{job.company.lower().strip()}|{job.city.lower().strip()}"
+    def compute_hash(self, item: ContentItem) -> str:
+        corpus = (
+            f"{item.title.lower().strip()}|{item.company.lower().strip()}|"
+            f"{item.location.lower().strip()}"
+        )
         return hashlib.sha256(corpus.encode("utf-8")).hexdigest()
 
-    def is_duplicate(self, job: Job) -> bool:
-        h = self.compute_hash(job)
-        k = job.dedup_key()
+    def is_duplicate(self, item: ContentItem) -> bool:
+        h = self.compute_hash(item)
+        k = item.dedup_key()
         if h in self.seen_hashes or k in self.seen_keys:
             return True
         self.seen_hashes.add(h)

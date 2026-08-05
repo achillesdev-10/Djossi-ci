@@ -2,8 +2,23 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import type { JobOfferSchema, JobOfferSchemaStatus } from '@/types';
+import type { JobOfferSchema, JobOfferSchemaStatus, ContentCategory } from '@/types';
 import { cleanDescription } from '@/lib/descriptionCleaner';
+
+const CATEGORY_TABS: Array<{ value: ContentCategory | 'all'; label: string }> = [
+  { value: 'all', label: 'Tous' },
+  { value: 'job', label: 'Emplois' },
+  { value: 'internship', label: 'Stages' },
+  { value: 'scholarship', label: 'Bourses' },
+  { value: 'exam', label: 'Concours' },
+];
+
+const CATEGORY_BADGES: Record<ContentCategory, { label: string; className: string }> = {
+  job: { label: 'Emploi', className: 'bg-sky-500/15 text-sky-400 border-sky-500/30' },
+  internship: { label: 'Stage', className: 'bg-violet-500/15 text-violet-400 border-violet-500/30' },
+  scholarship: { label: 'Bourse', className: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
+  exam: { label: 'Concours', className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
+};
 
 /** ISO 8601 → valeur pour un <input type="datetime-local">. */
 function toDatetimeLocal(iso: string) {
@@ -38,6 +53,7 @@ export default function AdminJobsClient({
   const [jobs, setJobs] = useState<JobOfferSchema[]>(initialJobs);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | JobOfferSchemaStatus | 'verified' | 'unverified'>('pending');
+  const [categoryFilter, setCategoryFilter] = useState<ContentCategory | 'all'>('all');
   const [contractFilter, setContractFilter] = useState<string>('all');
   const [cityFilter, setCityFilter] = useState<string>('all');
   const [duplicatesOnly, setDuplicatesOnly] = useState(false);
@@ -50,6 +66,7 @@ export default function AdminJobsClient({
   const [modalNotice, setModalNotice] = useState<string | null>(null);
   const [isAiRewriting, setIsAiRewriting] = useState(false);
   const [editForm, setEditForm] = useState({
+    category: 'job' as ContentCategory,
     title: '',
     company: '',
     location: '',
@@ -100,6 +117,9 @@ export default function AdminJobsClient({
         ? job.is_verified
         : !job.is_verified;
 
+    const matchesCategory =
+      categoryFilter === 'all' ? true : (job.category || 'job') === categoryFilter;
+
     const matchesContract =
       contractFilter === 'all' ? true : job.contract_type === contractFilter;
 
@@ -108,7 +128,14 @@ export default function AdminJobsClient({
 
     const matchesDuplicate = duplicatesOnly ? duplicateIds.includes(job.id) : true;
 
-    return matchesSearch && matchesStatus && matchesContract && matchesCity && matchesDuplicate;
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesCategory &&
+      matchesContract &&
+      matchesCity &&
+      matchesDuplicate
+    );
   });
 
   async function handleUpdateStatus(job: JobOfferSchema, newStatus: JobOfferSchemaStatus) {
@@ -247,6 +274,7 @@ export default function AdminJobsClient({
     setEditingJob(null);
     setModalNotice(null);
     setEditForm({
+      category: categoryFilter !== 'all' ? categoryFilter : 'job',
       title: '',
       company: '',
       location: 'Abidjan',
@@ -268,6 +296,7 @@ export default function AdminJobsClient({
     setIsCreating(false);
     setModalNotice(null);
     setEditForm({
+      category: job.category || 'job',
       title: job.title,
       company: job.company,
       location: job.location,
@@ -369,16 +398,18 @@ export default function AdminJobsClient({
 
   const pendingCount = jobs.filter((j) => j.status === 'pending').length;
   const duplicateCount = jobs.filter((j) => duplicateIds.includes(j.id)).length;
+  const categoryCount = (cat: ContentCategory | 'all') =>
+    cat === 'all' ? jobs.length : jobs.filter((j) => (j.category || 'job') === cat).length;
 
   return (
     <div className="space-y-8 pb-24">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-white font-[var(--font-display)]">
-            Gestion des Offres & Modération
+            Modération des contenus (offres, stages, bourses, concours)
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Examinez les offres collectées par le scraper, modérez le contenu et gérez le référencement SEO.
+            Examinez les contenus collectés par le scraper, modérez-les (valider / publier / rejeter / supprimer) et gérez le référencement SEO.
           </p>
         </div>
         <button
@@ -389,8 +420,28 @@ export default function AdminJobsClient({
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 5v14M5 12h14" />
           </svg>
-          Créer une offre
+          Nouveau contenu
         </button>
+      </div>
+
+      {/* Onglets de Catégorie (Emploi / Stage / Bourse / Concours) */}
+      <div className="flex flex-wrap gap-2">
+        {CATEGORY_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setCategoryFilter(tab.value)}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 ${
+              categoryFilter === tab.value
+                ? 'bg-primary text-slate-950 shadow-lg shadow-primary/20'
+                : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+            }`}
+          >
+            <span>{tab.label}</span>
+            <span className="bg-slate-950/40 px-2 py-0.5 rounded-full text-[10px] text-white">
+              {categoryCount(tab.value)}
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* Onglets de Statut */}
@@ -524,7 +575,7 @@ export default function AdminJobsClient({
                     className="rounded border-slate-700 bg-slate-900 text-primary focus:ring-primary h-4 w-4"
                   />
                 </th>
-                <th className="py-4 px-6">Poste / Entreprise / Source</th>
+                <th className="py-4 px-6">Titre / Organisme / Source</th>
                 <th className="py-4 px-6">Lieu</th>
                 <th className="py-4 px-6">Contrat</th>
                 <th className="py-4 px-6">Date limite</th>
@@ -548,7 +599,12 @@ export default function AdminJobsClient({
                     </td>
                     <td className="py-4 px-6">
                       <div className="font-bold text-white max-w-xs truncate flex items-center gap-2">
-                        {job.title}
+                        <span
+                          className={`shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold ${CATEGORY_BADGES[job.category || 'job'].className}`}
+                        >
+                          {CATEGORY_BADGES[job.category || 'job'].label}
+                        </span>
+                        <span className="truncate">{job.title}</span>
                         {duplicateIds.includes(job.id) && (
                           <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-fuchsia-500/15 border border-fuchsia-500/30 px-2 py-0.5 text-[10px] font-bold text-fuchsia-400">
                             Doublon probable
@@ -670,11 +726,11 @@ export default function AdminJobsClient({
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div>
                 <h3 className="text-xl font-bold text-white font-[var(--font-display)]">
-                  {isCreating ? 'Créer une offre' : "Examiner & Éditer l'offre"}
+                  {isCreating ? 'Créer un contenu' : "Examiner & Éditer le contenu"}
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
                   {isCreating
-                    ? 'Publiez directement une offre ou créez-la en attente de validation.'
+                    ? 'Créez un contenu (emploi, stage, bourse ou concours) en attente de validation.'
                     : 'Modifiez le contenu, nettoyez ou réécrivez la description, ajustez le SEO.'}
                 </p>
               </div>
@@ -685,35 +741,63 @@ export default function AdminJobsClient({
               {/* Informations Générales */}
               <div className="space-y-4">
                 <h4 className="text-sm font-bold text-primary uppercase tracking-wider">1. Informations principales</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Titre du poste</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Catégorie</label>
+                    <select
+                      value={editForm.category}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, category: e.target.value as ContentCategory })
+                      }
+                      className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary"
+                    >
+                      <option value="job">Emploi</option>
+                      <option value="internship">Stage</option>
+                      <option value="scholarship">Bourse d'études</option>
+                      <option value="exam">Concours / Examen</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Titre</label>
                     <input type="text" required value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Entreprise</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">
+                      {editForm.category === 'scholarship' ? 'Bailleur' : editForm.category === 'exam' ? 'Organisme' : 'Entreprise'}
+                    </label>
                     <input type="text" required value={editForm.company} onChange={(e) => setEditForm({ ...editForm, company: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Lieu / Ville</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Lieu / Ville / Pays</label>
                     <input type="text" required value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Type de contrat</label>
-                    <select value={editForm.contract_type} onChange={(e) => setEditForm({ ...editForm, contract_type: e.target.value as any })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary">
-                      <option value="CDI">CDI</option><option value="CDD">CDD</option><option value="Stage">Stage</option><option value="Freelance">Freelance</option><option value="Alternance">Alternance</option><option value="Prestation">Prestation</option>
-                    </select>
+                    {editForm.category === 'job' || editForm.category === 'internship' ? (
+                      <>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Type de contrat</label>
+                        <select value={editForm.contract_type} onChange={(e) => setEditForm({ ...editForm, contract_type: e.target.value as any })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary">
+                          <option value="CDI">CDI</option><option value="CDD">CDD</option><option value="Stage">Stage</option><option value="Freelance">Freelance</option><option value="Alternance">Alternance</option><option value="Prestation">Prestation</option>
+                        </select>
+                      </>
+                    ) : (
+                      <>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Type de contrat</label>
+                        <div className="rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-xs text-slate-400">
+                          Sans objet pour cette catégorie
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Statut</label>
                     <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value as any })} className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:border-primary">
                       <option value="pending">En attente (Pending)</option>
-                      <option value="published">Publiée (Published)</option>
-                      <option value="rejected">Rejetée (Rejected)</option>
-                      <option value="archived">Archivée (Archived)</option>
+                      <option value="published">Publié (Published)</option>
+                      <option value="rejected">Rejeté (Rejected)</option>
+                      <option value="archived">Archivé (Archived)</option>
                     </select>
                   </div>
                 </div>

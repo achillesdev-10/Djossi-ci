@@ -1080,7 +1080,7 @@ function resolvePythonBinary(): string | null {
  */
 export function launchScraperProcess() {
   const python = resolvePythonBinary();
-  const sites = process.env.SCRAPER_SITES || "educarriere,jobivoire2,novojob,rmo,emploiivoire,emploici,orange,mtn";
+  const sites = process.env.SCRAPER_SITES || "educarriere,emploici,boursedetude";
   const maxPerSite = process.env.SCRAPER_MAX_PER_SITE || "5";
   const script = path.join(process.cwd(), "scraper", "scraper.py");
   const dataDir = path.join(process.cwd(), "data");
