@@ -27,7 +27,7 @@ const COLUMNS = [
       { label: 'Qui sommes-nous ?', href: '/about' },
       { label: 'Blog', href: '/blog' },
       { label: 'Carrières chez TravaillerEnCi', href: '/careers' },
-      { label: 'Nous contacter', href: `mailto:${SITE_CONFIG.supportEmail}` },
+      { label: 'Nous contacter', href: '/contact' },
     ],
   },
   {
@@ -52,7 +52,9 @@ export default function Footer() {
               </div>
               <div>
                 <div className="text-xl font-black font-[var(--font-display)] text-white">
-                  Travailleren<span className="text-primary">Ci</span>
+                  <span className="text-orange-400">Travailler</span>
+                  <span className="text-white">En</span>
+                  <span className="text-primary">Ci</span>
                 </div>
                 <div className="text-[10px] uppercase tracking-widest text-gray-500 -mt-1">
                   L'emploi en Côte d'Ivoire

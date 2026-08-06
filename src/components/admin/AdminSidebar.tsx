@@ -124,7 +124,9 @@ export default function AdminSidebar({
           </div>
           <div>
             <div className="font-[var(--font-display)] text-lg font-extrabold tracking-tight">
-              TravaillerenCi
+              <span className="text-orange-400">Travailler</span>
+              <span className="text-white">En</span>
+              <span className="text-emerald-400">Ci</span>
             </div>
             <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-400/80">
               Console Admin

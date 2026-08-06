@@ -60,8 +60,10 @@ export default function Header() {
               <span className="text-white font-black text-xl font-[var(--font-display)]">T</span>
             </div>
             <div>
-              <div className="text-lg sm:text-xl font-black font-[var(--font-display)] tracking-tight dark:text-white">
-                Travailleren<span className="text-primary">Ci</span>
+              <div className="text-lg sm:text-xl font-black font-[var(--font-display)] tracking-tight leading-none rounded-xl bg-slate-900 dark:bg-white/10 px-2.5 py-1.5 text-white">
+                <span className="text-orange-500">Travailler</span>
+                <span className="text-white">En</span>
+                <span className="text-primary">Ci</span>
               </div>
               <div className="text-[10px] uppercase tracking-widest text-muted-foreground -mt-1">
                 L'emploi en Côte d'Ivoire
