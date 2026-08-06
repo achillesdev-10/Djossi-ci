@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, openSync, closeSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, openSync, closeSync } from "node:fs";
 import path from "node:path";
 import { spawn, execSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
@@ -416,12 +416,12 @@ function readStoredScraperHealth(): ScraperHealth {
 
     // Même logique de timeout sur la valeur lue du fichier.
     const status = normaliseRunStatus(parsed.status);
-    let lastRunAt = parsed.lastRunAt ? String(parsed.lastRunAt) : null;
-    let offersAdded =
+    const lastRunAt = parsed.lastRunAt ? String(parsed.lastRunAt) : null;
+    const offersAdded =
       parsed.offersAdded === null || parsed.offersAdded === undefined
         ? null
         : numberFromUnknown(parsed.offersAdded);
-    let message = parsed.message ? String(parsed.message) : null;
+    const message = parsed.message ? String(parsed.message) : null;
 
     if (status === "running" && lastRunAt) {
       const ageMs = Date.now() - new Date(lastRunAt).getTime();

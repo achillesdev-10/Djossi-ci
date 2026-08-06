@@ -31,8 +31,6 @@ export type AdminUsersData = {
   note: string | null;
 };
 
-type SqliteDb = InstanceType<typeof DatabaseSync>;
-
 const DB_PATH = path.join(process.cwd(), "data", "travaillerenci.sqlite3");
 
 function asIsoDate(value: unknown) {

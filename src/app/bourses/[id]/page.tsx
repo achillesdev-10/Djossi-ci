@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
 import SimpleMarkdown from '@/components/content/SimpleMarkdown';
-import type { JobOfferSchema } from '@/types';
 import { formatDate, truncate } from '@/lib/utils';
 
 export const revalidate = 300;

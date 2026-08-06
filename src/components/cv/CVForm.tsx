@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { CVData, Experience, Education } from '@/types/cv';
 import { createEmptyExperience, createEmptyEducation } from '@/types/cv';
+
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5 Mo
 
 interface CVFormProps {
   cvData: CVData;
@@ -12,6 +14,13 @@ interface CVFormProps {
 export default function CVForm({ cvData, onChange }: CVFormProps) {
   const [skillInput, setSkillInput] = useState('');
   const [optimizingField, setOptimizingField] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoMessage, setPhotoMessage] = useState<{
+    type: 'error' | 'info';
+    text: string;
+  } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const updateField = <K extends keyof CVData>(field: K, value: CVData[K]) => {
     onChange({ ...cvData, [field]: value });
@@ -57,6 +66,68 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
 
   const removeSkill = (skill: string) => {
     updateField('skills', cvData.skills.filter((s) => s !== skill));
+  };
+
+  const handlePhotoFile = async (file: File | undefined | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setPhotoMessage({
+        type: 'error',
+        text: 'Format non supporté. Choisissez une image (JPG, PNG, WebP).',
+      });
+      return;
+    }
+    if (file.size > MAX_PHOTO_SIZE) {
+      setPhotoMessage({ type: 'error', text: 'Image trop lourde (5 Mo maximum).' });
+      return;
+    }
+    setPhotoMessage(null);
+    setPhotoUploading(true);
+
+    // Aperçu immédiat via un blob local, puis upload Supabase en arrière-plan.
+    const localUrl = URL.createObjectURL(file);
+    updateField('photoUrl', localUrl);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/cv/photo', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        updateField('photoUrl', data.url);
+      } else if (data.code === 'not_configured') {
+        setPhotoMessage({
+          type: 'info',
+          text: 'Aperçu local uniquement — stockage Supabase non configuré.',
+        });
+      } else {
+        setPhotoMessage({
+          type: 'error',
+          text: data.error || "Échec de l'upload de la photo.",
+        });
+      }
+    } catch {
+      setPhotoMessage({
+        type: 'error',
+        text: "Erreur lors de l'upload de la photo.",
+      });
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  const removePhoto = () => {
+    const current = cvData.photoUrl;
+    if (current?.startsWith('blob:')) URL.revokeObjectURL(current);
+    updateField('photoUrl', '');
+    setPhotoMessage(null);
+    if (photoInputRef.current) photoInputRef.current.value = '';
+  };
+
+  const handlePhotoDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handlePhotoFile(e.dataTransfer.files?.[0]);
   };
 
   const handleSkillKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -109,6 +180,120 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
           <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-base">👤</span>
           Informations personnelles
         </h2>
+
+        {/* --- Photo de profil --- */}
+        <div className="mb-6 flex flex-col sm:flex-row items-center gap-5">
+          <div className="relative shrink-0">
+            <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-primary/15 bg-gray-100 dark:bg-slate-800 shadow-inner flex items-center justify-center">
+              {cvData.photoUrl ? (
+                <img
+                  src={cvData.photoUrl}
+                  alt="Photo de profil"
+                  crossOrigin={
+                    cvData.photoUrl.startsWith('http')
+                      ? 'anonymous'
+                      : undefined
+                  }
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <svg
+                  className="w-12 h-12 text-gray-300 dark:text-slate-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              )}
+            </div>
+            {cvData.photoUrl && !photoUploading && (
+              <button
+                onClick={removePhoto}
+                title="Retirer la photo"
+                className="absolute -top-1.5 -right-1.5 w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 text-white text-sm font-bold shadow-md flex items-center justify-center transition-all hover:scale-110"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0 w-full">
+            <label className={labelClass}>Photo de profil</label>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                handlePhotoFile(e.target.files?.[0]);
+                e.target.value = '';
+              }}
+            />
+            <div
+              onClick={() => photoInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handlePhotoDrop}
+              className={`flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl border-2 border-dashed border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800/50 text-sm font-semibold text-gray-600 dark:text-gray-300 cursor-pointer transition-all hover:border-primary hover:bg-primary/5 ${
+                isDragging
+                  ? 'border-primary bg-primary/10 scale-[1.01] ring-2 ring-primary/20'
+                  : ''
+              }`}
+            >
+              {photoUploading ? (
+                <>
+                  <svg
+                    className="w-4 h-4 animate-spin text-primary"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    ></path>
+                  </svg>
+                  Upload en cours...
+                </>
+              ) : (
+                <>📷 Télécharger une photo ou glisser-déposer</>
+              )}
+            </div>
+            {photoMessage && (
+              <p
+                className={`mt-2 text-xs font-semibold ${
+                  photoMessage.type === 'error'
+                    ? 'text-red-500'
+                    : 'text-amber-500'
+                }`}
+              >
+                {photoMessage.text}
+              </p>
+            )}
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Conseil : photo récente, fond neutre et visage bien visible.
+              JPG, PNG ou WebP — 5 Mo max.
+            </p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Nom et Prénom</label>

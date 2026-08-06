@@ -18,7 +18,6 @@ export default function MentionsLegalesPage() {
             <p>
               <strong>Contact officiel :</strong><br />
               Email : <a href="mailto:achillesdev10@gmail.com" className="text-primary hover:underline">achillesdev10@gmail.com</a><br />
-              Téléphone : +225 07 00 00 00 00<br />
               Siège social : Abidjan, Côte d'Ivoire
             </p>
           </section>

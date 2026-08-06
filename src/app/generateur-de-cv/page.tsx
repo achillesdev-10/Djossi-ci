@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { CVData } from '@/types/cv';
 import { createEmptyCV, createEmptyExperience, createEmptyEducation } from '@/types/cv';
 import dynamic from 'next/dynamic';
+import { useLocalStorage } from '@/hooks';
 
 const CVFormDynamic = dynamic(() => import('@/components/cv/CVForm'), { ssr: false });
 const CVPreviewDynamic = dynamic(() => import('@/components/cv/CVPreview'), { ssr: false });
@@ -63,23 +64,77 @@ const sampleCV: CVData = {
 };
 
 export default function CVGeneratorPage() {
-  const [cvData, setCVData] = useState<CVData>(createEmptyCV);
+  const [cvData, setCVData] = useLocalStorage<CVData>('travaillerenci_cv_data', createEmptyCV());
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [isExporting, setIsExporting] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setCVData({
-      ...sampleCV,
-      experiences: sampleCV.experiences.map((e) => ({ ...e, id: crypto.randomUUID() })),
-      educations: sampleCV.educations.map((e) => ({ ...e, id: crypto.randomUUID() })),
+    setCVData((prev) => {
+      // Les blob: URLs (aperçu local quand Supabase n'est pas configuré) ne
+      // survivent pas à un rechargement : on les retire pour éviter une image
+      // cassée. Les URL Supabase publiques, elles, restent valides.
+      const cleaned = prev.photoUrl?.startsWith('blob:')
+        ? { ...prev, photoUrl: '' }
+        : prev;
+
+      const isEmpty =
+        !cleaned.fullName &&
+        !cleaned.jobTitle &&
+        !cleaned.email &&
+        !cleaned.phone &&
+        !cleaned.city &&
+        !cleaned.summary &&
+        cleaned.experiences.length === 0 &&
+        cleaned.educations.length === 0 &&
+        cleaned.skills.length === 0 &&
+        !cleaned.photoUrl;
+
+      // Première visite (rien en mémoire locale) : charger un CV d'exemple.
+      if (isEmpty) {
+        return {
+          ...sampleCV,
+          experiences: sampleCV.experiences.map((e) => ({ ...e, id: crypto.randomUUID() })),
+          educations: sampleCV.educations.map((e) => ({ ...e, id: crypto.randomUUID() })),
+        };
+      }
+      return cleaned;
     });
     setHydrated(true);
+  }, [setCVData]);
+
+  // Indicateur « sauvegardé » : feedback après chaque modification du CV.
+  useEffect(() => {
+    if (!hydrated) return;
+    setSaveState('saving');
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => setSaveState('saved'), 450);
+  }, [cvData, hydrated]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
   }, []);
 
   const exportPDF = async () => {
     setIsExporting(true);
     try {
+      // Précharger la photo de profil (URL publique Supabase) pour garantir
+      // son rendu dans le PDF — html2canvas re-déclenche le téléchargement
+      // avec CORS, la mise en cache évite les images manquantes.
+      if (cvData.photoUrl) {
+        await new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          img.crossOrigin = 'anonymous';
+          img.src = cvData.photoUrl!;
+        });
+      }
+
       const html2pdfModule = await import('html2pdf.js');
       const html2pdf = html2pdfModule.default;
       const element = document.getElementById('cv-preview');
@@ -131,6 +186,32 @@ export default function CVGeneratorPage() {
                 Créez un CV professionnel en quelques minutes. Optimisez votre contenu avec l'IA
                 pour maximiser vos chances auprès des recruteurs ivoiriens.
               </p>
+              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/70 border border-gray-200 dark:border-slate-700 shadow-sm">
+                {saveState === 'saving' ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Sauvegarde…</span>
+                  </>
+                ) : saveState === 'saved' ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Sauvegardé automatiquement</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a2 2 0 012-2h8l6 6v10a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3v6h6M9 13h6M9 17h4" />
+                    </svg>
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Sauvegarde automatique</span>
+                  </>
+                )}
+              </div>
             </div>
             <div className="flex flex-wrap gap-3">
               <button

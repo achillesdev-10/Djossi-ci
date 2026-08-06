@@ -492,7 +492,7 @@ function SimpleMarkdown({ text }: { text: string }) {
   };
 
   for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
+    const line = lines[i];
     const trimmed = line.trim();
     if (!trimmed) {
       flushList();

@@ -58,7 +58,7 @@ export default function AdminJobsClient({
   const [cityFilter, setCityFilter] = useState<string>('all');
   const [duplicatesOnly, setDuplicatesOnly] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   // Modal d'édition & SEO
   const [editingJob, setEditingJob] = useState<JobOfferSchema | null>(null);

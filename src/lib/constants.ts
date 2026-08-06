@@ -90,8 +90,9 @@ const SITE_CONFIG = {
   name: 'TravaillerenCi',
   description: 'Plateforme d\'offres d\'emploi en Côte d\'Ivoire',
   url: 'https://travaillerenci.ci',
-  supportEmail: 'contact@travaillerenci.ci',
-  phone: '+225 20 00 00 00',
+  supportEmail: 'achillesdev10@gmail.com',
+  // Pas de numéro de téléphone pour le moment.
+  phone: '',
   address: 'Abidjan, Côte d\'Ivoire',
   social: {
     facebook: 'https://facebook.com/travaillerenci',

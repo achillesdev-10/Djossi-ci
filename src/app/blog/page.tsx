@@ -1,0 +1,156 @@
+import Link from 'next/link';
+import { BlogService } from '@/services/blogService';
+import type { BlogPost } from '@/types/blog';
+
+export const dynamic = 'force-dynamic';
+
+export const metadata = {
+  title: 'Blog — TravaillerenCi',
+  description:
+    "Conseils emploi, actualités du marché du travail et coulisses de la plateforme : le blog TravaillerenCi pour réussir votre carrière en Côte d'Ivoire.",
+};
+
+function formatDate(iso: string | null) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
+}
+
+function tagList(tags: string | null): string[] {
+  return (tags || '')
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+export default async function BlogPage() {
+  const { rows: posts, total } = await BlogService.list({
+    status: 'published',
+    order_by: 'published_at',
+    order_dir: 'desc',
+    limit: 50,
+  });
+
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-white to-gray-50/70 dark:from-slate-950 dark:to-slate-900">
+      {/* ===== En-tête ===== */}
+      <section className="relative overflow-hidden border-b border-border/40 bg-gradient-to-br from-primary/8 via-white to-accent/8 dark:from-primary/10 dark:via-slate-950 dark:to-accent/10">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-primary)_0%,_transparent_55%)] opacity-20 dark:opacity-10"
+        />
+        <div className="container mx-auto px-4 py-12 sm:py-16 relative z-10 max-w-4xl text-center">
+          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary dark:text-emerald-400 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold mb-5">
+            <span aria-hidden="true">📝</span> Le blog TravaillerenCi
+          </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight font-[var(--font-display)] text-gray-900 dark:text-white">
+            Conseils & actualités
+          </h1>
+          <p className="mt-4 text-base sm:text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
+            Des astuces pour vos candidatures, les tendances du marché du travail ivoirien et
+            les nouveautés de la plateforme.
+          </p>
+        </div>
+      </section>
+
+      {/* ===== Liste des articles ===== */}
+      <section className="container mx-auto px-4 py-10 sm:py-14 max-w-5xl">
+        {posts.length === 0 ? (
+          <div className="bg-white dark:bg-slate-900 border border-dashed border-border rounded-2xl p-10 sm:p-16 text-center">
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center mb-5 text-3xl">
+              <span aria-hidden="true">📝</span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white font-[var(--font-display)]">
+              Aucun article publié pour le moment
+            </h2>
+            <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-2 max-w-md mx-auto">
+              Revenez bientôt : nos premiers articles sur l&apos;emploi en Côte d&apos;Ivoire
+              arrivent très vite !
+            </p>
+            <Link
+              href="/jobs"
+              className="mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white font-semibold text-sm shadow-md shadow-primary/20 hover:brightness-110 transition-all"
+            >
+              Voir les offres d&apos;emploi
+            </Link>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              <strong className="text-gray-800 dark:text-gray-200">{total}</strong>{' '}
+              article{total > 1 ? 's' : ''} publié{total > 1 ? 's' : ''}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+              {posts.map((post) => (
+                <BlogCard key={post.id} post={post} />
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+    </main>
+  );
+}
+
+function BlogCard({ post }: { post: BlogPost }) {
+  const tags = tagList(post.tags);
+  return (
+    <Link
+      href={`/blog/${post.slug}`}
+      className="group flex flex-col bg-white dark:bg-slate-900 border border-border rounded-2xl overflow-hidden hover:shadow-lg hover:-translate-y-1 hover:border-primary/30 transition-all duration-200"
+    >
+      {/* Couverture */}
+      <div className="relative h-40 overflow-hidden bg-gradient-to-br from-primary/15 via-white to-accent/15 dark:from-primary/10 dark:via-slate-900 dark:to-accent/10">
+        {post.cover_image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={post.cover_image}
+            alt={post.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-5xl opacity-60 transition-transform duration-300 group-hover:scale-110" aria-hidden="true">
+              📰
+            </span>
+          </div>
+        )}
+        {tags.length > 0 && (
+          <span className="absolute top-3 left-3 inline-flex items-center rounded-full bg-white/90 dark:bg-slate-950/80 backdrop-blur px-2.5 py-1 text-[11px] font-bold text-primary shadow-sm">
+            {tags[0]}
+          </span>
+        )}
+      </div>
+
+      {/* Corps */}
+      <div className="flex flex-col flex-1 p-5">
+        <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400 font-medium mb-2">
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4M8 2v4M3 10h18" />
+          </svg>
+          {formatDate(post.published_at)}
+          <span aria-hidden="true">•</span>
+          <span className="truncate">{post.author}</span>
+        </div>
+        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white font-[var(--font-display)] leading-snug group-hover:text-primary transition-colors line-clamp-2">
+          {post.title}
+        </h2>
+        {post.excerpt && (
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3 flex-1">
+            {post.excerpt}
+          </p>
+        )}
+        <div className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
+          Lire l&apos;article
+          <svg className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14" />
+            <path d="m12 5 7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </Link>
+  );
+}

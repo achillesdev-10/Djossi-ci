@@ -1,13 +1,20 @@
-name: TravaillerEnCi Scraper Automation
+name: TravaillerEnCi CI (Scraper + Lint)
 
 on:
   schedule:
     # Deux fois par jour : 06:00 et 18:00 UTC (= 06:00 & 18:00 GMT, 07:00 & 19:00 Abidjan)
     - cron: '0 6,18 * * *'
   workflow_dispatch: # Déclenchement manuel depuis l'onglet Actions
+  push: # Vérification du code à chaque push (lint + typecheck)
+  pull_request:
 
 jobs:
+  # ==========================================================================
+  # Scraping automatisé — NE s'exécute que sur planification ou manuel.
+  # Pas à chaque push : les sites sources ne doivent pas être sollicités en continu.
+  # ==========================================================================
   scrape-content:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
@@ -38,3 +45,36 @@ jobs:
         run: |
           # SCRAPER_SITES (variable de repo) est optionnelle : défaut = educarriere,emploici,boursedetude
           python scraper/scraper.py --max-per-site 15 ${SCRAPER_SITES:+--sites "$SCRAPER_SITES"}
+
+  # ==========================================================================
+  # Vérification du code front (Next.js) à chaque push / PR :
+  #   • ESLint (flat config, eslint.config.mjs)
+  #   • TypeScript strict (tsc --noEmit)
+  # ==========================================================================
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+
+    # Annule les runs de lint précédents sur la même branche lors de pushes
+    # rapides et successifs (économise les minutes Actions).
+    concurrency:
+      group: lint-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Typecheck (TypeScript)
+        run: npx tsc --noEmit

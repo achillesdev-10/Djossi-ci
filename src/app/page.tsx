@@ -52,41 +52,60 @@ export default async function HomePage({
           className="absolute -top-20 -left-16 w-72 h-72 rounded-full bg-accent/10 blur-3xl"
         />
 
-        <div className="container mx-auto px-4 relative z-10 max-w-4xl">
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary dark:text-emerald-400 px-3.5 py-1.5 rounded-full text-[12px] sm:text-sm font-semibold mb-4 sm:mb-6">
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-              </span>
-              Plateforme 100% ivoirienne
+        <div className="container mx-auto px-4 relative z-10 max-w-6xl">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            {/* Colonne texte */}
+            <div className="text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary dark:text-emerald-400 px-3.5 py-1.5 rounded-full text-[12px] sm:text-sm font-semibold mb-4 sm:mb-5">
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                </span>
+                Plateforme 100% ivoirienne
+              </div>
+
+              <h1 className="text-[28px] leading-[1.15] sm:text-4xl lg:text-[44px] xl:text-5xl font-extrabold mb-3 sm:mb-5 font-[var(--font-display)] text-gray-900 dark:text-white">
+                Travailleren<span className="text-primary">Ci</span>
+                <span className="block text-gray-800 dark:text-gray-200 text-[22px] sm:text-3xl lg:text-[32px] mt-1 sm:mt-2">
+                  Trouvez un job qui <span className="text-gradient-primary">vaut le coup</span>
+                </span>
+              </h1>
+
+              <p className="text-[15px] sm:text-lg text-gray-600 dark:text-gray-300 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                Des <strong className="text-gray-900 dark:text-white">offres vérifiées</strong>, des entreprises de confiance,
+                et zéro spam. Postulez simplement — on s'occupe du reste 🇨🇮
+              </p>
             </div>
 
-            <h1 className="text-[28px] leading-[1.15] sm:text-4xl lg:text-5xl font-extrabold mb-3 sm:mb-5 font-[var(--font-display)] text-gray-900 dark:text-white">
-              Travailleren<span className="text-primary">Ci</span>
-              <span className="block text-gray-800 dark:text-gray-200 text-[22px] sm:text-3xl lg:text-4xl mt-1 sm:mt-2">
-                Trouvez un job qui <span className="text-gradient-primary">vaut le coup</span>
-              </span>
-            </h1>
-
-            <p className="text-[15px] sm:text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed mb-6 sm:mb-8">
-              Des <strong className="text-gray-900 dark:text-white">offres vérifiées</strong>, des entreprises de confiance,
-              et zéro spam. Postulez simplement — on s'occupe du reste 🇨🇮
-            </p>
+            {/* Colonne illustration (desktop uniquement) */}
+            <div className="hidden lg:flex justify-center lg:justify-end">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/hero-illustration.svg"
+                alt="Recherche d'emploi en Côte d'Ivoire : offres vérifiées, mallette et localisation"
+                width={520}
+                height={445}
+                className="w-full max-w-[520px] h-auto drop-shadow-xl"
+                fetchPriority="high"
+              />
+            </div>
           </div>
 
-          <Suspense fallback={<SearchBarSkeleton />}>
-            <SearchBar
-              initialKeyword={keyword}
-              initialLocation={location}
-              initialContract={contract}
-            />
-          </Suspense>
+          {/* Barre de recherche pleine largeur */}
+          <div className="mt-8 sm:mt-10 max-w-4xl mx-auto">
+            <Suspense fallback={<SearchBarSkeleton />}>
+              <SearchBar
+                initialKeyword={keyword}
+                initialLocation={location}
+                initialContract={contract}
+              />
+            </Suspense>
 
-          <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-[12px] sm:text-sm text-gray-500 dark:text-gray-400">
-            <Stat icon="✅" label="Offres vérifiées" />
-            <Stat icon="⚡" label="Réponse rapide" />
-            <Stat icon="🇨🇮" label="100% Côte d'Ivoire" />
+            <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-[12px] sm:text-sm text-gray-500 dark:text-gray-400">
+              <Stat icon="✅" label="Offres vérifiées" />
+              <Stat icon="⚡" label="Réponse rapide" />
+              <Stat icon="🇨🇮" label="100% Côte d'Ivoire" />
+            </div>
           </div>
         </div>
       </section>

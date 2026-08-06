@@ -14,6 +14,8 @@ export interface Education {
 }
 
 export interface CVData {
+  /** URL publique (Supabase Storage) ou blob: local de la photo de profil. */
+  photoUrl?: string;
   fullName: string;
   jobTitle: string;
   email: string;
@@ -26,6 +28,7 @@ export interface CVData {
 }
 
 export const createEmptyCV = (): CVData => ({
+  photoUrl: '',
   fullName: '',
   jobTitle: '',
   email: '',

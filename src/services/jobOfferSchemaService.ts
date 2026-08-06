@@ -10,12 +10,10 @@
  */
 
 import {
-  JobContractType,
   JobOfferSchema,
   JobOfferSchemaFilters,
   JobOfferSchemaInsert,
   PaginatedRows,
-  JobOfferSchemaStatus,
 } from '@/types';
 import {
   getSupabaseClient,
@@ -152,7 +150,7 @@ async function getDb(): Promise<DatabaseSyncInstance | null> {
     cachedDb = new DatabaseSync(dbPath);
     ensureSchema(cachedDb);
     return cachedDb;
-  } catch (err) {
+  } catch {
     return null;
   }
 }
