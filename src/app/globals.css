@@ -33,6 +33,11 @@
 
 html {
   scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+html:focus-within {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -93,7 +98,7 @@ html.dark body {
   /*  Animations & micro-interactions (accueil, cartes, widgets)          */
   /* ===================================================================== */
   .animate-marquee {
-    animation: marquee 28s linear infinite;
+    animation: marquee 60s linear infinite;
   }
   .animate-marquee:hover {
     animation-play-state: paused;

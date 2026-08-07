@@ -486,7 +486,7 @@ export default function ExamsAdminClient({
           <option value="all">Toutes les catégories</option>
           {EXAM_CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>
-              {c.emoji} {c.label}
+              {c.label}
             </option>
           ))}
         </select>
@@ -700,7 +700,7 @@ export default function ExamsAdminClient({
                   <Field label="Catégorie">
                     <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as ExamCategory })} className={inputCls}>
                       {EXAM_CATEGORIES.map((c) => (
-                        <option key={c.value} value={c.value}>{c.emoji} {c.label}</option>
+                        <option key={c.value} value={c.value}>{c.label}</option>
                       ))}
                     </select>
                   </Field>

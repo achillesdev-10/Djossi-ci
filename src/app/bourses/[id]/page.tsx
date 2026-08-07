@@ -76,7 +76,7 @@ export default async function BourseDetailPage({ params }: PageProps) {
 
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
-              🎓 Bourse d'études
+              Bourse d'études
             </span>
             {deadline && (
               <span

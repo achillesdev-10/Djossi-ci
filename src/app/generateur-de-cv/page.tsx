@@ -174,7 +174,10 @@ export default function CVGeneratorPage() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold mb-4 border border-emerald-200/60 dark:border-emerald-800/40">
-                <span>✨</span> Propulsé par l'IA — Optimisé pour la Côte d'Ivoire
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                  <path d="M9 3h6M10 3v4a2 2 0 0 1-2 2H4M14 3v4a2 2 0 0 0 2 2h4M5 3h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM19 11h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2ZM12 13a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8 19c0-1.5 1.8-3 4-3s4 1.5 4 3" />
+                </svg>
+                Propulsé par l'IA — Optimisé pour la Côte d'Ivoire
               </div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-gray-900 dark:text-white font-[var(--font-display)]">
                 Générateur de CV IA —{' '}

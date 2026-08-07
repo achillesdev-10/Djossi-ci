@@ -81,7 +81,7 @@ export default function Header() {
                 {link.label}
                 {(link as any).isCV && (
                   <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded-full font-semibold ml-1.5">
-                    IA ✨
+                    IA
                   </span>
                 )}
               </Link>
@@ -191,7 +191,7 @@ export default function Header() {
                 {link.label}
                 {(link as any).isCV && (
                   <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded-full font-semibold ml-1.5">
-                    IA ✨
+                    IA
                   </span>
                 )}
               </Link>

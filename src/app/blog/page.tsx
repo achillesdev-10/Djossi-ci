@@ -44,7 +44,11 @@ export default async function BlogPage() {
         />
         <div className="container mx-auto px-4 py-12 sm:py-16 relative z-10 max-w-4xl text-center">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary dark:text-emerald-400 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold mb-5">
-            <span aria-hidden="true">📝</span> Le blog TravaillerenCi
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+              <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+              <path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z" />
+            </svg>
+            Le blog TravaillerenCi
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight font-[var(--font-display)] text-gray-900 dark:text-white">
             Conseils & actualités
@@ -60,8 +64,11 @@ export default async function BlogPage() {
       <section className="container mx-auto px-4 py-10 sm:py-14 max-w-5xl">
         {posts.length === 0 ? (
           <div className="bg-white dark:bg-slate-900 border border-dashed border-border rounded-2xl p-10 sm:p-16 text-center">
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center mb-5 text-3xl">
-              <span aria-hidden="true">📝</span>
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center mb-5">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7 text-gray-400" aria-hidden="true">
+                <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+                <path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z" />
+              </svg>
             </div>
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white font-[var(--font-display)]">
               Aucun article publié pour le moment
@@ -113,9 +120,10 @@ function BlogCard({ post }: { post: BlogPost }) {
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-5xl opacity-60 transition-transform duration-300 group-hover:scale-110" aria-hidden="true">
-              📰
-            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10 sm:w-12 sm:h-12 opacity-60 transition-transform duration-300 group-hover:scale-110" aria-hidden="true">
+              <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+              <path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z" />
+            </svg>
           </div>
         )}
         {tags.length > 0 && (

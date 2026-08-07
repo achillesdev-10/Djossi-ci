@@ -124,7 +124,7 @@ export default function ExamSearchBar({
             <option value="">Toutes les catégories</option>
             {EXAM_CATEGORIES.map((c) => (
               <option key={c.value} value={c.value}>
-                {c.emoji} {c.label}
+                {c.label}
               </option>
             ))}
           </select>

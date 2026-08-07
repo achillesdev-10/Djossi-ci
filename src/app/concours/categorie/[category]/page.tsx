@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { ExamService } from '@/services/examService';
 import ExamCard from '@/components/exams/ExamCard';
+import CategoryIcon from '@/components/exams/CategoryIcon';
 import { CATEGORY_SEO } from '@/lib/examSeo';
 import { EXAM_CATEGORIES, EXAM_CATEGORY_LABEL } from '@/lib/examConstants';
 import type { ExamCategory } from '@/types/exam';
@@ -176,7 +177,7 @@ export default async function ConcoursCategoryPage({ params }: PageProps) {
                 href={`/concours/categorie/${c.value}`}
                 className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-gray-600 transition-all hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:text-gray-300"
               >
-                <span aria-hidden="true">{c.emoji}</span>
+                <CategoryIcon category={c.value} className="h-3.5 w-3.5" />
                 {c.label}
               </Link>
             ))}

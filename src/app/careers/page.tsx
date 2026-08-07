@@ -10,22 +10,42 @@ export const metadata = {
 
 const REASONS = [
   {
-    emoji: '🚀',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7">
+        <path d="m12 2-1 3.5L9 7l3.5 1L13 12l1-4L17.5 7 15 5.5 12 2ZM3 13l3.5 3.5L4 20l3.5-1 1.5 3 1.5-3 3.5 1-2.5-3.5L15 13l-3 1-3-1-3-1ZM19 11l1.2 3L23 15l-2.8 1L19 19l-1.2-3L15 15l2.8-1 1.2-3Z" />
+      </svg>
+    ),
     title: 'Un projet en pleine croissance',
     text: 'TravaillerenCi évolue chaque semaine : nouvelles fonctionnalités, nouveaux contenus et une audience qui grandit. C’est le moment idéal pour rejoindre l’aventure.',
   },
   {
-    emoji: '💡',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7">
+        <path d="M9 18h6M10 22h4" />
+        <path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2Z" />
+      </svg>
+    ),
     title: 'Des idées à construire',
     text: 'Nous sommes ouverts aux profils créatifs qui veulent améliorer l’employabilité des jeunes Ivoiriens, que ce soit sur le produit, le design, le marketing ou la technique.',
   },
   {
-    emoji: '🤝',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7">
+        <path d="M18 21a3 3 0 0 0 3-3v-3a3 3 0 0 0-3-3h-1v3a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V8" />
+        <path d="M6 3 3 6l3 3" />
+        <path d="M6 3v7.5A3.5 3.5 0 0 0 9.5 14H14a2 2 0 0 1 2 2v.5" />
+      </svg>
+    ),
     title: 'Un fonctionnement collaboratif',
     text: 'En tant que jeune équipe, nous privilégions l’échange, la transparence et l’impact concret. Votre avis compte vraiment dans les décisions.',
   },
   {
-    emoji: '🇨🇮',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7">
+        <path d="M12 21s-7-4.5-7-10a7 7 0 0 1 14 0c0 5.5-7 10-7 10Z" />
+        <path d="M9.5 11.5 11 13l3.5-3.5" />
+      </svg>
+    ),
     title: 'Un impact local réel',
     text: 'Chaque mission accomplie aide des milliers de candidats à trouver un emploi, un stage ou une formation en Côte d’Ivoire.',
   },
@@ -69,7 +89,12 @@ export default function CareersPage() {
         />
         <div className="container mx-auto px-4 py-14 sm:py-20 relative z-10 max-w-4xl text-center">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary dark:text-emerald-400 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold mb-5">
-            <span aria-hidden="true">🤝</span> Rejoignez l’équipe
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+              <path d="M18 21a3 3 0 0 0 3-3v-3a3 3 0 0 0-3-3h-1v3a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V8" />
+              <path d="M6 3 3 6l3 3" />
+              <path d="M6 3v7.5A3.5 3.5 0 0 0 9.5 14H14a2 2 0 0 1 2 2v.5" />
+            </svg>
+            Rejoignez l'équipe
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight font-[var(--font-display)] text-gray-900 dark:text-white">
             Carrières chez <span className="text-primary">TravaillerenCi</span>
@@ -79,7 +104,10 @@ export default function CareersPage() {
             plus d’informations&nbsp;? Nous serions ravis d’échanger avec vous.
           </p>
           <div className="mt-7 inline-flex items-center gap-3 rounded-2xl bg-white dark:bg-slate-900 border border-border px-5 py-4 shadow-md">
-            <span className="text-2xl" aria-hidden="true">📧</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary" aria-hidden="true">
+              <path d="M3 8l7.89 5.26a2 2 0 0 0 2.22 0L21 8" />
+              <path d="M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2Z" />
+            </svg>
             <div className="text-left">
               <div className="text-[11px] uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold">
                 Écrivez-nous à
@@ -106,8 +134,8 @@ export default function CareersPage() {
               key={r.title}
               className="bg-white dark:bg-slate-900 border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-md transition-all"
             >
-              <div className="text-2xl mb-3" aria-hidden="true">
-                {r.emoji}
+              <div className="text-primary mb-3" aria-hidden="true">
+                {r.icon}
               </div>
               <h3 className="font-bold text-gray-900 dark:text-white">{r.title}</h3>
               <p className="mt-1.5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{r.text}</p>
@@ -159,7 +187,7 @@ export default function CareersPage() {
       <section className="container mx-auto px-4 pb-16 sm:pb-24 max-w-4xl">
         <div className="rounded-3xl bg-gradient-to-br from-primary to-accent p-8 sm:p-10 text-center text-white shadow-xl shadow-primary/20">
           <h2 className="text-2xl sm:text-3xl font-extrabold font-[var(--font-display)]">
-            Envoyez-nous votre candidature&nbsp;✨
+            Envoyez-nous votre candidature
           </h2>
           <p className="mt-3 text-sm sm:text-base text-white/85 max-w-xl mx-auto">
             Développeurs, rédacteurs, étudiants, entreprises&nbsp;: présentez-nous votre parcours

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Suspense } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import SearchBar from '@/components/jobs/SearchBar';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
 import { ExamService } from '@/services/examService';
@@ -8,7 +8,7 @@ import type { JobOfferSchema, JobContractType } from '@/types';
 import NewsTicker, { type TickerItem } from '@/components/home/NewsTicker';
 import HomeCarousel from '@/components/home/HomeCarousel';
 import PollWidget from '@/components/home/PollWidget';
-import CompactJobCard from '@/components/home/CompactJobCard';
+import OffersGrid from '@/components/home/OffersGrid';
 
 export const revalidate = 60;
 
@@ -17,43 +17,75 @@ const QUICK_LINKS = [
     label: 'Offres d\u2019emploi',
     desc: 'CDI, CDD, prestation',
     href: '/jobs',
-    icon: '💼',
     gradient: 'from-orange-500 to-amber-500',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
+        <rect x="2" y="7" width="20" height="14" rx="2" />
+        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+      </svg>
+    ),
   },
   {
     label: 'Stages',
     desc: 'Pour étudiants & jeunes diplômés',
     href: '/jobs?contract=Stage',
-    icon: '🎓',
     gradient: 'from-sky-500 to-cyan-500',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
+        <path d="M22 10 12 5 2 10l10 5 10-5Z" />
+        <path d="M6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5" />
+      </svg>
+    ),
   },
   {
     label: 'Bourses d\u2019études',
     desc: 'Étudier en CI & à l\u2019étranger',
     href: '/bourses',
-    icon: '🌍',
     gradient: 'from-emerald-500 to-green-500',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
+        <path d="M22 10 12 5 2 10l10 5 10-5Z" />
+        <path d="M6 12.5v4.5c0 1.2 2.7 2.5 6 2.5s6-1.3 6-2.5v-4.5" />
+        <path d="M22 10v5" />
+      </svg>
+    ),
   },
   {
     label: 'Concours admin.',
     desc: 'ENA, INFAS, CAFOP\u2026',
     href: '/concours',
-    icon: '🏛️',
     gradient: 'from-accent to-indigo-600',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
+        <path d="M3 21h18" />
+        <path d="M4 21V10l8-6 8 6v11" />
+        <path d="M9 21v-6h6v6" />
+      </svg>
+    ),
   },
   {
     label: 'Générateur de CV',
     desc: 'Un CV pro avec l\u2019IA',
     href: '/generateur-de-cv',
-    icon: '✨',
     gradient: 'from-fuchsia-500 to-purple-600',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+        <path d="M14 2v6h6" />
+        <path d="M9 13h6M9 17h4" />
+      </svg>
+    ),
   },
   {
     label: 'Conseils & Blog',
     desc: 'Astuces candidature',
     href: '/blog',
-    icon: '📝',
     gradient: 'from-rose-500 to-pink-500',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
+        <path d="M15 12h-5M15 8h-5M8 3h5.6a1 1 0 0 1 .7.3l3.4 3.4a1 1 0 0 1 .3.7V21a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+      </svg>
+    ),
   },
 ];
 
@@ -77,7 +109,7 @@ export default async function HomePage({
       location: location || undefined,
       contract_type: contract || undefined,
       status: 'published',
-      limit: 12,
+      limit: 60,
       order_by: 'created_at',
       order_dir: 'desc',
     }),
@@ -149,6 +181,10 @@ export default async function HomePage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       {/* ======================================================================== */}
+      {/*   FIL ACTU (sous la barre de navigation) : offres, concours, bourses…     */}
+      {/* ======================================================================== */}
+      <NewsTicker items={tickerItems} />
+      {/* ======================================================================== */}
       {/*   HERO — Mobile-first : texte lisible, peu de padding vertical            */}
       {/* ======================================================================== */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/8 via-white to-accent/8 dark:from-primary/10 dark:via-slate-950 dark:to-accent/10 pt-8 pb-8 sm:pt-14 sm:pb-10 border-b border-border/40">
@@ -186,7 +222,7 @@ export default async function HomePage({
 
               <p className="text-[15px] sm:text-lg text-gray-600 dark:text-gray-300 max-w-xl mx-auto lg:mx-0 leading-relaxed">
                 Des <strong className="text-gray-900 dark:text-white">offres vérifiées</strong>, des entreprises de confiance,
-                et zéro spam. Postulez simplement — on s'occupe du reste 🇨🇮
+                et zéro spam. Postulez simplement — on s'occupe du reste.
               </p>
             </div>
 
@@ -215,18 +251,36 @@ export default async function HomePage({
             </Suspense>
 
             <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-[12px] sm:text-sm text-gray-500 dark:text-gray-400">
-              <Stat icon="✅" label="Offres vérifiées" />
-              <Stat icon="⚡" label="Réponse rapide" />
-              <Stat icon="🇨🇮" label="100% Côte d'Ivoire" />
+              <Stat
+                icon={
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-emerald-500">
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                }
+                label="Offres vérifiées"
+              />
+              <Stat
+                icon={
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-orange-500">
+                    <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" />
+                  </svg>
+                }
+                label="Réponse rapide"
+              />
+              <Stat
+                icon={
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-primary">
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="4" />
+                    <path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20ZM2 12h20" />
+                  </svg>
+                }
+                label="100% Côte d'Ivoire"
+              />
             </div>
           </div>
         </div>
       </section>
-
-      {/* ======================================================================== */}
-      {/*   FIL ACTU : dernières offres, concours, bourses & articles du blog      */}
-      {/* ======================================================================== */}
-      <NewsTicker items={tickerItems} />
 
       {/* ======================================================================== */}
       {/*   WIDGETS : carrousel (images des sources) + sondage                     */}
@@ -320,28 +374,7 @@ export default async function HomePage({
         {jobsList.length === 0 ? (
           <EmptyState keyword={keyword} location={location} contract={contract} />
         ) : (
-          <>
-            <ul className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 list-none p-0 m-0">
-              {jobsList.map((job) => (
-                <li key={job.id} className="h-full">
-                  <CompactJobCard job={job as JobOfferSchema} />
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-8 sm:mt-12 flex items-center justify-center">
-              <Link
-                href="/jobs"
-                className="inline-flex items-center gap-2 px-5 sm:px-6 py-3 rounded-xl bg-white dark:bg-slate-900 border border-border hover:border-primary/30 hover:shadow-sm text-gray-800 dark:text-gray-200 hover:text-primary font-semibold text-sm sm:text-base transition-colors"
-              >
-                Voir toutes les offres
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14" />
-                  <path d="m12 5 7 7-7 7" />
-                </svg>
-              </Link>
-            </div>
-          </>
+          <OffersGrid jobs={jobsList as JobOfferSchema[]} />
         )}
       </section>
 
@@ -390,7 +423,12 @@ export default async function HomePage({
                 href="/generateur-de-cv"
                 className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-extrabold text-primary shadow-lg transition-transform hover:scale-105"
               >
-                ✨ Générer mon CV
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+                  <path d="M14 2v6h6" />
+                  <path d="M9 13h6M9 17h4" />
+                </svg>
+                Générer mon CV
               </Link>
               <Link
                 href="/jobs"
@@ -469,8 +507,11 @@ function HomeBlogCard({
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-3xl sm:text-4xl opacity-60">
-            <span aria-hidden="true">📰</span>
+          <div className="flex h-full items-center justify-center opacity-60">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8 sm:h-10 sm:w-10" aria-hidden="true">
+              <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+              <path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z" />
+            </svg>
           </div>
         )}
       </div>
@@ -495,7 +536,7 @@ function HomeBlogCard({
   );
 }
 
-function Stat({ icon, label }: { icon: string; label: string }) {
+function Stat({ icon, label }: { icon: ReactNode; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 bg-white/70 dark:bg-slate-900/75 backdrop-blur px-2.5 sm:px-3 py-1.5 rounded-full border border-border shadow-sm text-gray-700 dark:text-gray-300">
       <span aria-hidden="true">{icon}</span>

@@ -66,9 +66,10 @@ export default async function BlogArticlePage({
         </div>
       ) : (
         <div className="relative h-40 sm:h-56 w-full overflow-hidden bg-gradient-to-br from-primary/15 via-white to-accent/15 dark:from-primary/10 dark:via-slate-900 dark:to-accent/10 flex items-center justify-center">
-          <span className="text-6xl sm:text-7xl opacity-50" aria-hidden="true">
-            📰
-          </span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 sm:w-20 sm:h-20 opacity-50 text-primary" aria-hidden="true">
+            <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
+            <path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z" />
+          </svg>
         </div>
       )}
 
@@ -147,7 +148,7 @@ export default async function BlogArticlePage({
         {/* ===== CTA ===== */}
         <div className="mt-8 rounded-3xl bg-gradient-to-br from-primary to-accent p-7 sm:p-9 text-center text-white shadow-xl shadow-primary/20">
           <h2 className="text-xl sm:text-2xl font-extrabold font-[var(--font-display)]">
-            Trouvez votre prochaine opportunité 🇨🇮
+            Trouvez votre prochaine opportunité
           </h2>
           <p className="mt-2 text-sm sm:text-base text-white/85 max-w-lg mx-auto">
             Des centaines d&apos;offres d&apos;emploi, de stages et de bourses vérifiées vous
@@ -168,7 +169,12 @@ export default async function BlogArticlePage({
               href="/generateur-de-cv"
               className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3 text-white font-bold text-sm hover:bg-white/10 transition-colors"
             >
-              ✨ Créer mon CV
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+                <path d="M14 2v6h6" />
+                <path d="M9 13h6M9 17h4" />
+              </svg>
+              Créer mon CV
             </Link>
           </div>
         </div>

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { ExamService } from '@/services/examService';
 import ExamCard from '@/components/exams/ExamCard';
 import ExamSearchBar from '@/components/exams/ExamSearchBar';
+import CategoryIcon from '@/components/exams/CategoryIcon';
 import {
   DIPLOMA_FILTERS,
   EXAM_CATEGORIES,
@@ -225,29 +226,29 @@ export default async function ConcoursPage({ searchParams }: ConcoursPageProps) 
                     : 'border-gray-200 bg-white text-gray-600 hover:border-primary/40 dark:border-slate-700 dark:bg-slate-900 dark:text-gray-300',
                 )}
               >
-                <span aria-hidden="true">{c.emoji}</span>
+                <CategoryIcon category={c.value} className="h-3.5 w-3.5" />
                 {c.label}
               </Link>
-            ))}
-          </div>
-        </section>
+          ))}
+        </div>
+      </section>
 
-        {/* Explorer par catégorie / par diplôme — pages SEO (maillage interne) */}
-        <section aria-label="Explorer par catégorie ou par diplôme" className="mb-6">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">
-            Explorer par catégorie
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {EXAM_CATEGORIES.map((c) => (
-              <Link
-                key={c.value}
-                href={`/concours/categorie/${c.value}`}
-                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[12.5px] font-semibold text-gray-600 transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:text-gray-300"
-              >
-                <span aria-hidden="true">{c.emoji}</span>
-                {c.label}
-              </Link>
-            ))}
+      {/* Explorer par catégorie / par diplôme — pages SEO (maillage interne) */}
+      <section aria-label="Explorer par catégorie ou par diplôme" className="mb-6">
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+          Explorer par catégorie
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {EXAM_CATEGORIES.map((c) => (
+            <Link
+              key={c.value}
+              href={`/concours/categorie/${c.value}`}
+              className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[12.5px] font-semibold text-gray-600 transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:text-gray-300"
+            >
+              <CategoryIcon category={c.value} className="h-3.5 w-3.5" />
+              {c.label}
+            </Link>
+          ))}
           </div>
           <p className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-widest text-gray-400">
             Par diplôme

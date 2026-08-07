@@ -51,13 +51,13 @@ export function diplomaLevel(diploma?: string | null): number | null {
   return found ? found[1] : null;
 }
 
-export const EXAM_CATEGORIES: { value: ExamCategory; label: string; emoji: string }[] = [
-  { value: 'administratif', label: 'Administratif', emoji: '🏛️' },
-  { value: 'sante', label: 'Santé', emoji: '🩺' },
-  { value: 'enseignement', label: 'Enseignement', emoji: '📚' },
-  { value: 'securite', label: 'Sécurité', emoji: '🛡️' },
-  { value: 'militaire', label: 'Militaire', emoji: '🎖️' },
-  { value: 'autre', label: 'Autre', emoji: '📋' },
+export const EXAM_CATEGORIES: { value: ExamCategory; label: string }[] = [
+  { value: 'administratif', label: 'Administratif' },
+  { value: 'sante', label: 'Santé' },
+  { value: 'enseignement', label: 'Enseignement' },
+  { value: 'securite', label: 'Sécurité' },
+  { value: 'militaire', label: 'Militaire' },
+  { value: 'autre', label: 'Autre' },
 ];
 
 export const EXAM_CATEGORY_LABEL: Record<ExamCategory, string> = Object.fromEntries(

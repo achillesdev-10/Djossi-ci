@@ -90,10 +90,12 @@ export default function HomeCarousel() {
       <div className="w-full overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-accent to-orange-500 shadow-lg animate-gradient-x h-56 sm:h-72">
         <div className="flex h-full items-center justify-center px-6 text-white">
           <div className="text-center">
-            <span className="text-4xl" aria-hidden="true">
-              🇨🇮
-            </span>
-            <p className="mt-2 text-sm sm:text-base font-semibold">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="h-12 w-12 mx-auto opacity-90" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M2 12h20" />
+              <path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20Z" />
+            </svg>
+            <p className="mt-3 text-sm sm:text-base font-semibold">
               Chargement des opportunités…
             </p>
           </div>

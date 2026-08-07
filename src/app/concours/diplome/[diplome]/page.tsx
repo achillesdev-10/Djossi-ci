@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { ExamService } from '@/services/examService';
 import ExamCard from '@/components/exams/ExamCard';
+import CategoryIcon from '@/components/exams/CategoryIcon';
 import { DIPLOMA_SEO, DIPLOMA_SEO_BY_SLUG } from '@/lib/examSeo';
 import { EXAM_CATEGORIES } from '@/lib/examConstants';
 
@@ -108,7 +109,11 @@ export default async function ConcoursDiplomaPage({ params }: PageProps) {
         {/* En-tête éditorial unique */}
         <div className="mb-8 rounded-2xl border border-gray-100 bg-gradient-to-br from-emerald-500/5 via-white to-sky-500/5 p-6 dark:border-slate-800 dark:from-emerald-500/10 dark:via-slate-900 dark:to-sky-500/10 sm:p-8">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-bold text-primary">
-            🎓 Diplôme : {seo.label}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+              <path d="M22 10 12 5 2 10l10 5 10-5Z" />
+              <path d="M6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5" />
+            </svg>
+            Diplôme : {seo.label}
           </div>
           <h1 className="mb-3 font-[var(--font-display)] text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">
             {seo.title}
@@ -184,7 +189,7 @@ export default async function ConcoursDiplomaPage({ params }: PageProps) {
                   href={`/concours/categorie/${c.value}`}
                   className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-gray-600 transition-all hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:text-gray-300"
                 >
-                  <span aria-hidden="true">{c.emoji}</span>
+                  <CategoryIcon category={c.value} className="h-3.5 w-3.5" />
                   {c.label}
                 </Link>
               ))}

@@ -175,7 +175,7 @@ export default async function JobDetailPage({ params }: PageProps) {
               {/* Bouton Partager sur WhatsApp très visible */}
               <div className="pt-1">
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`📢 *${job.title}* chez *${job.company}* (${job.location})\n\nConsultez l'offre complète sur TravaillerEnCi : https://travaillerenci.vercel.app/jobs/${job.id}`)}`}
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`*${job.title}* chez *${job.company}* (${job.location})\n\nConsultez l'offre complète sur TravaillerEnCi : https://travaillerenci.vercel.app/jobs/${job.id}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all"
@@ -243,7 +243,7 @@ export default async function JobDetailPage({ params }: PageProps) {
                 <MetaRow label="Contrat" value={job.contract_type} />
                 <MetaRow
                   label="Vérifié"
-                  value={job.is_verified ? '✅ Oui — par TravaillerEnCi' : '⏳ En cours'}
+                  value={job.is_verified ? 'Oui — par TravaillerEnCi' : 'En cours'}
                 />
                 <MetaRow label="Publiée le" value={formatDate(job.created_at)} />
                 {job.source_url && (

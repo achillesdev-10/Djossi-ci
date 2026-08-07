@@ -112,7 +112,7 @@ function OgCard({ exam, fontFamily }: { exam: Exam | null; fontFamily?: string }
               fontSize: 22,
             }}
           >
-            🇨🇮
+            CI
           </div>
           <span>
             Travailleren<span style={{ color: '#34d399' }}>Ci</span>

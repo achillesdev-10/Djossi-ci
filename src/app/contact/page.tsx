@@ -12,18 +12,32 @@ export const metadata = {
 
 const INFO_ITEMS = [
   {
-    emoji: '📧',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+        <path d="M3 8l7.89 5.26a2 2 0 0 0 2.22 0L21 8" />
+        <path d="M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2Z" />
+      </svg>
+    ),
     title: 'Email',
     value: SITE_CONFIG.supportEmail,
     href: `mailto:${SITE_CONFIG.supportEmail}`,
   },
   {
-    emoji: '📍',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+        <path d="M12 21s-7-4.5-7-10a7 7 0 0 1 14 0c0 5.5-7 10-7 10Z" />
+        <circle cx="12" cy="11" r="2.5" />
+      </svg>
+    ),
     title: 'Localisation',
     value: 'Abidjan, Côte d\u2019Ivoire',
   },
   {
-    emoji: '⚡',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+        <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" />
+      </svg>
+    ),
     title: 'Temps de réponse',
     value: 'Sous 24 à 48 heures ouvrées',
   },
@@ -40,7 +54,10 @@ export default function ContactPage() {
         />
         <div className="container mx-auto px-4 py-12 sm:py-16 relative z-10 max-w-4xl text-center">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary dark:text-emerald-400 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold mb-5">
-            <span aria-hidden="true">💬</span> Nous contacter
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
+            </svg>
+            Nous contacter
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight font-[var(--font-display)] text-gray-900 dark:text-white">
             Parlons-en&nbsp;!
@@ -62,8 +79,8 @@ export default function ContactPage() {
                 key={item.title}
                 className="flex items-center gap-4 rounded-2xl border border-border bg-white dark:bg-slate-900 p-5 shadow-sm hover:border-primary/30 transition-colors"
               >
-                <div className="shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 border border-primary/10 flex items-center justify-center text-2xl">
-                  <span aria-hidden="true">{item.emoji}</span>
+                <div className="shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 border border-primary/10 flex items-center justify-center text-primary">
+                  <span aria-hidden="true">{item.icon}</span>
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
@@ -145,7 +162,7 @@ export default function ContactPage() {
             >
               <div>
                 <div className="font-bold font-[var(--font-display)]">Envie de trouver un job ?</div>
-                <div className="text-sm text-white/80">Parcourez les offres vérifiées 🇨🇮</div>
+                <div className="text-sm text-white/80">Parcourez les offres vérifiées</div>
               </div>
               <svg className="w-5 h-5 shrink-0 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14" />

@@ -11,22 +11,41 @@ export const metadata = {
 
 const VALUES = [
   {
-    emoji: '✅',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+    ),
     title: 'Des offres vérifiées',
     text: "Chaque annonce est contrôlée avant publication pour lutter contre les arnaques à l'emploi.",
   },
   {
-    emoji: '🇨🇮',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20ZM2 12h20" />
+      </svg>
+    ),
     title: '100% ivoirien',
     text: 'Conçu à Abidjan, pensé pour les réalités du marché du travail en Côte d’Ivoire.',
   },
   {
-    emoji: '🔓',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+        <rect x="3" y="11" width="18" height="11" rx="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </svg>
+    ),
     title: 'Gratuit et ouvert',
     text: "La recherche d'emploi ne doit pas être un luxe : l'accès aux offres est entièrement gratuit.",
   },
   {
-    emoji: '⚡',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+        <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" />
+      </svg>
+    ),
     title: 'Simple et rapide',
     text: 'Postulez en quelques clics, sans compte obligatoire pour consulter les offres.',
   },
@@ -35,19 +54,33 @@ const VALUES = [
 const JOURNEY = [
   {
     period: 'La genèse',
-    emoji: '💡',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+        <path d="M9 18h6M10 22h4" />
+        <path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2Z" />
+      </svg>
+    ),
     title: 'Un constat simple',
     text: "En Côte d'Ivoire, l'information sur les opportunités professionnelles est dispersée entre les sites des entreprises, les réseaux sociaux et le bouche-à-oreille. De nombreux talents qualifiés passent à côté d'offres correspondant pourtant à leur profil.",
   },
   {
     period: 'La solution',
-    emoji: '🛠️',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z" />
+      </svg>
+    ),
     title: 'Une plateforme unique',
     text: 'TravaillerenCi centralise les offres d’emploi, de stages, de bourses et de concours administratifs en un seul endroit, avec un scraping automatisé des sources publiques et une modération humaine de chaque contenu.',
   },
   {
     period: "Aujourd'hui",
-    emoji: '🚀',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+        <path d="m12 2-1 3.5L9 7l3.5 1L13 12l1-4L17.5 7 15 5.5 12 2Z" />
+        <path d="M4 13l2 2 2-2M4 18l2 2 2-2" />
+      </svg>
+    ),
     title: 'Un projet vivant',
     text: "La plateforme évolue en continu : générateur de CV intelligent, alertes personnalisées, et bientôt de nouvelles fonctionnalités pour les candidats comme pour les recruteurs ivoiriens.",
   },
@@ -64,7 +97,12 @@ export default function AboutPage() {
         />
         <div className="container mx-auto px-4 py-14 sm:py-20 relative z-10 max-w-4xl text-center">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary dark:text-emerald-400 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold mb-5">
-            <span aria-hidden="true">🇨🇮</span> À propos de TravaillerenCi
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20ZM2 12h20" />
+            </svg>
+            À propos de TravaillerenCi
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight font-[var(--font-display)] text-gray-900 dark:text-white">
             Qui sommes-nous&nbsp;?
@@ -121,8 +159,8 @@ export default function AboutPage() {
               className="relative bg-white dark:bg-slate-900 border border-border rounded-2xl p-6 sm:p-8 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
             >
               <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
-                <div className="shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/15 to-accent/15 border border-primary/10 flex items-center justify-center text-2xl">
-                  <span aria-hidden="true">{step.emoji}</span>
+                <div className="shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/15 to-accent/15 border border-primary/10 flex items-center justify-center text-primary">
+                  <span aria-hidden="true">{step.icon}</span>
                 </div>
                 <div>
                   <div className="text-xs font-bold uppercase tracking-widest text-primary mb-1">
@@ -151,8 +189,8 @@ export default function AboutPage() {
                 key={v.title}
                 className="bg-white dark:bg-slate-900 border border-border rounded-2xl p-5 sm:p-6 hover:border-primary/30 transition-colors"
               >
-                <div className="text-2xl mb-3" aria-hidden="true">
-                  {v.emoji}
+                <div className="text-primary mb-3" aria-hidden="true">
+                  {v.icon}
                 </div>
                 <h3 className="font-bold text-gray-900 dark:text-white">{v.title}</h3>
                 <p className="mt-1.5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{v.text}</p>
@@ -184,7 +222,12 @@ export default function AboutPage() {
               href="/generateur-de-cv"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/30 text-white font-bold text-sm hover:bg-white/10 transition-colors"
             >
-              ✨ Créer mon CV
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+                <path d="M14 2v6h6" />
+                <path d="M9 13h6M9 17h4" />
+              </svg>
+              Créer mon CV
             </Link>
           </div>
         </div>
