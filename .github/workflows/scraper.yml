@@ -46,6 +46,22 @@ jobs:
           # SCRAPER_SITES (variable de repo) est optionnelle : défaut = educarriere,emploici,boursedetude
           python scraper/scraper.py --max-per-site 15 ${SCRAPER_SITES:+--sites "$SCRAPER_SITES"}
 
+      - name: Run exam scraper (module Concours — sources officielles)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          EXAM_SOURCES: ${{ vars.EXAM_SOURCES }}
+        run: |
+          # EXAM_SOURCES (variable de repo) optionnelle : filtre les sources
+          # (ex: gucaci,ena,infas). Défaut = toutes les sources activées.
+          python scraper/exams_runner.py --max-per-source 10 ${EXAM_SOURCES:+--sources "$EXAM_SOURCES"}
+
+      - name: Run exam unit tests (parser + anti-duplication)
+        run: |
+          python scraper/tests/test_exam_parser.py
+          python scraper/tests/test_similarity_check.py
+
   # ==========================================================================
   # Vérification du code front (Next.js) à chaque push / PR :
   #   • ESLint (flat config, eslint.config.mjs)

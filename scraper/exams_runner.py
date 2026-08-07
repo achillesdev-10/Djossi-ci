@@ -1,0 +1,271 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+===============================================================================
+  TravaillerEnCi — scraper/exams_runner.py
+  Runner du module Concours Administratifs (table `exams`)
+
+  Pipeline :
+      1. Lecture de la config centralisée scraper/config/exam_sources.json
+      2. Vérification robots.txt de chaque source (sources interdites ignorées)
+      3. Scraping brut (exam_sources.py)
+      4. Réécriture 100% + extraction structurée via Gemini (gemini_exams.py),
+         repli heuristique (exam_parser.py) si pas de clé
+      4b. Contrôle anti-duplication (similarity_check.py) : si la réécriture est
+          trop proche de la source (> seuil, défaut 30%), la fiche est marquée
+          'low' et signalée à la modération pour réécriture manuelle.
+      5. Validation + enregistrement en 'pending' → modération /admin/exams
+
+  Exemples :
+      python scraper/exams_runner.py
+      python scraper/exams_runner.py --max-per-source 10
+      python scraper/exams_runner.py --sources gucaci,ena
+      python scraper/exams_runner.py --dry-run
+      python scraper/exams_runner.py --no-ai
+      python scraper/exams_runner.py --similarity-threshold 0.3
+      python scraper/exams_runner.py --check-sources   # rapport robots.txt (docs)
+===============================================================================
+"""
+
+from __future__ import annotations
+
+import argparse
+import io
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import List
+
+def _fix_console() -> None:
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+    except Exception:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+
+_fix_console()
+
+HERE = Path(__file__).resolve().parent
+PROJECT_ROOT = HERE.parent
+DATA_DIR = PROJECT_ROOT / "data"
+DB_PATH = DATA_DIR / "travaillerenci.sqlite3"
+HEALTH_JSON = DATA_DIR / "admin-exams-health.json"
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from scraper.core.http_client import HttpClient
+from scraper.core.logger import setup_logger
+from scraper.core.gemini_exams import ExamGeminiEnricher
+from scraper.core.robots_check import check_robots
+from scraper.core.similarity_check import (
+    SIMILARITY_THRESHOLD as DEFAULT_SIMILARITY_THRESHOLD,
+    needs_rewrite,
+    text_similarity,
+)
+from scraper.database.exam_repository import ExamRepository
+from scraper.exam_sources import get_enabled_sources, build_scraper
+from scraper.models.exam_item import ExamItem
+
+logger = setup_logger("exams_runner")
+
+
+def _write_health(status: str, added: int, message: str) -> None:
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "status": status,
+            "lastRunAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "examsAdded": added,
+            "message": message,
+        }
+        tmp = HEALTH_JSON.with_suffix(".tmp")
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(HEALTH_JSON)
+    except Exception as exc:
+        logger.debug(f"Écriture health JSON impossible : {exc}")
+
+
+def report_sources() -> int:
+    """Rapport robots.txt de toutes les sources (alimente docs/CONCOURS_SOURCES.md)."""
+    http_client = HttpClient()
+    print("\n" + "=" * 72)
+    print("RAPPORT DES SOURCES DE CONCOURS — vérification robots.txt")
+    print("=" * 72)
+    rows = []
+    for cfg in get_enabled_sources():
+        base = str(cfg.get("base_url", ""))
+        robots = check_robots(http_client, base, "/")
+        rows.append((cfg.get("id"), cfg.get("name"), base, robots.status, robots.note))
+        print(
+            f"  • {cfg.get('id'):16} [{robots.status:12}] {base}\n"
+            f"      {robots.note or ''}"
+        )
+    http_client.close()
+    print("\nRésumé :", {r[0]: r[3] for r in rows})
+    return 0
+
+
+def run(
+    source_ids: List[str],
+    max_per_source: int,
+    dry_run: bool,
+    use_ai: bool,
+    similarity_threshold: float,
+) -> int:
+    logger.info("=" * 60)
+    logger.info("🚀 Pipeline Concours Administratifs (table exams)")
+    logger.info(
+        f"   Max par source : {max_per_source} | Dry-run : {dry_run} | IA : {use_ai} | "
+        f"Seuil anti-duplication : {similarity_threshold:.0%}"
+    )
+    logger.info("=" * 60)
+
+    enabled = get_enabled_sources()
+    if source_ids:
+        enabled = [s for s in enabled if s.get("id") in source_ids]
+    if not enabled:
+        logger.error("❌ Aucune source de concours activée (scraper/config/exam_sources.json).")
+        return 1
+
+    http_client = HttpClient()
+    enricher = ExamGeminiEnricher() if use_ai else ExamGeminiEnricher(api_key=None)
+
+    all_items: List[ExamItem] = []
+    robots_report: List[dict] = []
+    # Contrôle anti-duplication (§2.6) : fiches trop proches de la source.
+    to_rewrite: List[ExamItem] = []
+
+    for cfg in enabled:
+        source_id = cfg.get("id")
+        base = str(cfg.get("base_url", ""))
+        robots = check_robots(http_client, base, "/")
+        robots_report.append(
+            {"id": source_id, "name": cfg.get("name"), "url": base, "robots": robots.status}
+        )
+        if not robots.allowed:
+            logger.warning(f"⛔ Source {source_id} interdite par robots.txt — ignorée.")
+            continue
+
+        try:
+            scraper = build_scraper(cfg, http_client)
+            raw_items = scraper.scrape(max_offers=max_per_source)
+            for item in raw_items:
+                # Texte source BRUT conservé AVANT la réécriture — nécessaire
+                # au contrôle anti-duplication (comparaison source ↔ réécrit).
+                raw_text = item.description_md
+                # Réécriture 100% + extraction structurée (repli heuristique inclus).
+                enricher.enrich(item)
+                ok, reason = item.is_valid()
+                if not ok:
+                    logger.debug(f"  🚫 Rejeté ({reason}) : {item.title[:50]}")
+                    continue
+                # Contrôle anti-duplication : pertinent UNIQUEMENT si la
+                # réécriture a réellement eu lieu. Le repli heuristique (pas de
+                # clé IA / échec Gemini) ne reformule pas le texte → une
+                # similarité de 1.0 triviale ne doit PAS être signalée.
+                if raw_text.strip() == item.description_md.strip():
+                    all_items.append(item)
+                    continue
+                score = text_similarity(raw_text, item.description_md)
+                if needs_rewrite(raw_text, item.description_md, similarity_threshold):
+                    to_rewrite.append(item)
+                    item.confidence = "low"  # priorité relecture manuelle
+                    logger.warning(
+                        f"  ⚠️ Similarité {score:.0%} > {similarity_threshold:.0%} "
+                        f"— à réécrire : {item.title[:60]}"
+                    )
+                all_items.append(item)
+        except Exception as exc:
+            logger.error(f"  ❌ Erreur source {source_id} : {exc}", exc_info=True)
+
+    http_client.close()
+    enricher.close()
+
+    logger.info(f"\n📊 {len(all_items)} concours bruts valides prêts à l'enregistrement.")
+    if to_rewrite:
+        logger.warning(
+            f"⚠️ {len(to_rewrite)} fiche(s) trop proche(s) de la source "
+            f"(similarité > {similarity_threshold:.0%}) — à réécrire en modération."
+        )
+    if dry_run:
+        for idx, item in enumerate(all_items, 1):
+            print(
+                f"  {idx}. [{item.category.upper():14}] {item.title[:58]} — {item.organizer[:36]} "
+                f"[{item.source[:24]}] (confiance {item.confidence})"
+            )
+        if to_rewrite:
+            print("\n⚠️ À RÉÉCRIRE (similarité élevée avec la source) :")
+            for idx, item in enumerate(to_rewrite, 1):
+                print(f"  - {idx}. {item.title[:70]}")
+        print("\nRapport robots.txt :")
+        for r in robots_report:
+            print(f"   - {r['id']:16} {r['robots']}")
+        return 0
+
+    created = 0
+    updated = 0
+    log_id = None
+    try:
+        with ExamRepository(DB_PATH) as repo:
+            log_id = repo.add_log("running", 0, f"Scraping concours : {len(all_items)} candidats")
+            for item in all_items:
+                _, was_created = repo.upsert(item)
+                if was_created:
+                    created += 1
+                else:
+                    updated += 1
+            stats = repo.stats()
+    except Exception as exc:
+        logger.error(f"❌ Erreur BDD : {exc}", exc_info=True)
+        _write_health("error", created, f"Erreur BDD : {exc}")
+        return 1
+
+    message = f"Concours : {created} nouveau(x), {updated} mis à jour. {stats}"
+    if to_rewrite:
+        message += f" ⚠️ {len(to_rewrite)} à réécrire (similarité > {similarity_threshold:.0%})"
+    if log_id is not None:
+        try:
+            with ExamRepository(DB_PATH) as repo:
+                repo.finish_log(log_id, "success", created, message)
+        except Exception:
+            pass
+    _write_health("success", created, message)
+    logger.info(f"✅ Terminé : {created} nouveau(x), {updated} mis à jour. {stats}")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="TravaillerEnCi — module Concours (table exams)")
+    parser.add_argument("--sources", type=str, default="", help="Ids de sources séparés par des virgules (défaut : toutes)")
+    parser.add_argument("--max-per-source", type=int, default=10, help="Max de concours par source")
+    parser.add_argument("--dry-run", action="store_true", help="Afficher sans enregistrer")
+    parser.add_argument("--no-ai", action="store_true", help="Extraction heuristique uniquement")
+    parser.add_argument(
+        "--similarity-threshold",
+        type=float,
+        default=DEFAULT_SIMILARITY_THRESHOLD,
+        # « %% » : échappement printf exigé par argparse dans les chaînes d'aide.
+        help=f"Seuil anti-duplication source↔réécriture (défaut : {DEFAULT_SIMILARITY_THRESHOLD * 100:.0f} %%)",
+    )
+    parser.add_argument("--check-sources", action="store_true", help="Rapport robots.txt des sources puis quitter")
+    args = parser.parse_args()
+
+    if args.check_sources:
+        return report_sources()
+
+    source_ids = [s.strip() for s in args.sources.split(",") if s.strip()]
+    use_ai = not args.no_ai
+    return run(
+        source_ids,
+        args.max_per_source,
+        args.dry_run,
+        use_ai,
+        args.similarity_threshold,
+    )
+
+
+if __name__ == "__main__":
+    sys.exit(main())

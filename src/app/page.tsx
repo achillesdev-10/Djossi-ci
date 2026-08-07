@@ -1,11 +1,61 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import SearchBar from '@/components/jobs/SearchBar';
-import JobCard from '@/components/jobs/JobCard';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
+import { ExamService } from '@/services/examService';
+import { BlogService } from '@/services/blogService';
 import type { JobOfferSchema, JobContractType } from '@/types';
+import NewsTicker, { type TickerItem } from '@/components/home/NewsTicker';
+import HomeCarousel from '@/components/home/HomeCarousel';
+import PollWidget from '@/components/home/PollWidget';
+import CompactJobCard from '@/components/home/CompactJobCard';
 
 export const revalidate = 60;
+
+const QUICK_LINKS = [
+  {
+    label: 'Offres d\u2019emploi',
+    desc: 'CDI, CDD, prestation',
+    href: '/jobs',
+    icon: '💼',
+    gradient: 'from-orange-500 to-amber-500',
+  },
+  {
+    label: 'Stages',
+    desc: 'Pour étudiants & jeunes diplômés',
+    href: '/jobs?contract=Stage',
+    icon: '🎓',
+    gradient: 'from-sky-500 to-cyan-500',
+  },
+  {
+    label: 'Bourses d\u2019études',
+    desc: 'Étudier en CI & à l\u2019étranger',
+    href: '/bourses',
+    icon: '🌍',
+    gradient: 'from-emerald-500 to-green-500',
+  },
+  {
+    label: 'Concours admin.',
+    desc: 'ENA, INFAS, CAFOP\u2026',
+    href: '/concours',
+    icon: '🏛️',
+    gradient: 'from-accent to-indigo-600',
+  },
+  {
+    label: 'Générateur de CV',
+    desc: 'Un CV pro avec l\u2019IA',
+    href: '/generateur-de-cv',
+    icon: '✨',
+    gradient: 'from-fuchsia-500 to-purple-600',
+  },
+  {
+    label: 'Conseils & Blog',
+    desc: 'Astuces candidature',
+    href: '/blog',
+    icon: '📝',
+    gradient: 'from-rose-500 to-pink-500',
+  },
+];
 
 export default async function HomePage({
   searchParams,
@@ -21,41 +71,104 @@ export default async function HomePage({
   const location = (sp?.city || '').trim();
   const contract = (sp?.contract || '').trim() as JobContractType;
 
-  const { rows: jobs, total } = await JobOfferSchemaService.list({
-    keyword: keyword || undefined,
-    location: location || undefined,
-    contract_type: contract || undefined,
-    status: 'published',
-    limit: 30,
-    order_by: 'created_at',
-    order_dir: 'desc',
-  });
+  const [jobs, examRows, blogRows, bourseRows] = await Promise.all([
+    JobOfferSchemaService.list({
+      keyword: keyword || undefined,
+      location: location || undefined,
+      contract_type: contract || undefined,
+      status: 'published',
+      limit: 12,
+      order_by: 'created_at',
+      order_dir: 'desc',
+    }),
+    ExamService.list({ status: 'published', limit: 6, order_by: 'created_at', order_dir: 'desc' }),
+    BlogService.list({ status: 'published', limit: 4, order_by: 'published_at', order_dir: 'desc' }),
+    JobOfferSchemaService.list({
+      category: 'scholarship',
+      status: 'published',
+      limit: 4,
+      order_by: 'created_at',
+      order_dir: 'desc',
+    }),
+  ]);
 
-  const totalKnown = Math.max(total, jobs.length);
+  const { rows: jobsList, total } = jobs;
+  const totalKnown = Math.max(total, jobsList.length);
+
+  const tickerItems: TickerItem[] = [
+    ...jobsList.slice(0, 5).map((job) => ({
+      id: `job-${job.id}`,
+      title: job.title,
+      href: `/jobs/${job.id}`,
+      type: 'offre' as const,
+    })),
+    ...examRows.rows.slice(0, 4).map((exam) => ({
+      id: `exam-${exam.id}`,
+      title: exam.title,
+      href: `/concours/${exam.slug || exam.id}`,
+      type: 'concours' as const,
+    })),
+    ...bourseRows.rows.slice(0, 3).map((bourse) => ({
+      id: `bourse-${bourse.id}`,
+      title: bourse.title,
+      href: `/bourses/${bourse.id}`,
+      type: 'bourse' as const,
+    })),
+    ...blogRows.rows.slice(0, 3).map((post) => ({
+      id: `post-${post.id}`,
+      title: post.title,
+      href: `/blog/${post.slug}`,
+      type: 'blog' as const,
+    })),
+  ];
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'TravaillerenCi',
+    alternateName: 'TravaillerEnCi',
+    url: 'https://travaillerenci.ci',
+    inLanguage: 'fr-CI',
+    description:
+      "Plateforme d'offres d'emploi, de stages, de bourses et de concours administratifs en Côte d'Ivoire.",
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: 'https://travaillerenci.ci/jobs?q={search_term_string}',
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  };
 
   return (
     <main className="flex-1 min-h-screen bg-gradient-to-b from-white to-gray-50/70 dark:from-slate-950 dark:to-slate-900 transition-colors">
+      {/* JSON-LD (SEO) : WebSite + SearchAction */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* ======================================================================== */}
-      {/*   EN-TÊTE / HERO — Mobile-first : texte lisible, peu de padding vertical */}
+      {/*   HERO — Mobile-first : texte lisible, peu de padding vertical            */}
       {/* ======================================================================== */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/8 via-white to-accent/8 dark:from-primary/10 dark:via-slate-950 dark:to-accent/10 pt-10 pb-8 sm:pt-16 sm:pb-12 border-b border-border/40">
+      <section className="relative overflow-hidden bg-gradient-to-br from-primary/8 via-white to-accent/8 dark:from-primary/10 dark:via-slate-950 dark:to-accent/10 pt-8 pb-8 sm:pt-14 sm:pb-10 border-b border-border/40">
         <div
           aria-hidden="true"
           className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-primary)_0%,_transparent_55%)] opacity-20 dark:opacity-10"
         />
         <div
           aria-hidden="true"
-          className="absolute -bottom-24 -right-20 w-72 h-72 rounded-full bg-secondary/10 blur-3xl"
+          className="absolute -bottom-24 -right-20 w-72 h-72 rounded-full bg-secondary/10 blur-3xl animate-float-slow"
         />
         <div
           aria-hidden="true"
-          className="absolute -top-20 -left-16 w-72 h-72 rounded-full bg-accent/10 blur-3xl"
+          className="absolute -top-20 -left-16 w-72 h-72 rounded-full bg-accent/10 blur-3xl animate-float"
         />
 
         <div className="container mx-auto px-4 relative z-10 max-w-6xl">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             {/* Colonne texte */}
-            <div className="text-center lg:text-left">
+            <div className="text-center lg:text-left animate-fade-in-up">
               <div className="inline-flex items-center gap-2 bg-primary/10 text-primary dark:text-emerald-400 px-3.5 py-1.5 rounded-full text-[12px] sm:text-sm font-semibold mb-4 sm:mb-5">
                 <span className="relative flex h-2 w-2 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
@@ -85,7 +198,7 @@ export default async function HomePage({
                 alt="Recherche d'emploi en Côte d'Ivoire : offres vérifiées, mallette et localisation"
                 width={520}
                 height={445}
-                className="w-full max-w-[520px] h-auto drop-shadow-xl"
+                className="w-full max-w-[520px] h-auto drop-shadow-xl animate-float"
                 fetchPriority="high"
               />
             </div>
@@ -111,20 +224,83 @@ export default async function HomePage({
       </section>
 
       {/* ======================================================================== */}
-      {/*   LISTE DES OFFRES — cards verticales sur mobile, 1-2-3 colonnes resp.  */}
+      {/*   FIL ACTU : dernières offres, concours, bourses & articles du blog      */}
       {/* ======================================================================== */}
-      <section className="container mx-auto px-4 pb-16 sm:pb-24 max-w-5xl">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-4 mt-8 sm:mt-12 mb-4 sm:mb-6">
+      <NewsTicker items={tickerItems} />
+
+      {/* ======================================================================== */}
+      {/*   WIDGETS : carrousel (images des sources) + sondage                     */}
+      {/* ======================================================================== */}
+      <section className="container mx-auto px-4 mt-8 sm:mt-12 max-w-6xl">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 items-stretch">
+          <div className="lg:col-span-2 animate-fade-in-up">
+            <SectionHeading
+              kicker="À la une"
+              title="Les opportunités du moment"
+              actionHref="/jobs"
+              actionLabel="Tout voir"
+            />
+            <HomeCarousel />
+          </div>
+          <div className="animate-fade-in-up" style={{ animationDelay: '120ms' }}>
+            <PollWidget />
+          </div>
+        </div>
+      </section>
+
+      {/* ======================================================================== */}
+      {/*   ACCÈS RAPIDES : catégories colorées (2 colonnes sur mobile)            */}
+      {/* ======================================================================== */}
+      <section className="container mx-auto px-4 mt-10 sm:mt-14 max-w-6xl">
+        <SectionHeading kicker="Explorez" title="Où voulez-vous commencer ?" />
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
+          {QUICK_LINKS.map((link, i) => (
+            <Link
+              key={link.label}
+              href={link.href}
+              className="group relative overflow-hidden rounded-2xl p-4 sm:p-5 text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl animate-fade-in-up"
+              style={{ animationDelay: `${i * 60}ms` }}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br ${link.gradient} opacity-100`} />
+              <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/15 transition-transform duration-500 group-hover:scale-150" />
+              <div className="relative flex flex-col gap-1.5">
+                <span className="text-2xl sm:text-3xl drop-shadow" aria-hidden="true">
+                  {link.icon}
+                </span>
+                <span className="font-[var(--font-display)] text-sm sm:text-base font-extrabold leading-tight">
+                  {link.label}
+                </span>
+                <span className="text-[11px] sm:text-xs text-white/85 leading-tight">
+                  {link.desc}
+                </span>
+                <span className="mt-1 inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold opacity-0 transition-opacity group-hover:opacity-100">
+                  Explorer
+                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14" />
+                    <path d="m12 5 7 7-7 7" />
+                  </svg>
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ======================================================================== */}
+      {/*   OFFRE À LA UNE — grille 2 colonnes dès le mobile                        */}
+      {/* ======================================================================== */}
+      <section className="container mx-auto px-4 pb-4 sm:pb-8 max-w-6xl">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-4 mt-10 sm:mt-14 mb-4 sm:mb-6">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white font-[var(--font-display)]">
               {keyword || location || contract
                 ? `${totalKnown} résultat${totalKnown > 1 ? 's' : ''}`
-                : 'Offres à la une'}
+                : 'Dernières offres'}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {keyword || location || contract
                 ? <>Triées par : pertinence + nouveauté</>
-                : <>Les dernières offres publiées sur TravaillerenCi</>}
+                : <>Les dernières opportunités publiées sur TravaillerenCi</>}
             </p>
           </div>
           {(keyword || location || contract) && (
@@ -141,18 +317,14 @@ export default async function HomePage({
           )}
         </div>
 
-        {jobs.length === 0 ? (
-          <EmptyState
-            keyword={keyword}
-            location={location}
-            contract={contract}
-          />
+        {jobsList.length === 0 ? (
+          <EmptyState keyword={keyword} location={location} contract={contract} />
         ) : (
           <>
-            <ul className="grid grid-cols-1 gap-3.5 sm:gap-5 md:grid-cols-2 xl:grid-cols-3 list-none p-0 m-0">
-              {jobs.map((job, i) => (
-                <li key={job.id}>
-                  <JobCard job={job as JobOfferSchema} priority={i < 4} />
+            <ul className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 list-none p-0 m-0">
+              {jobsList.map((job) => (
+                <li key={job.id} className="h-full">
+                  <CompactJobCard job={job as JobOfferSchema} />
                 </li>
               ))}
             </ul>
@@ -172,6 +344,64 @@ export default async function HomePage({
           </>
         )}
       </section>
+
+      {/* ======================================================================== */}
+      {/*   DERNIERS ARTICLES DU BLOG — 2 colonnes dès le mobile                    */}
+      {/* ======================================================================== */}
+      {blogRows.rows.length > 0 && (
+        <section className="container mx-auto px-4 pb-16 sm:pb-24 max-w-6xl">
+          <SectionHeading
+            kicker="Le blog"
+            title="Conseils & actualités"
+            actionHref="/blog"
+            actionLabel="Tous les articles"
+          />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+            {blogRows.rows.map((post, i) => (
+              <HomeBlogCard key={post.id} post={post} index={i} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ======================================================================== */}
+      {/*   BANDEAU CTA                                                             */}
+      {/* ======================================================================== */}
+      <section className="container mx-auto px-4 pb-16 sm:pb-24 max-w-6xl">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary via-emerald-600 to-accent px-6 py-10 sm:p-12 text-center text-white shadow-xl shadow-primary/20 animate-gradient-x">
+          <div
+            aria-hidden="true"
+            className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/10 blur-2xl"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute -bottom-12 -right-8 h-48 w-48 rounded-full bg-orange-400/25 blur-3xl"
+          />
+          <div className="relative">
+            <h2 className="font-[var(--font-display)] text-2xl sm:text-4xl font-extrabold mb-3">
+              Prêt à décrocher votre prochain job ?
+            </h2>
+            <p className="mx-auto max-w-2xl text-sm sm:text-base text-white/90 mb-6">
+              Créez un CV professionnel en quelques minutes avec notre générateur IA,
+              puis postulez aux meilleures offres en Côte d'Ivoire.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                href="/generateur-de-cv"
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-extrabold text-primary shadow-lg transition-transform hover:scale-105"
+              >
+                ✨ Générer mon CV
+              </Link>
+              <Link
+                href="/jobs"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/40 bg-white/10 px-6 py-3 text-sm font-bold text-white backdrop-blur transition-colors hover:bg-white/20"
+              >
+                Parcourir les offres
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
@@ -179,6 +409,91 @@ export default async function HomePage({
 // -----------------------------------------------------------------------------
 //  Sous-composants — inline car la page est un Server Component
 // -----------------------------------------------------------------------------
+
+function SectionHeading({
+  kicker,
+  title,
+  actionHref,
+  actionLabel,
+}: {
+  kicker: string;
+  title: string;
+  actionHref?: string;
+  actionLabel?: string;
+}) {
+  return (
+    <div className="flex items-end justify-between gap-3 mb-4 sm:mb-5">
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-primary dark:text-emerald-400 mb-1">
+          {kicker}
+        </p>
+        <h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white font-[var(--font-display)] leading-tight">
+          {title}
+        </h2>
+      </div>
+      {actionHref && actionLabel && (
+        <Link
+          href={actionHref}
+          className="shrink-0 inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-primary hover:gap-2 transition-all"
+        >
+          {actionLabel}
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14" />
+            <path d="m12 5 7 7-7 7" />
+          </svg>
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function HomeBlogCard({
+  post,
+  index,
+}: {
+  post: { title: string; slug: string; excerpt?: string | null; cover_image?: string | null; author?: string };
+  index: number;
+}) {
+  return (
+    <Link
+      href={`/blog/${post.slug}`}
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-primary/25 animate-fade-in-up"
+      style={{ animationDelay: `${index * 70}ms` }}
+    >
+      <div className="relative h-24 sm:h-32 overflow-hidden bg-gradient-to-br from-primary/15 via-white to-accent/15 dark:from-primary/10 dark:via-slate-900 dark:to-accent/10">
+        {post.cover_image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={post.cover_image}
+            alt={post.title}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-3xl sm:text-4xl opacity-60">
+            <span aria-hidden="true">📰</span>
+          </div>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
+        <h3 className="font-bold text-[12.5px] sm:text-sm leading-snug text-gray-900 line-clamp-2 transition-colors group-hover:text-primary">
+          {post.title}
+        </h3>
+        {post.excerpt && (
+          <p className="mt-1.5 flex-1 text-[11px] sm:text-xs text-gray-500 line-clamp-2 leading-relaxed">
+            {post.excerpt}
+          </p>
+        )}
+        <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-primary">
+          Lire l'article
+          <svg className="h-3 w-3 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14" />
+            <path d="m12 5 7 7-7 7" />
+          </svg>
+        </span>
+      </div>
+    </Link>
+  );
+}
 
 function Stat({ icon, label }: { icon: string; label: string }) {
   return (

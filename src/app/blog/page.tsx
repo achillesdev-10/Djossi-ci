@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { BlogService } from '@/services/blogService';
 import type { BlogPost } from '@/types/blog';
+import { formatDateShort } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,7 +83,7 @@ export default async function BlogPage() {
               <strong className="text-gray-800 dark:text-gray-200">{total}</strong>{' '}
               article{total > 1 ? 's' : ''} publié{total > 1 ? 's' : ''}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
               {posts.map((post) => (
                 <BlogCard key={post.id} post={post} />
               ))}
@@ -102,7 +103,7 @@ function BlogCard({ post }: { post: BlogPost }) {
       className="group flex flex-col bg-white dark:bg-slate-900 border border-border rounded-2xl overflow-hidden hover:shadow-lg hover:-translate-y-1 hover:border-primary/30 transition-all duration-200"
     >
       {/* Couverture */}
-      <div className="relative h-40 overflow-hidden bg-gradient-to-br from-primary/15 via-white to-accent/15 dark:from-primary/10 dark:via-slate-900 dark:to-accent/10">
+      <div className="relative h-28 overflow-hidden bg-gradient-to-br from-primary/15 via-white to-accent/15 dark:from-primary/10 dark:via-slate-900 dark:to-accent/10 sm:h-40">
         {post.cover_image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -125,27 +126,28 @@ function BlogCard({ post }: { post: BlogPost }) {
       </div>
 
       {/* Corps */}
-      <div className="flex flex-col flex-1 p-5">
-        <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400 font-medium mb-2">
-          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <div className="flex flex-col flex-1 p-3.5 sm:p-5">
+        <div className="flex items-center gap-2 text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 font-medium mb-2">
+          <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2" />
             <path d="M16 2v4M8 2v4M3 10h18" />
           </svg>
-          {formatDate(post.published_at)}
+          <span className="hidden sm:inline">{formatDate(post.published_at)}</span>
+          <span className="sm:hidden">{post.published_at ? formatDateShort(post.published_at) : ''}</span>
           <span aria-hidden="true">•</span>
           <span className="truncate">{post.author}</span>
         </div>
-        <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white font-[var(--font-display)] leading-snug group-hover:text-primary transition-colors line-clamp-2">
+        <h2 className="text-[13px] sm:text-lg font-bold text-gray-900 dark:text-white font-[var(--font-display)] leading-snug group-hover:text-primary transition-colors line-clamp-2">
           {post.title}
         </h2>
         {post.excerpt && (
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3 flex-1">
+          <p className="mt-1.5 sm:mt-2 text-[11.5px] sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3 flex-1">
             {post.excerpt}
           </p>
         )}
-        <div className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
+        <div className="mt-3 sm:mt-4 inline-flex items-center gap-1.5 text-[11.5px] sm:text-sm font-semibold text-primary">
           Lire l&apos;article
-          <svg className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+          <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
             <path d="M5 12h14" />
             <path d="m12 5 7 7-7 7" />
           </svg>

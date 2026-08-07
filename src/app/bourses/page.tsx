@@ -53,7 +53,7 @@ export default async function BoursesPage() {
         </div>
 
         {bourses.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {bourses.map((bourse) => (
               <ScholarshipCard key={bourse.id} bourse={bourse as JobOfferSchema} />
             ))}
@@ -94,11 +94,11 @@ function ScholarshipCard({ bourse }: { bourse: JobOfferSchema }) {
   return (
     <Link
       href={`/bourses/${bourse.id}`}
-      className="group bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-6 hover:border-primary/30 hover:shadow-lg transition-all flex flex-col"
+      className="group bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-4 sm:p-6 hover:border-primary/30 hover:shadow-lg transition-all flex flex-col"
     >
       <div className="flex items-center justify-between gap-2 mb-3">
         <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[10.5px] font-bold text-amber-600 dark:text-amber-400">
-          🎓 Bourse d'études
+          🎓 Bourse
         </span>
         {deadline && (
           <span

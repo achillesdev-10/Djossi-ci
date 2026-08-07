@@ -55,17 +55,17 @@ export default function Header() {
     >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-20">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md">
+          <Link href="/" className="flex items-center gap-2 group" aria-label="TravaillerEnCi — Accueil">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-shadow">
               <span className="text-white font-black text-xl font-[var(--font-display)]">T</span>
             </div>
             <div>
-              <div className="text-lg sm:text-xl font-black font-[var(--font-display)] tracking-tight leading-none rounded-xl bg-slate-900 dark:bg-white/10 px-2.5 py-1.5 text-white">
+              <div className="text-lg sm:text-xl font-black font-[var(--font-display)] tracking-tight leading-none drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)] dark:drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] transition-transform group-hover:scale-[1.02] origin-left">
                 <span className="text-orange-500">Travailler</span>
-                <span className="text-white">En</span>
-                <span className="text-primary">Ci</span>
+                <span className="text-gray-900 dark:text-white">En</span>
+                <span className="text-primary dark:text-emerald-400">Ci</span>
               </div>
-              <div className="text-[10px] uppercase tracking-widest text-muted-foreground -mt-1">
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground -mt-0.5">
                 L'emploi en Côte d'Ivoire
               </div>
             </div>

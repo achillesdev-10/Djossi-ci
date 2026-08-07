@@ -31,6 +31,17 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: '/admin/exams',
+    label: 'Concours',
+    description: 'Modération des concours',
+    icon: (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z" />
+        <path d="M14 2v6h6" />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/analytics',
     label: 'Analytics',
     description: 'Visites & trafic',

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
-import JobCard from '@/components/jobs/JobCard';
 import SearchBar from '@/components/jobs/SearchBar';
+import CompactJobCard from '@/components/home/CompactJobCard';
 import type { JobOfferSchema } from '@/types';
 
 export const metadata = {
@@ -71,9 +71,9 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
         </div>
 
         {jobs.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
             {jobs.map((job) => (
-              <JobCard key={job.id} job={job as JobOfferSchema} />
+              <CompactJobCard key={job.id} job={job as JobOfferSchema} />
             ))}
           </div>
         ) : (

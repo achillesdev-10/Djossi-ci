@@ -61,6 +61,13 @@ html.dark body {
     background-clip: text;
   }
 
+  .text-gradient-tricolor {
+    background: linear-gradient(100deg, #F77F00 0%, #F77F00 30%, #1f2937 50%, #009639 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
   .glass-effect {
     background: rgba(255, 255, 255, 0.75);
     backdrop-filter: blur(10px);
@@ -80,5 +87,90 @@ html.dark body {
   .hover-lift:hover {
     transform: translateY(-4px);
     box-shadow: var(--shadow-xl);
+  }
+
+  /* ===================================================================== */
+  /*  Animations & micro-interactions (accueil, cartes, widgets)          */
+  /* ===================================================================== */
+  .animate-marquee {
+    animation: marquee 28s linear infinite;
+  }
+  .animate-marquee:hover {
+    animation-play-state: paused;
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.7s ease-out both;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out both;
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .animate-float-slow {
+    animation: float 9s ease-in-out infinite;
+  }
+  .animate-pop {
+    animation: pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .animate-gradient-x {
+    background-size: 200% 200%;
+    animation: gradientX 8s ease infinite;
+  }
+  .animate-ticker-pulse {
+    animation: tickerPulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-12px); }
+  }
+  @keyframes pop {
+    0%   { opacity: 0; transform: scale(0.92); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes gradientX {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  @keyframes tickerPulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.45; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-marquee,
+    .animate-float,
+    .animate-float-slow,
+    .animate-gradient-x,
+    .animate-ticker-pulse {
+      animation: none !important;
+    }
+  }
+
+  /* Barre de défilement fine et colorée */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #F77F00, #009639);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
 }

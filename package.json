@@ -11,7 +11,8 @@
     "db:setup": "tsx scripts/sqlite-setup.ts",
     "db:reset": "tsx scripts/sqlite-setup.ts --reset",
     "db:seed": "echo \"Plus de seed : les contenus proviennent du scraper (python scraper/scraper.py)\"",
-    "db:dry": "tsx scripts/sqlite-setup.ts --dry-run"
+    "db:dry": "tsx scripts/sqlite-setup.ts --dry-run",
+    "db:migrate-exams": "tsx scripts/migrate-exams.ts"
   },
   "keywords": [
     "emploi",
