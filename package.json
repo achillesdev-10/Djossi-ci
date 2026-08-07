@@ -12,7 +12,13 @@
     "db:reset": "tsx scripts/sqlite-setup.ts --reset",
     "db:seed": "echo \"Plus de seed : les contenus proviennent du scraper (python scraper/scraper.py)\"",
     "db:dry": "tsx scripts/sqlite-setup.ts --dry-run",
-    "db:migrate-exams": "tsx scripts/migrate-exams.ts"
+    "db:migrate-exams": "tsx scripts/migrate-exams.ts",
+    "db:seed-exams": "tsx scripts/seed-exams.ts",
+    "db:apply-exams-migration": "tsx scripts/apply-exams-migration.ts",
+    "db:apply-migrations": "tsx scripts/apply-content-migrations.ts",
+    "db:sync-exams": "tsx scripts/sync-all-to-supabase.ts --tables=exam",
+    "db:sync-all": "tsx scripts/sync-all-to-supabase.ts",
+    "test:exam-phase": "tsx scripts/test-exam-phase.ts"
   },
   "keywords": [
     "emploi",

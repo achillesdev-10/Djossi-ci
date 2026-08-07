@@ -57,10 +57,11 @@ jobs:
           # (ex: gucaci,ena,infas). Défaut = toutes les sources activées.
           python scraper/exams_runner.py --max-per-source 10 ${EXAM_SOURCES:+--sources "$EXAM_SOURCES"}
 
-      - name: Run exam unit tests (parser + anti-duplication)
+      - name: Run exam unit tests (parser + anti-duplication + repository)
         run: |
           python scraper/tests/test_exam_parser.py
           python scraper/tests/test_similarity_check.py
+          python scraper/tests/test_exam_repository.py
 
   # ==========================================================================
   # Vérification du code front (Next.js) à chaque push / PR :
@@ -94,3 +95,6 @@ jobs:
 
       - name: Typecheck (TypeScript)
         run: npx tsc --noEmit
+
+      - name: Unit tests (phase concours)
+        run: npm run test:exam-phase

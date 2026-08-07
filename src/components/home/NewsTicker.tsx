@@ -22,11 +22,11 @@ function TickerRow({ items, hidden }: { items: TickerItem[]; hidden?: boolean })
       aria-hidden={hidden}
       className="flex shrink-0 items-center gap-10 pl-10"
     >
-      {items.map((item) => {
+      {items.map((item, index) => {
         const meta = TYPE_META[item.type];
         return (
           <Link
-            key={`${item.type}-${item.id}`}
+            key={`${item.type}-${item.id}-${index}`}
             href={item.href}
             className="group flex min-w-0 items-center gap-2.5 text-sm text-gray-100 hover:text-white"
           >
@@ -53,7 +53,7 @@ export default function NewsTicker({ items }: { items: TickerItem[] }) {
   const doubled = [...items, ...items];
 
   return (
-    <div className="relative z-10 -mt-2 overflow-hidden border-y border-white/10 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
+    <div className="relative z-10 overflow-hidden border-y border-white/10 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
       <div className="flex items-stretch">
         <div className="relative z-10 flex shrink-0 items-center gap-2 bg-gradient-to-r from-orange-600 to-orange-500 px-3.5 sm:px-5 text-white shadow-lg">
           <span className="relative flex h-2 w-2">

@@ -165,13 +165,14 @@ class ExamRepository:
             exam_id = row["id"]
             cur.execute(
                 """UPDATE exams SET
-                    title=?, organizer=?, category=?, exam_type=?, description_md=?,
-                    registration_start=?, registration_end=?, exam_date=?, results_date=?,
-                    age_min=?, age_max=?, age_reference_date=?, nationality=?, diplomas=?,
-                    min_diploma_level=?, positions_count=?, registration_fee=?, location=?,
-                    cities=?, documents=?, source_url=?, source_website=?, confidence=?,
-                    seo_title=?, seo_description=?, seo_keywords=?, slug=?, updated_at=?
-                  WHERE id=?""",
+                    title = ?, organizer = ?, category = ?, exam_type = ?, description_md = ?,
+                    registration_start = ?, registration_end = ?, exam_date = ?, results_date = ?,
+                    age_min = ?, age_max = ?, age_reference_date = ?, nationality = ?, diplomas = ?,
+                    min_diploma_level = ?, positions_count = ?, registration_fee = ?, location = ?,
+                    cities = ?, documents = ?, source_url = ?, source_website = ?, status = ?,
+                    confidence = ?, seo_title = ?, seo_description = ?, seo_keywords = ?, slug = ?,
+                    updated_at = ?
+                  WHERE id = ?""",
                 (*payload, now, exam_id),
             )
             self.conn.commit()
@@ -186,7 +187,11 @@ class ExamRepository:
                 min_diploma_level, positions_count, registration_fee, location,
                 cities, documents, source_url, source_website, status, confidence,
                 seo_title, seo_description, seo_keywords, slug, created_at, updated_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            )
             RETURNING id""",
             (*payload, now, now),
         )

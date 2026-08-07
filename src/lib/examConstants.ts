@@ -92,34 +92,46 @@ export const EXAM_CONFIDENCE_LABEL: Record<ExamConfidence, string> = {
 
 /**
  * Phase « métier » dérivée des dates (affichée sur les cartes) :
- *  - open      : inscriptions ouvertes (registration_end futur ou absent)
+ *  - upcoming  : annoncé — inscriptions PAS encore ouvertes (date d'ouverture
+ *                future, ou communiqué sans dates précises)
+ *  - open      : inscriptions ouvertes (registration_end futur)
  *  - ongoing   : inscriptions closes, épreuves en cours ou à venir
  *  - results   : résultats publiés (results_date renseignée)
  *  - closed    : tout est terminé
  */
 export function examPhase(exam: {
+  registration_start?: string | null;
   registration_end?: string | null;
   exam_date?: string | null;
   results_date?: string | null;
 }): ExamPhase {
   const now = Date.now();
+  const regStart = exam.registration_start ? new Date(exam.registration_start).getTime() : null;
   const regEnd = exam.registration_end ? new Date(exam.registration_end).getTime() : null;
   const examDate = exam.exam_date ? new Date(exam.exam_date).getTime() : null;
   const results = exam.results_date ? new Date(exam.results_date).getTime() : null;
 
-  if (results && !Number.isNaN(results) && results <= now) return 'results';
-  if (regEnd && !Number.isNaN(regEnd) && regEnd > now) return 'open';
-  if (regEnd && !Number.isNaN(regEnd) && regEnd <= now) {
-    if (examDate && !Number.isNaN(examDate) && examDate < now) {
-      return results ? 'results' : 'closed';
-    }
+  if (results && results <= now) return 'results';
+  // Inscriptions pas encore ouvertes → concours « à venir ».
+  if (regStart && regStart > now) return 'upcoming';
+  if (regEnd && regEnd > now) return 'open';
+  // Inscriptions débutées mais sans date de fin connue (fréquent dans les
+  // communiqués) → on considère que les inscriptions restent ouvertes.
+  if (regStart && !regEnd) return 'open';
+  if (regEnd && regEnd <= now) {
+    if (examDate && examDate < now) return 'closed';
     return 'ongoing';
   }
-  if (regEnd === null && examDate && !Number.isNaN(examDate) && examDate >= now) return 'open';
-  return 'open';
+  // Pas de fin d'inscription connue : on se cale sur les épreuves si connues,
+  // sinon le concours est considéré comme annoncé (à venir).
+  if (examDate) {
+    return examDate >= now ? 'upcoming' : 'closed';
+  }
+  return 'upcoming';
 }
 
 export const EXAM_PHASE_LABEL: Record<ExamPhase, string> = {
+  upcoming: 'À venir',
   open: 'Inscriptions ouvertes',
   ongoing: 'En cours',
   closed: 'Clos',
@@ -128,6 +140,7 @@ export const EXAM_PHASE_LABEL: Record<ExamPhase, string> = {
 
 /** Classes Tailwind des badges de phase (cartes / fiche). */
 export const EXAM_PHASE_BADGE: Record<ExamPhase, string> = {
+  upcoming: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
   open: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
   ongoing: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
   closed: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30',

@@ -4,6 +4,7 @@ import { ExamService } from '@/services/examService';
 import ExamCard from '@/components/exams/ExamCard';
 import ExamSearchBar from '@/components/exams/ExamSearchBar';
 import CategoryIcon from '@/components/exams/CategoryIcon';
+import PhaseSection, { groupExamsByPhase, SECTION_LIMIT } from '@/components/exams/PhaseSection';
 import {
   DIPLOMA_FILTERS,
   EXAM_CATEGORIES,
@@ -42,8 +43,28 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 const PAGE_SIZE = 18;
+
+/** Filtres de phase groupés utilisés par les liens « Voir tout » des sections. */
+const PHASE_GROUPS: Record<'current' | 'past', ExamPhase[]> = {
+  current: ['open', 'ongoing'],
+  past: ['closed', 'results'],
+};
+const PHASE_GROUP_LABEL: Record<'current' | 'past', string> = {
+  current: 'En cours',
+  past: 'Clos & résultats',
+};
+
+type PhaseFilter = ExamPhase | keyof typeof PHASE_GROUPS | '';
+
+/** Phases acceptées dans l'URL (phases simples + groupes) — dérivé des constantes. */
+const VALID_PHASES = new Set<string>([
+  ...Object.keys(EXAM_PHASE_LABEL),
+  ...Object.keys(PHASE_GROUPS),
+]);
+
 const PHASE_OPTIONS: { value: ExamPhase | ''; label: string }[] = [
   { value: '', label: 'Tous' },
+  { value: 'upcoming', label: 'À venir' },
   { value: 'open', label: 'Inscriptions ouvertes' },
   { value: 'ongoing', label: 'En cours' },
   { value: 'results', label: 'Résultats publiés' },
@@ -67,7 +88,8 @@ export default async function ConcoursPage({ searchParams }: ConcoursPageProps) 
   const organizer = sp.organizer || '';
   const category = sp.category || '';
   const diploma = sp.diploma || '';
-  const phase = (sp.phase || '') as ExamPhase | '';
+  const rawPhase = sp.phase || '';
+  const phase = (VALID_PHASES.has(rawPhase) ? rawPhase : '') as PhaseFilter;
   const page = Math.max(1, Number(sp.page) || 1);
 
   const [organizers, all] = await Promise.all([
@@ -88,14 +110,24 @@ export default async function ConcoursPage({ searchParams }: ConcoursPageProps) 
 
   let rows = all.rows;
   let total = all.total;
+
+  // Vue par défaut (sans filtre de phase) : on regroupe les concours en
+  // « En cours » (inscriptions ouvertes / épreuves), « À venir » (annoncés,
+  // inscriptions pas encore ouvertes) et « Clos & résultats ». Un filtre de
+  // phase sélectionné → grille unique + pagination (comportement classique).
+  const grouped = groupExamsByPhase(rows);
   if (phase) {
-    rows = rows.filter((e) => examPhase(e) === phase);
+    // Un filtre « groupé » (current/past) couvre plusieurs phases ; sinon filtre simple.
+    const phases = PHASE_GROUPS[phase as keyof typeof PHASE_GROUPS] ?? [phase as ExamPhase];
+    rows = rows.filter((e) => phases.includes(examPhase(e)));
     total = rows.length;
   }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const pagedRows = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pagedRows = phase
+    ? rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+    : [];
 
   function filterHref(params: Record<string, string | undefined>) {
     const url = new URLSearchParams();
@@ -128,9 +160,10 @@ export default async function ConcoursPage({ searchParams }: ConcoursPageProps) 
             Concours administratifs en Côte d'Ivoire
           </h1>
           <p className="max-w-2xl text-base text-gray-600 dark:text-gray-300 sm:text-lg">
-            Les concours de la fonction publique et des grandes écoles ivoiriennes
-            (ENA, INFAS, CAFOP, gendarmerie…), alimentés directement depuis les
-            sources officielles — dates d'inscription, conditions et liens officiels.
+            Retrouvez les concours <strong>en cours</strong> et <strong>à venir</strong> de la
+            fonction publique et des grandes écoles ivoiriennes (ENA, INFAS, CAFOP,
+            gendarmerie…), alimentés directement depuis les sources officielles —
+            dates d'inscription, conditions et liens officiels.
           </p>
         </div>
 
@@ -275,89 +308,112 @@ export default async function ConcoursPage({ searchParams }: ConcoursPageProps) 
           {category && (
             <span className="text-sm text-gray-500 dark:text-gray-400">
               Catégorie : {EXAM_CATEGORY_LABEL[category as keyof typeof EXAM_CATEGORY_LABEL] ?? category}
-              {phase ? ` · ${EXAM_PHASE_LABEL[phase as ExamPhase]}` : ''}
+              {phase
+                ? ` · ${PHASE_GROUP_LABEL[phase as keyof typeof PHASE_GROUP_LABEL] ?? EXAM_PHASE_LABEL[phase as ExamPhase]}`
+                : ''}
             </span>
           )}
         </div>
 
         {/* Résultats */}
-        {pagedRows.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
-            {pagedRows.map((exam) => (
-              <ExamCard key={exam.id} exam={exam} priority={safePage === 1} />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900 sm:p-12">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-50 dark:bg-slate-800 sm:h-20 sm:w-20">
-              <svg className="h-8 w-8 text-gray-400 sm:h-10 sm:w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z" />
-              </svg>
-            </div>
-            <h3 className="mb-2 font-[var(--font-display)] text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
-              Aucun concours ne correspond à vos critères
-            </h3>
-            <p className="mx-auto mb-6 max-w-md text-sm text-gray-500 dark:text-gray-400 sm:text-base">
-              Modifiez vos filtres ou réinitialisez la recherche. Les nouveaux avis
-              de concours apparaissent après validation par notre équipe.
-            </p>
-            <Link
-              href="/concours"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-primary-dark"
-            >
-              Voir tous les concours
-            </Link>
-          </div>
-        )}
+        {phase ? (
+          <>
+            {pagedRows.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
+                {pagedRows.map((exam) => (
+                  <ExamCard key={exam.id} exam={exam} priority={safePage === 1} />
+                ))}
+              </div>
+            ) : (
+              <ConcoursEmptyState />
+            )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <nav aria-label="Pagination" className="mt-10 flex flex-wrap items-center justify-center gap-2">
-            {safePage > 1 && (
-              <Link
-                href={filterHref({ page: String(safePage - 1) })}
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:text-gray-300"
-              >
-                ← Précédent
-              </Link>
-            )}
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
-              .reduce<number[]>((acc, p) => {
-                if (acc.length && p - acc[acc.length - 1] > 1) acc.push(-1);
-                acc.push(p);
-                return acc;
-              }, [])
-              .map((p, i) =>
-                p === -1 ? (
-                  <span key={`gap-${i}`} className="px-1 text-gray-400">
-                    …
-                  </span>
-                ) : (
+            {/* Pagination (vue filtrée par phase uniquement) */}
+            {totalPages > 1 && (
+              <nav aria-label="Pagination" className="mt-10 flex flex-wrap items-center justify-center gap-2">
+                {safePage > 1 && (
                   <Link
-                    key={p}
-                    href={filterHref({ page: String(p) })}
-                    aria-current={p === safePage ? 'page' : undefined}
-                    className={cn(
-                      'rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
-                      p === safePage
-                        ? 'bg-primary text-white shadow-md shadow-primary/20'
-                        : 'border border-gray-200 bg-white text-gray-600 hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:text-gray-300',
-                    )}
+                    href={filterHref({ page: String(safePage - 1) })}
+                    className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:text-gray-300"
                   >
-                    {p}
+                    ← Précédent
                   </Link>
-                ),
-              )}
-            {safePage < totalPages && (
-              <Link
-                href={filterHref({ page: String(safePage + 1) })}
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:text-gray-300"
-              >
-                Suivant →
-              </Link>
+                )}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                  .reduce<number[]>((acc, p) => {
+                    if (acc.length && p - acc[acc.length - 1] > 1) acc.push(-1);
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, i) =>
+                    p === -1 ? (
+                      <span key={`gap-${i}`} className="px-1 text-gray-400">
+                        …
+                      </span>
+                    ) : (
+                      <Link
+                        key={p}
+                        href={filterHref({ page: String(p) })}
+                        aria-current={p === safePage ? 'page' : undefined}
+                        className={cn(
+                          'rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
+                          p === safePage
+                            ? 'bg-primary text-white shadow-md shadow-primary/20'
+                            : 'border border-gray-200 bg-white text-gray-600 hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:text-gray-300',
+                        )}
+                      >
+                        {p}
+                      </Link>
+                    ),
+                  )}
+                {safePage < totalPages && (
+                  <Link
+                    href={filterHref({ page: String(safePage + 1) })}
+                    className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:text-gray-300"
+                  >
+                    Suivant →
+                  </Link>
+                )}
+              </nav>
             )}
-          </nav>
+          </>
+        ) : (
+          <>
+            {/* Section 1 — concours en cours (inscriptions ouvertes / épreuves) */}
+            <PhaseSection
+              title="Concours en cours"
+              subtitle="Inscriptions ouvertes ou épreuves en cours"
+              accent="emerald"
+              exams={grouped.current}
+              limit={SECTION_LIMIT}
+              viewAllHref={filterHref({ phase: 'current', page: undefined })}
+              viewAllLabel="Voir tout"
+            />
+            {/* Section 2 — concours à venir (annoncés) */}
+            <PhaseSection
+              title="Concours à venir"
+              subtitle="Annoncés — inscriptions pas encore ouvertes"
+              accent="indigo"
+              exams={grouped.upcoming}
+              limit={SECTION_LIMIT}
+              viewAllHref={filterHref({ phase: 'upcoming', page: undefined })}
+              viewAllLabel="Voir tout"
+            />
+            {/* Section 3 — archives */}
+            <PhaseSection
+              title="Concours clos & résultats"
+              subtitle="Archives des sessions passées"
+              accent="slate"
+              exams={grouped.past}
+              limit={SECTION_LIMIT}
+              viewAllHref={filterHref({ phase: 'past', page: undefined })}
+              viewAllLabel="Voir tout"
+            />
+            {grouped.current.length === 0 &&
+              grouped.upcoming.length === 0 &&
+              grouped.past.length === 0 && <ConcoursEmptyState />}
+          </>
         )}
 
         {/* Bloc sources officielles (crédibilité + SEO) */}
@@ -375,5 +431,34 @@ export default async function ConcoursPage({ searchParams }: ConcoursPageProps) 
         </section>
       </div>
     </main>
+  );
+}
+
+// -----------------------------------------------------------------------------
+//  Sous-composants
+// -----------------------------------------------------------------------------
+
+function ConcoursEmptyState() {
+  return (
+    <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900 sm:p-12">
+      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-50 dark:bg-slate-800 sm:h-20 sm:w-20">
+        <svg className="h-8 w-8 text-gray-400 sm:h-10 sm:w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z" />
+        </svg>
+      </div>
+      <h3 className="mb-2 font-[var(--font-display)] text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
+        Aucun concours ne correspond à vos critères
+      </h3>
+      <p className="mx-auto mb-6 max-w-md text-sm text-gray-500 dark:text-gray-400 sm:text-base">
+        Modifiez vos filtres ou réinitialisez la recherche. Les nouveaux avis
+        de concours apparaissent après validation par notre équipe.
+      </p>
+      <Link
+        href="/concours"
+        className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-primary-dark"
+      >
+        Voir tous les concours
+      </Link>
+    </div>
   );
 }

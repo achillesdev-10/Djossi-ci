@@ -98,7 +98,8 @@ html.dark body {
   /*  Animations & micro-interactions (accueil, cartes, widgets)          */
   /* ===================================================================== */
   .animate-marquee {
-    animation: marquee 60s linear infinite;
+    /* Vitesse ÷ 2 par rapport à la version initiale (60s → 120s pour une boucle) */
+    animation: marquee 120s linear infinite;
   }
   .animate-marquee:hover {
     animation-play-state: paused;
@@ -166,16 +167,30 @@ html.dark body {
     }
   }
 
-  /* Barre de défilement fine et colorée */
+  /* Barre de défilement fine et noire */
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
   }
   ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #F77F00, #009639);
+    background: #111827; /* noir */
     border-radius: 999px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
+  }
+
+  /* Firefox — même style (barre noire) */
+  html {
+    scrollbar-color: #111827 transparent;
+    scrollbar-width: thin;
+  }
+
+  /* En mode sombre, un gris clair pour rester visible sur fond sombre */
+  html.dark ::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
+  html.dark {
+    scrollbar-color: #475569 transparent;
   }
 }

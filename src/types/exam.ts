@@ -32,8 +32,8 @@ export interface ExamDocument {
   url: string;
 }
 
-/** État « métier » dérivé (front) : ouvert / en cours / clos / résultats publiés. */
-export type ExamPhase = 'open' | 'ongoing' | 'closed' | 'results';
+/** État « métier » dérivé (front) : annoncé / ouvert / en cours / clos / résultats publiés. */
+export type ExamPhase = 'upcoming' | 'open' | 'ongoing' | 'closed' | 'results';
 
 export interface Exam {
   id: string;

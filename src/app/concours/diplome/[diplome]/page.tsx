@@ -2,8 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { ExamService } from '@/services/examService';
-import ExamCard from '@/components/exams/ExamCard';
 import CategoryIcon from '@/components/exams/CategoryIcon';
+import PhaseSection, { groupExamsByPhase, SECTION_LIMIT } from '@/components/exams/PhaseSection';
 import { DIPLOMA_SEO, DIPLOMA_SEO_BY_SLUG } from '@/lib/examSeo';
 import { EXAM_CATEGORIES } from '@/lib/examConstants';
 
@@ -56,6 +56,9 @@ export default async function ConcoursDiplomaPage({ params }: PageProps) {
     order_by: 'created_at',
     order_dir: 'desc',
   });
+
+  // Regroupement « métier » : en cours / à venir / clos & résultats.
+  const grouped = groupExamsByPhase(exams);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -143,13 +146,37 @@ export default async function ConcoursDiplomaPage({ params }: PageProps) {
           </Link>
         </div>
 
-        {/* Résultats */}
+        {/* Résultats — regroupés par phase (en cours / à venir / archives) */}
         {exams.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
-            {exams.map((exam) => (
-              <ExamCard key={exam.id} exam={exam} priority={false} />
-            ))}
-          </div>
+          <>
+            <PhaseSection
+              title="Concours en cours"
+              subtitle="Inscriptions ouvertes ou épreuves en cours"
+              accent="emerald"
+              exams={grouped.current}
+              limit={SECTION_LIMIT}
+              viewAllHref={`/concours?diploma=${seo.value}&phase=current`}
+              viewAllLabel="Voir tout"
+            />
+            <PhaseSection
+              title="Concours à venir"
+              subtitle="Annoncés — inscriptions pas encore ouvertes"
+              accent="indigo"
+              exams={grouped.upcoming}
+              limit={SECTION_LIMIT}
+              viewAllHref={`/concours?diploma=${seo.value}&phase=upcoming`}
+              viewAllLabel="Voir tout"
+            />
+            <PhaseSection
+              title="Concours clos & résultats"
+              subtitle="Archives des sessions passées"
+              accent="slate"
+              exams={grouped.past}
+              limit={SECTION_LIMIT}
+              viewAllHref={`/concours?diploma=${seo.value}&phase=past`}
+              viewAllLabel="Voir tout"
+            />
+          </>
         ) : (
           <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900 sm:p-12">
             <h3 className="mb-2 font-[var(--font-display)] text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
