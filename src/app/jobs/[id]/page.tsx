@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
+import SimpleMarkdown from '@/components/content/SimpleMarkdown';
 import type { JobOfferSchema } from '@/types';
 import { formatDate, truncate } from '@/lib/utils';
 
@@ -204,7 +205,7 @@ export default async function JobDetailPage({ params }: PageProps) {
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 font-[var(--font-display)]">
                 À propos de ce poste
               </h2>
-              <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+              <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed">
                 <SimpleMarkdown text={job.description} />
               </div>
             </div>
@@ -470,76 +471,3 @@ function MiniJobCard({ job }: { job: JobOfferSchema }) {
   );
 }
 
-function SimpleMarkdown({ text }: { text: string }) {
-  const lines = text.split(/\r?\n/);
-  const blocks: React.ReactNode[] = [];
-  let listBuffer: string[] = [];
-  let key = 0;
-
-  const flushList = () => {
-    if (listBuffer.length === 0) return;
-    blocks.push(
-      <ul
-        key={`ul-${key++}`}
-        className="my-3 pl-4 sm:pl-5 space-y-1.5 list-disc marker:text-primary marker:opacity-70"
-      >
-        {listBuffer.map((it, i) => (
-          <li key={i} dangerouslySetInnerHTML={{ __html: inline(it) }} />
-        ))}
-      </ul>
-    );
-    listBuffer = [];
-  };
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-    if (!trimmed) {
-      flushList();
-      continue;
-    }
-    let m: RegExpMatchArray | null;
-    if ((m = trimmed.match(/^#{1,3}\s+(.*)$/))) {
-      flushList();
-      const level = (trimmed.match(/^#+/)![0].length) as 1 | 2 | 3;
-      const sizes = {
-        1: 'text-xl sm:text-2xl font-bold mt-6 mb-3',
-        2: 'text-lg sm:text-xl font-bold mt-5 mb-2.5',
-        3: 'text-base sm:text-lg font-bold mt-4 mb-2',
-      } as const;
-      const Tag = (`h${level + 1}` as unknown) as 'h3';
-      blocks.push(
-        <Tag
-          key={`h-${key++}`}
-          className={`${sizes[level]} text-gray-900 dark:text-white font-[var(--font-display)]`}
-          dangerouslySetInnerHTML={{ __html: inline(m[1]) }}
-        />
-      );
-      continue;
-    }
-    if (/^\s*[-*•]\s+/.test(trimmed)) {
-      listBuffer.push(trimmed.replace(/^\s*[-*•]\s+/, ''));
-      continue;
-    }
-    flushList();
-    blocks.push(
-      <p
-        key={`p-${key++}`}
-        className="my-2.5"
-        dangerouslySetInnerHTML={{ __html: inline(line) }}
-      />
-    );
-  }
-  flushList();
-  return <>{blocks}</>;
-}
-
-function inline(src: string): string {
-  let s = src
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>');
-  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-gray-900 dark:text-white">$1</strong>');
-  s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
-  return s;
-}

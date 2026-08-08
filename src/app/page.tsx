@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Suspense, type ReactNode } from 'react';
+import CoverImage from '@/components/content/CoverImage';
 import SearchBar from '@/components/jobs/SearchBar';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
 import { ExamService } from '@/services/examService';
@@ -479,8 +480,7 @@ function HomeBlogCard({
     >
       <div className="relative h-24 sm:h-32 overflow-hidden bg-gray-100 dark:bg-slate-800">
         {post.cover_image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <CoverImage
             src={post.cover_image}
             alt={post.title}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"

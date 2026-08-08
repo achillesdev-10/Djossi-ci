@@ -27,7 +27,8 @@ export const metadata: Metadata = {
   keywords: ['emploi', 'côte d\'ivoire', 'jobs', 'offres d\'emploi', 'travail', 'abidjan', 'carrière', 'recrutement'],
   authors: [{ name: 'TravaillerenCi Team' }],
   icons: {
-    icon: '/favicon.svg',
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    apple: '/favicon.svg',
   },
   openGraph: {
     type: 'website',

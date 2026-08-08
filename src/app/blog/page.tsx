@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { BlogService } from '@/services/blogService';
+import CoverImage from '@/components/content/CoverImage';
 import type { BlogPost } from '@/types/blog';
 import { formatDateShort } from '@/lib/utils';
 
@@ -108,8 +109,7 @@ function BlogCard({ post }: { post: BlogPost }) {
       {/* Couverture */}
       <div className="relative h-28 overflow-hidden bg-gray-100 dark:bg-slate-800 sm:h-40">
         {post.cover_image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <CoverImage
             src={post.cover_image}
             alt={post.title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"

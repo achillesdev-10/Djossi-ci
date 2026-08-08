@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import SimpleMarkdown from '@/components/content/SimpleMarkdown';
+import CoverImage from '@/components/content/CoverImage';
 import { BlogService } from '@/services/blogService';
 import { SITE_CONFIG } from '@/lib/constants';
 
@@ -60,8 +61,7 @@ export default async function BlogArticlePage({
       {/* ===== Couverture ===== */}
       {post.cover_image ? (
         <div className="relative h-56 sm:h-80 lg:h-96 w-full overflow-hidden bg-slate-100 dark:bg-slate-900">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={post.cover_image} alt={post.title} className="w-full h-full object-cover" />
+          <CoverImage src={post.cover_image} alt={post.title} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
         </div>
       ) : (
