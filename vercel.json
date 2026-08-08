@@ -1,5 +1,4 @@
 {
-  "$comment": "TravaillerEnCi — config Vercel. Le service worker ne doit JAMAIS être mis en cache par le navigateur : sinon Chrome bloque sa mise à jour pendant 24 h et le bump de CACHE_VERSION (public/sw.js) ne se propage pas.",
   "headers": [
     {
       "source": "/sw.js",
