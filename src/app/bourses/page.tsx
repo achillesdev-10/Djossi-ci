@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
+import EmptyState from '@/components/EmptyState';
 import type { JobOfferSchema } from '@/types';
 import { formatDate, truncate } from '@/lib/utils';
 
@@ -35,15 +37,26 @@ export default async function BoursesPage() {
           </span>
         </nav>
 
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-extrabold mb-3 font-[var(--font-display)] text-gray-900 dark:text-white">
-            Bourses d'études en Côte d'Ivoire
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300 text-base sm:text-lg max-w-2xl">
-            Trouvez la bourse idéale pour financer vos études supérieures en
-            Côte d'Ivoire ou à l'étranger — universités partenaires, bourses
-            gouvernementales et programmes de financement vérifiés.
-          </p>
+        <div className="mb-8 flex items-center justify-between gap-6">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold mb-3 font-[var(--font-display)] text-gray-900 dark:text-white">
+              Bourses d'études en Côte d'Ivoire
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 text-base sm:text-lg max-w-2xl">
+              Trouvez la bourse idéale pour financer vos études supérieures en
+              Côte d'Ivoire ou à l'étranger — universités partenaires, bourses
+              gouvernementales et programmes de financement vérifiés.
+            </p>
+          </div>
+          <div className="relative hidden md:block h-40 w-56 shrink-0">
+            <Image
+              src="/illustrations/graduation.svg"
+              alt="Illustration d'une diplômée en toge avec sa toque de fin d'études"
+              fill
+              sizes="14rem"
+              className="object-contain drop-shadow-lg"
+            />
+          </div>
         </div>
 
         <div className="mb-6 flex items-center justify-between">
@@ -59,28 +72,14 @@ export default async function BoursesPage() {
             ))}
           </div>
         ) : (
-          <div className="bg-white dark:bg-slate-900 border border-dashed border-border rounded-2xl p-8 sm:p-12 text-center">
-            <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center mb-5">
-              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-              </svg>
-            </div>
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2 font-[var(--font-display)]">
-              Aucune bourse publiée pour le moment
-            </h3>
-            <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-              Le scraper collecte en continu les bourses d'études publiques et
-              privées. Les nouvelles opportunités apparaîtront ici dès leur
-              validation par notre équipe de modération.
-            </p>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white font-semibold text-sm shadow-md transition-all"
-            >
-              Retour à l'accueil
-            </Link>
-          </div>
+          <EmptyState
+            illustration="/illustrations/empty-state.svg"
+            illustrationAlt="Illustration d'un espace vide en attente de nouvelles bourses d'études"
+            title="Aucune bourse publiée pour le moment"
+            text="Le scraper collecte en continu les bourses d'études publiques et privées. Les nouvelles opportunités apparaîtront ici dès leur validation par notre équipe de modération."
+            actionLabel="Retour à l'accueil"
+            actionHref="/"
+          />
         )}
       </div>
     </main>

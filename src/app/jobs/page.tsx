@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
 import SearchBar from '@/components/jobs/SearchBar';
 import CompactJobCard from '@/components/home/CompactJobCard';
+import EmptyState from '@/components/EmptyState';
 import type { JobOfferSchema } from '@/types';
 
 export const metadata = {
@@ -77,25 +78,14 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
             ))}
           </div>
         ) : (
-          <div className="bg-white dark:bg-slate-900 border border-dashed border-border rounded-2xl p-8 sm:p-12 text-center">
-            <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center mb-5">
-              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2 font-[var(--font-display)]">
-              Aucune offre ne correspond à vos critères
-            </h3>
-            <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-              Essayez de modifier vos filtres, de chercher un autre mot-clé ou de réinitialiser la recherche.
-            </p>
-            <Link
-              href="/jobs"
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white font-semibold text-sm shadow-md transition-all"
-            >
-              Voir toutes les offres
-            </Link>
-          </div>
+          <EmptyState
+            illustration="/illustrations/no-results.svg"
+            illustrationAlt="Illustration d'un écran sans résultat de recherche d'offres d'emploi"
+            title="Aucune offre ne correspond à vos critères"
+            text="Essayez de modifier vos filtres, de chercher un autre mot-clé ou de réinitialiser la recherche."
+            actionLabel="Voir toutes les offres"
+            actionHref="/jobs"
+          />
         )}
       </div>
     </main>

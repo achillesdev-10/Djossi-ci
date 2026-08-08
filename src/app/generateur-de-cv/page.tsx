@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { CVData } from '@/types/cv';
 import { createEmptyCV, createEmptyExperience, createEmptyEducation } from '@/types/cv';
 import dynamic from 'next/dynamic';
+import NextImage from 'next/image'; // alias : ne pas masquer le constructeur global Image (préchargement photo PDF)
 import { useLocalStorage } from '@/hooks';
 
 const CVFormDynamic = dynamic(() => import('@/components/cv/CVForm'), { ssr: false });
@@ -253,6 +254,15 @@ export default function CVGeneratorPage() {
                   </>
                 )}
               </div>
+            </div>
+            <div className="relative hidden lg:block h-44 w-60 shrink-0">
+              <NextImage
+                src="/illustrations/resume-folder.svg"
+                alt="Illustration d'un dossier de CV posé sur un bureau, prêt à être envoyé"
+                fill
+                sizes="15rem"
+                className="object-contain drop-shadow-lg"
+              />
             </div>
             <div className="flex flex-wrap gap-3">
               <button

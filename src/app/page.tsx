@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Suspense, type ReactNode } from 'react';
+import EmptyState from '@/components/EmptyState';
 import SearchBar from '@/components/jobs/SearchBar';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
 import { ExamService } from '@/services/examService';
@@ -75,17 +77,31 @@ const QUICK_LINKS = [
         <path d="M9 13h6M9 17h4" />
       </svg>
     ),
+  },    {
+      label: 'Conseils & Blog',
+      desc: 'Astuces candidature',
+      href: '/blog',
+      color: 'bg-rose-500',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
+          <path d="M15 12h-5M15 8h-5M8 3h5.6a1 1 0 0 1 .7.3l3.4 3.4a1 1 0 0 1 .3.7V21a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+        </svg>
+      ),
+    },
+  ];
+
+const STEPS = [
+  {
+    title: 'Recherchez',
+    text: 'Parcourez les offres vérifiées, filtrées par ville, type de contrat ou mot-clé — sur mobile comme sur ordinateur.',
   },
   {
-    label: 'Conseils & Blog',
-    desc: 'Astuces candidature',
-    href: '/blog',
-    color: 'bg-rose-500',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
-        <path d="M15 12h-5M15 8h-5M8 3h5.6a1 1 0 0 1 .7.3l3.4 3.4a1 1 0 0 1 .3.7V21a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
-      </svg>
-    ),
+    title: 'Comparez & sauvegardez',
+    text: 'Consultez les conditions, les délais et les sources officielles pour repérer les meilleures opportunités.',
+  },
+  {
+    title: 'Postulez en un clic',
+    text: 'Candidature directe par email ou via le lien officiel, sans compte obligatoire — en quelques secondes.',
   },
 ];
 
@@ -126,6 +142,14 @@ export default async function HomePage({
 
   const { rows: jobsList, total } = jobs;
   const totalKnown = Math.max(total, jobsList.length);
+  const resultsLabel =
+    [
+      keyword ? `"${keyword}"` : '',
+      location ? `à ${location}` : '',
+      contract ? `en ${contract}` : '',
+    ]
+      .filter(Boolean)
+      .join(' ') || 'cette zone';
 
   const tickerItems: TickerItem[] = [
     ...jobsList.slice(0, 5).map((job) => ({
@@ -213,17 +237,23 @@ export default async function HomePage({
               </p>
             </div>
 
-            {/* Colonne illustration (desktop uniquement) */}
+            {/* Colonne photo (desktop uniquement) — hero visuel above-the-fold */}
             <div className="hidden lg:flex justify-center lg:justify-end">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/images/hero-illustration.svg"
-                alt="Recherche d'emploi en Côte d'Ivoire : offres vérifiées, mallette et localisation"
-                width={520}
-                height={445}
-                className="w-full max-w-[520px] h-auto drop-shadow-xl animate-float"
-                fetchPriority="high"
-              />
+              <div className="relative w-full max-w-[520px]">
+                <div
+                  className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-primary/15 via-transparent to-secondary/15 blur-2xl"
+                  aria-hidden="true"
+                />
+                <Image
+                  src="/images/hero-home.jpg"
+                  alt="Jeune professionnel concentré devant son ordinateur portable pour chercher un emploi en Côte d'Ivoire"
+                  width={1600}
+                  height={1067}
+                  priority
+                  sizes="(min-width: 1024px) 520px, 100vw"
+                  className="relative h-auto w-full rounded-3xl object-cover shadow-2xl shadow-primary/10 ring-1 ring-black/5"
+                />
+              </div>
             </div>
           </div>
 
@@ -328,21 +358,93 @@ export default async function HomePage({
       </section>
 
       {/* ======================================================================== */}
+      {/*   COMMENT ÇA MARCHE — preuve sociale + photo recruteur/candidat          */}
+      {/* ======================================================================== */}
+      <section className="container mx-auto px-4 mt-10 sm:mt-14 max-w-6xl">
+        <SectionHeading
+          kicker="Comment ça marche"
+          title="Votre prochain job est à portée de clic"
+        />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+          {/* Photo : recruteur et candidat (confiance) */}
+          <div className="relative order-2 lg:order-1">
+            <div
+              className="absolute -inset-3 rounded-[2rem] bg-gradient-to-br from-primary/10 to-secondary/10 blur-xl"
+              aria-hidden="true"
+            />
+            <Image
+              src="/images/confiance-recrutement.jpg"
+              alt="Recruteur et candidat se serrant la main après un entretien réussi"
+              width={1600}
+              height={1068}
+              sizes="(min-width: 1024px) 560px, 100vw"
+              className="relative h-auto w-full rounded-3xl object-cover shadow-xl ring-1 ring-black/5"
+            />
+            <div className="absolute -bottom-4 left-4 sm:left-6 inline-flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </span>
+              <span>
+                <span className="block text-sm font-extrabold text-gray-900 dark:text-white">Offres 100% vérifiées</span>
+                <span className="block text-[11px] text-gray-500 dark:text-gray-400">relues avant publication</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Étapes */}
+          <div className="order-1 lg:order-2 space-y-3.5">
+            {STEPS.map((step, i) => (
+              <div
+                key={step.title}
+                className="group flex items-start gap-4 rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 animate-fade-in-up"
+                style={{ animationDelay: `${i * 90}ms` }}
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary font-[var(--font-display)] text-lg font-black text-white shadow-md shadow-primary/25">
+                  {i + 1}
+                </span>
+                <div>
+                  <h3 className="font-[var(--font-display)] text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                    {step.title}
+                  </h3>
+                  <p className="mt-1 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+                    {step.text}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ======================================================================== */}
       {/*   OFFRE À LA UNE — grille 2 colonnes dès le mobile                        */}
       {/* ======================================================================== */}
       <section className="container mx-auto px-4 pb-4 sm:pb-8 max-w-6xl">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-4 mt-10 sm:mt-14 mb-4 sm:mb-6">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white font-[var(--font-display)]">
-              {keyword || location || contract
-                ? `${totalKnown} résultat${totalKnown > 1 ? 's' : ''}`
-                : 'Dernières offres'}
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {keyword || location || contract
-                ? <>Triées par : pertinence + nouveauté</>
-                : <>Les dernières opportunités publiées sur TravaillerenCi</>}
-            </p>
+          <div className="flex items-end gap-3 sm:gap-5">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white font-[var(--font-display)]">
+                {keyword || location || contract
+                  ? `${totalKnown} résultat${totalKnown > 1 ? 's' : ''}`
+                  : 'Dernières offres'}
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {keyword || location || contract
+                  ? <>Triées par : pertinence + nouveauté</>
+                  : <>Les dernières opportunités publiées sur TravaillerenCi</>}
+              </p>
+            </div>
+            <div className="relative hidden md:block h-24 w-36 shrink-0">
+              <Image
+                src="/illustrations/job-hunt.svg"
+                alt="Illustration d'une personne à la recherche d'un emploi, un CV à la main"
+                fill
+                sizes="9rem"
+                className="object-contain"
+              />
+            </div>
           </div>
           {(keyword || location || contract) && (
             <Link
@@ -359,7 +461,14 @@ export default async function HomePage({
         </div>
 
         {jobsList.length === 0 ? (
-          <EmptyState keyword={keyword} location={location} contract={contract} />
+          <EmptyState
+            illustration="/illustrations/no-results.svg"
+            illustrationAlt="Illustration d'un écran de recherche sans résultat"
+            title={`Aucune offre trouvée pour ${resultsLabel}`}
+            text="Essayez avec un autre mot-clé, une ville voisine, ou supprimez certains filtres."
+            actionLabel="Réinitialiser les filtres"
+            actionHref="/"
+          />
         ) : (
           <OffersGrid jobs={jobsList as JobOfferSchema[]} />
         )}
@@ -539,57 +648,4 @@ function SearchBarSkeleton() {
   );
 }
 
-function EmptyState({
-  keyword,
-  location,
-  contract,
-}: {
-  keyword: string;
-  location: string;
-  contract: string;
-}) {
-  const label =
-    [
-      keyword ? `"${keyword}"` : '',
-      location ? `à ${location}` : '',
-      contract ? `en ${contract}` : '',
-    ]
-      .filter(Boolean)
-      .join(' ') || 'cette zone';
 
-  return (
-    <div className="bg-white dark:bg-slate-900 border border-dashed border-border rounded-2xl p-8 sm:p-12 text-center">
-      <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gray-50 dark:bg-slate-800 flex items-center justify-center mb-5">
-        <svg
-          className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-gray-500"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.7}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.3-4.3" />
-        </svg>
-      </div>
-      <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2 font-[var(--font-display)]">
-        Aucune offre trouvée pour {label}
-      </h3>
-      <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-        Essayez avec un autre mot-clé, une ville voisine, ou supprimez certains filtres.
-      </p>
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white font-semibold text-sm shadow-md shadow-primary/20"
-      >
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-          <path d="M3 3v5h5" />
-        </svg>
-        Réinitialiser les filtres
-      </Link>
-    </div>
-  );
-}
