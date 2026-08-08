@@ -9,6 +9,9 @@ import { useLocalStorage } from '@/hooks';
 const CVFormDynamic = dynamic(() => import('@/components/cv/CVForm'), { ssr: false });
 const CVPreviewDynamic = dynamic(() => import('@/components/cv/CVPreview'), { ssr: false });
 
+/** Largeur naturelle du CV A4 en px (@96dpi : 210mm ≈ 794px). */
+const PREVIEW_WIDTH_PX = 794;
+
 const sampleCV: CVData = {
   fullName: 'KOUASSI Jean-Paul',
   jobTitle: 'Développeur Full-Stack Senior',
@@ -71,6 +74,20 @@ export default function CVGeneratorPage() {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Aperçu mobile : mise à l'échelle mesurée (scale-to-fit) pour que le CV A4
+  // soit toujours entièrement visible et scrollable, quelle que soit la largeur
+  // de l'écran (le transform doit être accompagné d'une boîte aux dimensions
+  // compensées, sinon l'aperçu est tronqué / mal positionné sur mobile).
+  const previewShellRef = useRef<HTMLDivElement | null>(null);
+  const previewInnerRef = useRef<HTMLDivElement | null>(null);
+  // Échelle initiale calculée dès le premier rendu (largeur de la fenêtre)
+  // pour éviter un débordement horizontal avant le recalage ResizeObserver.
+  const [previewScale, setPreviewScale] = useState(() => {
+    if (typeof window === 'undefined') return 1;
+    return Math.min(1, (window.innerWidth - 48) / PREVIEW_WIDTH_PX);
+  });
+  const [previewSize, setPreviewSize] = useState({ width: PREVIEW_WIDTH_PX, height: 0 });
+
   useEffect(() => {
     setCVData((prev) => {
       // Les blob: URLs (aperçu local quand Supabase n'est pas configuré) ne
@@ -118,6 +135,30 @@ export default function CVGeneratorPage() {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
   }, []);
+
+  // Recale l'échelle et la hauteur de la zone d'aperçu dès que la largeur du
+  // conteneur ou le contenu du CV change (aperçu temps réel mobile + bureau).
+  useEffect(() => {
+    const shell = previewShellRef.current;
+    const inner = previewInnerRef.current;
+    if (!shell || !inner) return;
+
+    const update = () => {
+      const available = shell.clientWidth;
+      const scale = Math.min(1, available / PREVIEW_WIDTH_PX);
+      setPreviewScale(scale);
+      setPreviewSize({
+        width: Math.round(PREVIEW_WIDTH_PX * scale),
+        height: Math.round(inner.offsetHeight * scale),
+      });
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(shell);
+    observer.observe(inner);
+    return () => observer.disconnect();
+  }, [hydrated, cvData]);
 
   const exportPDF = async () => {
     setIsExporting(true);
@@ -264,7 +305,10 @@ export default function CVGeneratorPage() {
                   : 'text-gray-600 dark:text-gray-400'
               }`}
             >
-              ✏️ Éditer
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Éditer
             </button>
             <button
               onClick={() => setActiveTab('preview')}
@@ -274,7 +318,11 @@ export default function CVGeneratorPage() {
                   : 'text-gray-600 dark:text-gray-400'
               }`}
             >
-              👁️ Aperçu
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Aperçu
             </button>
           </div>
         </div>
@@ -292,9 +340,30 @@ export default function CVGeneratorPage() {
                 <div className="text-center text-xs text-gray-500 dark:text-gray-400 mb-3 font-semibold">
                   Format A4 — Aperçu en temps réel
                 </div>
-                <div className="overflow-auto max-h-[calc(100vh-14rem)] custom-scrollbar rounded-xl shadow-inner bg-slate-200/50 dark:bg-slate-900 p-4">
-                  <div className="flex justify-center origin-top-left scale-[0.65] md:scale-[0.75] lg:scale-[0.85] xl:scale-100">
-                    {hydrated && <CVPreviewDynamic cvData={cvData} />}
+                <div
+                  ref={previewShellRef}
+                  className="overflow-auto max-h-[70vh] lg:max-h-[calc(100vh-14rem)] custom-scrollbar rounded-xl shadow-inner bg-slate-200/50 dark:bg-slate-900 p-4"
+                >
+                  {/* Boîte aux dimensions compensées : largeur/hauteur du CV
+                      visuel réel. Sans elle, le transform scale() fait déborder
+                      ou tronquer l'aperçu sur mobile. */}
+                  <div
+                    className="cv-scale-box mx-auto"
+                    style={{
+                      width: previewSize.width || PREVIEW_WIDTH_PX,
+                      height: previewSize.height || undefined,
+                    }}
+                  >
+                    <div
+                      ref={previewInnerRef}
+                      style={{
+                        width: PREVIEW_WIDTH_PX,
+                        transform: `scale(${previewScale})`,
+                        transformOrigin: 'top left',
+                      }}
+                    >
+                      {hydrated && <CVPreviewDynamic cvData={cvData} />}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -315,6 +384,12 @@ export default function CVGeneratorPage() {
         }
         @media print {
           body * { visibility: hidden; }
+          .cv-scale-box, .cv-scale-box > div {
+            transform: none !important;
+            width: auto !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
           #cv-preview, #cv-preview * { visibility: visible; }
           #cv-preview {
             position: absolute;

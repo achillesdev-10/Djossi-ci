@@ -110,6 +110,8 @@ export default async function ConcoursPage({ searchParams }: ConcoursPageProps) 
 
   let rows = all.rows;
   let total = all.total;
+  // Total réel (non filtré) pour les statistiques du héros.
+  const totalRecensed = all.total;
 
   // Vue par défaut (sans filtre de phase) : on regroupe les concours en
   // « En cours » (inscriptions ouvertes / épreuves), « À venir » (annoncés,
@@ -143,29 +145,95 @@ export default async function ConcoursPage({ searchParams }: ConcoursPageProps) 
   return (
     <main className="flex-1 min-h-screen bg-gradient-to-b from-white to-gray-50/70 py-8 transition-colors dark:from-slate-950 dark:to-slate-900 sm:py-12">
       <div className="container mx-auto max-w-6xl px-4">
-        <nav aria-label="Fil d'Ariane" className="mb-6 text-sm text-gray-500 dark:text-gray-400">
-          <Link href="/" className="hover:text-primary">
-            Accueil
-          </Link>
-          <span className="mx-2" aria-hidden="true">
-            /
-          </span>
-          <span className="font-medium text-gray-900 dark:text-gray-200">
-            Concours administratifs
-          </span>
-        </nav>
+        {/* ===================== HÉRO ===================== */}
+        <section className="relative overflow-hidden mb-8 rounded-3xl bg-gradient-to-br from-primary via-emerald-700 to-accent text-white shadow-2xl shadow-primary/20">
+          {/* Décor : halos + formes flottantes */}
+          <div
+            className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-orange-400/30 blur-3xl"
+            aria-hidden="true"
+          />
+          <div
+            className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-emerald-300/20 blur-3xl"
+            aria-hidden="true"
+          />
+          <div
+            className="pointer-events-none absolute top-8 right-1/3 hidden h-3 w-3 rounded-full bg-orange-300/70 md:block"
+            aria-hidden="true"
+          />
+          <div
+            className="pointer-events-none absolute bottom-10 left-1/4 hidden h-2 w-2 rounded-full bg-white/50 md:block"
+            aria-hidden="true"
+          />
 
-        <div className="mb-8">
-          <h1 className="mb-3 font-[var(--font-display)] text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">
-            Concours administratifs en Côte d'Ivoire
-          </h1>
-          <p className="max-w-2xl text-base text-gray-600 dark:text-gray-300 sm:text-lg">
-            Retrouvez les concours <strong>en cours</strong> et <strong>à venir</strong> de la
-            fonction publique et des grandes écoles ivoiriennes (ENA, INFAS, CAFOP,
-            gendarmerie…), alimentés directement depuis les sources officielles —
-            dates d'inscription, conditions et liens officiels.
-          </p>
-        </div>
+          <div className="relative grid items-center gap-8 p-6 sm:p-10 lg:grid-cols-2 lg:p-12">
+            <div>
+              <nav
+                aria-label="Fil d'Ariane"
+                className="mb-5 text-sm text-white/70"
+              >
+                <Link href="/" className="hover:text-white">
+                  Accueil
+                </Link>
+                <span className="mx-2" aria-hidden="true">
+                  /
+                </span>
+                <span className="font-medium text-white">Concours administratifs</span>
+              </nav>
+
+              <div className="mb-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold backdrop-blur-sm border border-white/20">
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Sources officielles
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold backdrop-blur-sm border border-white/20">
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Mis à jour automatiquement
+                </span>
+              </div>
+
+              <h1 className="mb-4 font-[var(--font-display)] text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl">
+                Concours administratifs en Côte d'Ivoire
+              </h1>
+              <p className="max-w-xl text-base text-white/85 sm:text-lg">
+                Retrouvez les concours <strong className="text-white">en cours</strong> et{' '}
+                <strong className="text-white">à venir</strong> de la fonction publique et des
+                grandes écoles ivoiriennes (ENA, INFAS, CAFOP, gendarmerie…), alimentés
+                directement depuis les sources officielles — dates d'inscription, conditions
+                et liens officiels.
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
+                <div>
+                  <div className="font-[var(--font-display)] text-2xl font-black">
+                    {totalRecensed}
+                  </div>
+                  <div className="text-[11px] uppercase tracking-widest text-white/70">
+                    concours recensés
+                  </div>
+                </div>
+                <div>
+                  <div className="font-[var(--font-display)] text-2xl font-black">10+</div>
+                  <div className="text-[11px] uppercase tracking-widest text-white/70">
+                    sources officielles
+                  </div>
+                </div>
+                <div>
+                  <div className="font-[var(--font-display)] text-2xl font-black">100 %</div>
+                  <div className="text-[11px] uppercase tracking-widest text-white/70">
+                    relu avant publication
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Illustration SVG — bureau du candidat (concours) */}
+            <ConcoursHeroIllustration />
+          </div>
+        </section>
 
         {/* Barre de recherche + filtres organisateur/catégorie */}
         <div className="mb-5">
@@ -437,6 +505,87 @@ export default async function ConcoursPage({ searchParams }: ConcoursPageProps) 
 // -----------------------------------------------------------------------------
 //  Sous-composants
 // -----------------------------------------------------------------------------
+
+/** Illustration d'en-tête : fiche concours + toque + calendrier (SVG inline). */
+function ConcoursHeroIllustration() {
+  return (
+    <div className="relative hidden lg:block" aria-hidden="true">
+      <svg viewBox="0 0 460 340" className="w-full max-w-md mx-auto drop-shadow-2xl" role="img">
+        <defs>
+          <linearGradient id="concours-card" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor="#f1f5f9" />
+          </linearGradient>
+          <linearGradient id="concours-cap" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#fb923c" />
+            <stop offset="100%" stopColor="#f77f00" />
+          </linearGradient>
+          <linearGradient id="concours-doc" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#34d399" />
+            <stop offset="100%" stopColor="#059669" />
+          </linearGradient>
+        </defs>
+
+        {/* Halo arrière */}
+        <circle cx="230" cy="170" r="150" fill="#ffffff" opacity="0.12" />
+        <circle cx="230" cy="170" r="110" fill="#ffffff" opacity="0.10" />
+
+        {/* Toque de diplômé (orange) */}
+        <g transform="translate(300 40)">
+          <ellipse cx="62" cy="70" rx="58" ry="16" fill="#d97706" opacity="0.35" />
+          <path
+            d="M8 52 L62 18 L116 52 L62 86 Z"
+            fill="url(#concours-cap)"
+          />
+          <path d="M8 52 L62 86 L116 52" fill="none" stroke="#ea580c" strokeWidth="3" />
+          <path d="M116 52 L116 92 L62 112 L8 92 L8 52" fill="none" stroke="#ea580c" strokeWidth="3" />
+          <path d="M62 18 L62 30" stroke="#ea580c" strokeWidth="3" />
+          <circle cx="62" cy="36" r="5" fill="#fde68a" />
+          <path d="M62 36 Q88 30 108 44" fill="none" stroke="#fbbf24" strokeWidth="4" strokeLinecap="round" />
+        </g>
+
+        {/* Fiche concours (carte blanche) */}
+        <g transform="translate(34 96) rotate(-3)">
+          <rect x="0" y="0" width="240" height="190" rx="18" fill="url(#concours-card)" />
+          <rect x="18" y="18" width="66" height="24" rx="12" fill="#009639" />
+          <rect x="18" y="58" width="150" height="12" rx="6" fill="#cbd5e1" />
+          <rect x="18" y="78" width="190" height="10" rx="5" fill="#e2e8f0" />
+          <rect x="18" y="94" width="176" height="10" rx="5" fill="#e2e8f0" />
+          <rect x="18" y="120" width="204" height="10" rx="5" fill="#e2e8f0" />
+          <rect x="18" y="136" width="160" height="10" rx="5" fill="#e2e8f0" />
+          {/* Tampon de validation */}
+          <g transform="translate(178 138)">
+            <circle cx="22" cy="22" r="22" fill="url(#concours-doc)" />
+            <path d="M13 22l7 7 14-16" fill="none" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+          </g>
+          {/* Punaise */}
+          <circle cx="120" cy="-6" r="8" fill="#ef4444" />
+          <circle cx="120" cy="-6" r="3" fill="#fecaca" />
+        </g>
+
+        {/* Calendrier (bleu) */}
+        <g transform="translate(300 178)">
+          <rect x="0" y="0" width="96" height="104" rx="14" fill="#ffffff" />
+          <rect x="0" y="0" width="96" height="30" rx="14" fill="#003087" />
+          <rect x="0" y="16" width="96" height="14" fill="#003087" />
+          <circle cx="24" cy="16" r="4" fill="#ffffff" opacity="0.5" />
+          <circle cx="72" cy="16" r="4" fill="#ffffff" opacity="0.5" />
+          <text x="48" y="74" textAnchor="middle" fontSize="34" fontWeight="800" fill="#003087" fontFamily="Poppins, sans-serif">
+            08
+          </text>
+          <rect x="16" y="86" width="64" height="8" rx="4" fill="#93c5fd" />
+          <path d="M14 -8 L14 12 M82 -8 L82 12" stroke="#003087" strokeWidth="5" strokeLinecap="round" />
+        </g>
+
+        {/* Pastilles décoratives */}
+        <circle cx="96" cy="70" r="7" fill="#fbbf24" />
+        <circle cx="420" cy="120" r="6" fill="#34d399" />
+        <circle cx="40" cy="300" r="8" fill="#fbbf24" opacity="0.8" />
+        <circle cx="430" cy="290" r="10" fill="#ffffff" opacity="0.25" />
+      </svg>
+    </div>
+  );
+}
 
 function ConcoursEmptyState() {
   return (

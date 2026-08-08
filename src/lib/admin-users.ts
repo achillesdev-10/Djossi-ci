@@ -79,18 +79,58 @@ function emptyUsers(note: string): AdminUsersData {
 
 /**
  * Lecture des inscrits côté Supabase (production).
- * `profiles` + tables satellites `profiles_candidate` / `profiles_company`.
+ *
+ * Source principale : table `users` de l'authentification réelle (migration
+ * 0011, mots de passe hachés). Repli sur l'ancien schéma `profiles` +
+ * `profiles_candidate` / `profiles_company` si `users` n'existe pas encore
+ * (bases de production antérieures à la migration).
  */
 async function fromSupabase(): Promise<AdminUsersData> {
   const supabase = getSupabaseClient();
   if (!supabase) return emptyUsers("Supabase non configuré.");
 
-  const [profilesRes, candidatesRes, companiesRes] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id,email,role,created_at")
-      .order("created_at", { ascending: false })
-      .limit(2000),
+  // Table `users` (authentification réelle) en priorité.
+  const usersRes = await supabase
+    .from("users")
+    .select("id,email,name,role,created_at")
+    .order("created_at", { ascending: false })
+    .limit(2000);
+
+  if (usersRes.data && usersRes.data.length > 0) {
+    const users: AdminUser[] = usersRes.data.map((row) => ({
+      id: String(row.id),
+      email: stringFromUnknown(row.email, "email inconnu"),
+      role: normaliseRole(row.role),
+      name: stringFromUnknown(row.name, null),
+      phone: null,
+      headline: null,
+      website: null,
+      created_at: asIsoDate(row.created_at),
+    }));
+    return {
+      users,
+      ...countRoles(users),
+      source: "supabase",
+      note: null,
+    };
+  }
+
+  // Repli : ancien schéma `profiles` (si la table `users` est absente ou vide).
+  const profilesRes = await supabase
+    .from("profiles")
+    .select("id,email,role,created_at")
+    .order("created_at", { ascending: false })
+    .limit(2000);
+
+  if (profilesRes.error) {
+    return emptyUsers(
+      /relation|does not exist/i.test(profilesRes.error.message)
+        ? "Table users/profiles absente côté Supabase (migration 0002/0011 non appliquée)."
+        : `Erreur de lecture des utilisateurs : ${profilesRes.error.message}`,
+    );
+  }
+
+  const [candidatesRes, companiesRes] = await Promise.all([
     supabase
       .from("profiles_candidate")
       .select("id,full_name,phone_whatsapp,headline")
@@ -100,15 +140,6 @@ async function fromSupabase(): Promise<AdminUsersData> {
       .select("id,company_name,website")
       .limit(2000),
   ]);
-
-  const profilesError = profilesRes.error;
-  if (profilesError) {
-    return emptyUsers(
-      /relation|does not exist/i.test(profilesError.message)
-        ? "Table profiles absente côté Supabase (migration 0002 non appliquée)."
-        : `Erreur de lecture des utilisateurs : ${profilesError.message}`,
-    );
-  }
 
   const candidates = new Map<string, { name: string | null; phone: string | null; headline: string | null }>();
   for (const row of candidatesRes.data || []) {
@@ -158,7 +189,8 @@ async function fromSupabase(): Promise<AdminUsersData> {
 
 /**
  * Lecture des inscrits côté SQLite (dev local).
- * La table `profiles` peut ne pas exister → liste vide avec note explicative.
+ * Table `users` (authentification réelle) en priorité, repli sur les anciens
+ * schémas `profiles` / `auth_users` si présents.
  */
 function fromSqlite(): AdminUsersData {
   if (!existsSync(DB_PATH)) {
@@ -171,7 +203,7 @@ function fromSqlite(): AdminUsersData {
     const db = new DatabaseSync(DB_PATH);
     const table = db
       .prepare(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('profiles','users','auth_users') ORDER BY name LIMIT 1",
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('users','profiles','auth_users') ORDER BY CASE name WHEN 'users' THEN 0 WHEN 'profiles' THEN 1 ELSE 2 END LIMIT 1",
       )
       .get() as { name: string } | undefined;
 

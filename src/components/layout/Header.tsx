@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { fetchCurrentUser, logoutCurrentUser, type StoredUser } from '@/lib/clientAuth';
 
 const NAV_LINKS = [
   { label: 'Offres d\'emploi', href: '/jobs' },
@@ -18,26 +19,32 @@ export default function Header() {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [user, setUser] = useState<{ email: string; role: 'candidate' | 'company' | 'admin'; name: string } | null>(null);
+  const [user, setUser] = useState<StoredUser | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     onScroll();
     window.addEventListener('scroll', onScroll);
 
-    try {
-      const stored = localStorage.getItem('travaillerenci_user');
-      if (stored) {
-        setUser(JSON.parse(stored));
-      }
-    } catch {}
+    // Session réelle : lecture côté serveur (cookie httpOnly, rien à forger).
+    let cancelled = false;
+    fetchCurrentUser()
+      .then((current) => {
+        if (!cancelled) setUser(current);
+      })
+      .finally(() => {
+        if (!cancelled) setSessionLoading(false);
+      });
 
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('scroll', onScroll);
+    };
   }, []);
 
-  function handleLogout() {
-    localStorage.removeItem('travaillerenci_user');
-    document.cookie = 'travaillerenci_role=; path=/; max-age=0';
+  async function handleLogout() {
+    await logoutCurrentUser();
     setUser(null);
     window.location.href = '/';
   }
@@ -56,7 +63,7 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-20">
           <Link href="/" className="flex items-center gap-2 group" aria-label="TravaillerEnCi — Accueil">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-shadow">
+            <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30 group-hover:shadow-orange-500/50 transition-shadow">
               <span className="text-white font-black text-xl font-[var(--font-display)]">T</span>
             </div>
             <div>
@@ -114,7 +121,9 @@ export default function Header() {
               )}
             </button>
 
-            {user ? (
+            {sessionLoading ? (
+              <span className="w-24 h-9 rounded-xl bg-gray-100 dark:bg-slate-800 animate-pulse" aria-hidden="true" />
+            ) : user ? (
               <>
                 <Link
                   href={dashboardHref}
@@ -206,7 +215,9 @@ export default function Header() {
               </Link>
             ) : null}
             <div className="pt-4 mt-4 border-t border-border space-y-2">
-              {user ? (
+              {sessionLoading ? (
+                <div className="h-9 rounded-lg bg-gray-100 dark:bg-slate-800 animate-pulse" aria-hidden="true" />
+              ) : user ? (
                 <>
                   <button
                     onClick={() => {

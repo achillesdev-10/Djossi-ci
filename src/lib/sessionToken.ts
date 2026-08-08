@@ -135,3 +135,64 @@ export async function verifyAdminSessionToken(
     return null;
   }
 }
+
+// -----------------------------------------------------------------------------
+// Session UTILISATEUR (candidats & entreprises) — même mécanisme HMAC que la
+// session admin, avec un cookie séparé et une durée plus longue (30 jours).
+// -----------------------------------------------------------------------------
+
+export const USER_SESSION_COOKIE = 'travaillerenci_session';
+export const USER_SESSION_TTL_DAYS = 30;
+export const USER_SESSION_TTL_SECONDS = USER_SESSION_TTL_DAYS * 24 * 60 * 60;
+
+export interface UserSession {
+  userId: string;
+  email: string;
+  name: string;
+  role: 'candidate' | 'company' | 'admin';
+  iat: number;
+  exp: number;
+}
+
+export async function createUserSessionToken(user: {
+  id: string;
+  email: string;
+  name: string;
+  role: UserSession['role'];
+}): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const payload: UserSession = {
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    iat: now,
+    exp: now + USER_SESSION_TTL_SECONDS,
+  };
+  const encodedPayload = encodeBase64Url(JSON.stringify(payload));
+  const signature = await signValue(encodedPayload);
+  return `${encodedPayload}.${signature}`;
+}
+
+export async function verifyUserSessionToken(
+  token?: string | null
+): Promise<UserSession | null> {
+  if (!token) return null;
+
+  // Même règle que la session admin : toute erreur → null, jamais d'exception.
+  try {
+    const [payload, signature] = token.split('.');
+    if (!payload || !signature) return null;
+
+    const isValid = await verifySignature(payload, signature);
+    if (!isValid) return null;
+
+    const parsed = JSON.parse(decodeBase64Url(payload)) as UserSession;
+    if (!parsed.userId || parsed.exp * 1000 <= Date.now()) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}

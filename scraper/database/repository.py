@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -402,6 +402,7 @@ class JobRepository:
         return deleted
 
     def expire_overdue_offers(self) -> int:
+        """Expire les offres dont la deadline est dépassée (is_expired=1 / archived)."""
         assert self.conn is not None
         now = datetime.now().isoformat()
         cur = self.conn.execute(
@@ -410,7 +411,101 @@ class JobRepository:
             (now, now),
         )
         self.conn.commit()
-        return cur.rowcount
+        count = cur.rowcount
+
+        # Miroir Supabase (production / CI) : la base SQLite y est vide, la
+        # logique doit aussi s'appliquer côté Supabase.
+        if self.supabase is not None:
+            try:
+                resp = (
+                    self.supabase.table("job_offers")
+                    .update({"is_expired": True, "status": "archived", "updated_at": now})
+                    .lt("deadline", now)
+                    .in_("status", ["pending", "published"])
+                    .execute()
+                )
+                count = max(count, len(resp.data or []))
+            except Exception as exc:
+                _log_warning(f"Échec expiration Supabase : {exc}")
+        return count
+
+    def auto_publish_pending(self, max_age_minutes: int = 21) -> int:
+        """
+        Validation & publication AUTOMATIQUES des contenus restés en statut
+        'pending' depuis plus de `max_age_minutes` minutes.
+
+        L'admin garde la main pendant les 21 premières minutes : s'il se
+        connecte, il peut modérer normalement. S'il n'est pas disponible, les
+        offres collectées sont publiées d'elles-mêmes (jamais bloquées en
+        file d'attente).
+        """
+        assert self.conn is not None
+        now = datetime.now().isoformat()
+        cutoff = (datetime.now() - timedelta(minutes=max_age_minutes)).isoformat()
+        cur = self.conn.execute(
+            "UPDATE job_offers SET status = 'published', is_verified = 1, updated_at = ? "
+            "WHERE status = 'pending' AND created_at < ?",
+            (now, cutoff),
+        )
+        self.conn.commit()
+        count = cur.rowcount
+
+        # Miroir Supabase (production / CI) : la base SQLite y est vide, la
+        # logique doit aussi s'appliquer côté Supabase.
+        if self.supabase is not None:
+            try:
+                resp = (
+                    self.supabase.table("job_offers")
+                    .update({"status": "published", "is_verified": True})
+                    .eq("status", "pending")
+                    .lt("created_at", cutoff)
+                    .execute()
+                )
+                count = max(count, len(resp.data or []))
+            except Exception as exc:
+                _log_warning(f"Échec auto-publication Supabase : {exc}")
+        return count
+
+    def purge_old_offers(self, max_age_days: int = 21) -> int:
+        """
+        Suppression AUTOMATIQUE des offres âgées de plus de `max_age_days`
+        jours. Une offre dont la date limite (deadline) est encore dans le
+        futur est conservée, même si elle a plus de 21 jours : on ne supprime
+        jamais une annonce toujours active.
+        """
+        assert self.conn is not None
+        now = datetime.now().isoformat()
+        cutoff = (datetime.now() - timedelta(days=max_age_days)).isoformat()
+        cur = self.conn.execute(
+            "DELETE FROM job_offers "
+            "WHERE created_at < ? AND (deadline IS NULL OR deadline < ?)",
+            (cutoff, now),
+        )
+        self.conn.commit()
+        count = cur.rowcount
+
+        # Miroir Supabase (production / CI).
+        if self.supabase is not None:
+            try:
+                resp = (
+                    self.supabase.table("job_offers")
+                    .delete()
+                    .lt("created_at", cutoff)
+                    .is_("deadline", None)
+                    .execute()
+                )
+                count += len(resp.data or [])
+                resp = (
+                    self.supabase.table("job_offers")
+                    .delete()
+                    .lt("created_at", cutoff)
+                    .lt("deadline", now)
+                    .execute()
+                )
+                count += len(resp.data or [])
+            except Exception as exc:
+                _log_warning(f"Échec purge Supabase : {exc}")
+        return count
 
     def stats(self) -> Dict[str, int]:
         assert self.conn is not None

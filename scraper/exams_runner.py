@@ -208,6 +208,7 @@ def run(
     created = 0
     updated = 0
     log_id = None
+    purged_old = 0
     try:
         with ExamRepository(DB_PATH) as repo:
             log_id = repo.add_log("running", 0, f"Scraping concours : {len(all_items)} candidats")
@@ -217,6 +218,11 @@ def run(
                     created += 1
                 else:
                     updated += 1
+            # Les informations collectées « durent » 5 semaines : les fiches
+            # plus anciennes (fin d'inscription passée ou absente) sont purgées.
+            purged_old = repo.purge_old_exams()
+            if purged_old:
+                logger.info(f"🗑  {purged_old} concours supprimé(s) automatiquement (info > 5 semaines).")
             stats = repo.stats()
     except Exception as exc:
         logger.error(f"❌ Erreur BDD : {exc}", exc_info=True)

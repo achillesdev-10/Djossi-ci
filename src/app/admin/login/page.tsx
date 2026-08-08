@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import PasswordInput from '@/components/auth/PasswordInput';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -75,19 +76,15 @@ export default function AdminLoginPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              Mot de passe
-            </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
-              className="w-full rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary transition-colors"
-            />
-          </div>
+          <PasswordInput
+            label="Mot de passe"
+            value={password}
+            onChange={setPassword}
+            autoComplete="current-password"
+            labelClassName="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 ml-0"
+            inputClassName="rounded-2xl border border-slate-800 bg-slate-950 text-white placeholder-slate-600 focus:border-primary"
+            buttonClassName="text-slate-500 hover:text-slate-200"
+          />
 
           <button
             type="submit"

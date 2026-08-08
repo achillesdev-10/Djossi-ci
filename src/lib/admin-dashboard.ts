@@ -687,6 +687,37 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     }
   }
 
+  // Publication automatique (21 min) : si l'admin ne s'est pas connecté, les
+  // offres en attente depuis plus de 21 minutes sont validées et publiées.
+  // Suppression automatique (21 jours) : les offres âgées de plus de 21 jours
+  // (deadline passée ou absente) sont purgées de la base.
+  if (db) {
+    try {
+      const tables = getTableNames(db);
+      if (tables.has("job_offers")) {
+        const cols = getTableColumns(db, "job_offers");
+        const nowIso = new Date().toISOString();
+        if (cols.has("status") && cols.has("is_verified") && cols.has("created_at")) {
+          const autoPublishCutoff = new Date(Date.now() - 21 * 60 * 1000).toISOString();
+          db.prepare(
+            `UPDATE "job_offers"
+             SET status = 'published', is_verified = 1, updated_at = ?
+             WHERE status = 'pending' AND created_at < ?`,
+          ).run(nowIso, autoPublishCutoff);
+        }
+        if (cols.has("created_at") && cols.has("deadline")) {
+          const purgeCutoff = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString();
+          db.prepare(
+            `DELETE FROM "job_offers"
+             WHERE created_at < ? AND (deadline IS NULL OR deadline < ?)`,
+          ).run(purgeCutoff, nowIso);
+        }
+      }
+    } catch {
+      // BDD verrouillée / lecture seule : la maintenance se fera au prochain run.
+    }
+  }
+
   const offers = db ? getOfferRows(db) : [];
   const cities = Array.from(
     new Set(
@@ -899,6 +930,39 @@ async function getAdminDashboardDataFromSupabase(
       .in("status", ["pending", "published"]);
   } catch {
     // migration non appliquée → l'expiration se fera côté SQLite/scraper
+  }
+
+  // Publication automatique (21 min) : les offres en attente depuis plus de
+  // 21 minutes sont validées et publiées quand l'admin n'intervient pas.
+  try {
+    const autoPublishCutoff = new Date(Date.now() - 21 * 60 * 1000).toISOString();
+    await supabase
+      .from("job_offers")
+      .update({ status: "published", is_verified: true })
+      .eq("status", "pending")
+      .lt("created_at", autoPublishCutoff);
+  } catch {
+    // colonne non migrée → sans effet
+  }
+
+  // Suppression automatique (21 jours) : les offres de plus de 21 jours avec
+  // deadline passée ou absente sont purgées. Deux requêtes pour éviter les
+  // pièges d'encodage des dates dans `.or()`.
+  try {
+    const nowIso = new Date().toISOString();
+    const purgeCutoff = new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString();
+    await supabase
+      .from("job_offers")
+      .delete()
+      .lt("created_at", purgeCutoff)
+      .is("deadline", null);
+    await supabase
+      .from("job_offers")
+      .delete()
+      .lt("created_at", purgeCutoff)
+      .lt("deadline", nowIso);
+  } catch {
+    // colonne non migrée → sans effet
   }
 
   // Sélection avec `deadline` ; repli automatique si la migration 0005 n'a

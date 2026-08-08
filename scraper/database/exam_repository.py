@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -305,3 +305,47 @@ class ExamRepository:
         )
         row = cur.fetchone() or {"total": 0, "pending": 0, "published": 0}
         return {k: int(v or 0) for k, v in dict(row).items()}
+
+    def purge_old_exams(self, max_age_days: int = 35) -> int:
+        """
+        Suppression AUTOMATIQUE des concours dont l'information a été collectée
+        il y a plus de `max_age_days` jours (défaut : 5 semaines = 35 jours).
+
+        Une annonce dont la date de fin d'inscription est encore dans le futur
+        est conservée, même si la fiche a plus de 35 jours : on ne supprime
+        jamais un concours toujours ouvert.
+        """
+        assert self.conn is not None
+        now = datetime.now().isoformat()
+        cutoff = (datetime.now() - timedelta(days=max_age_days)).isoformat()
+        cur = self.conn.execute(
+            "DELETE FROM exams "
+            "WHERE created_at < ? AND (registration_end IS NULL OR registration_end < ?)",
+            (cutoff, now),
+        )
+        self.conn.commit()
+        count = cur.rowcount
+
+        # Miroir Supabase (production / CI) : la base SQLite y est vide, la
+        # logique doit aussi s'appliquer côté Supabase.
+        if self.supabase is not None:
+            try:
+                resp = (
+                    self.supabase.table("exams")
+                    .delete()
+                    .lt("created_at", cutoff)
+                    .is_("registration_end", None)
+                    .execute()
+                )
+                count += len(resp.data or [])
+                resp = (
+                    self.supabase.table("exams")
+                    .delete()
+                    .lt("created_at", cutoff)
+                    .lt("registration_end", now)
+                    .execute()
+                )
+                count += len(resp.data or [])
+            except Exception as exc:
+                _log_warning(f"Échec purge Supabase exams : {exc}")
+        return count

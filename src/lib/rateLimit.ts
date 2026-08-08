@@ -1,0 +1,48 @@
+import 'server-only';
+
+/**
+ *  TravaillerEnCi — src/lib/rateLimit.ts
+ *  Limiteur de débit léger en mémoire (anti brute-force / anti-spam).
+ *
+ *  NB : en déploiement serverless multi-instances, chaque instance a son
+ *  propre compteur — suffisant pour ralentir les attaques opportunistes, pas
+ *  pour une protection distribuée stricte.
+ */
+
+const DEFAULT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const DEFAULT_MAX_REQUESTS = 10;
+
+const hits = new Map<string, number[]>();
+
+/** Extrait une adresse IP depuis les en-têtes du proxy/Vercel. */
+export function getClientIp(request: Request): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return request.headers.get('x-real-ip') || 'unknown';
+}
+
+export function isRateLimited(
+  key: string,
+  max: number = DEFAULT_MAX_REQUESTS,
+  windowMs: number = DEFAULT_WINDOW_MS,
+): boolean {
+  const now = Date.now();
+  const list = (hits.get(key) || []).filter((t) => now - t < windowMs);
+
+  if (list.length >= max) {
+    hits.set(key, list);
+    return true;
+  }
+
+  list.push(now);
+  hits.set(key, list);
+
+  // Nettoyage opportuniste : évite la croissance mémoire de la Map.
+  if (hits.size > 1000) {
+    for (const [k, times] of hits) {
+      if (times.every((t) => now - t >= windowMs)) hits.delete(k);
+    }
+  }
+
+  return false;
+}

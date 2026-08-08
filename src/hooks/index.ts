@@ -1,52 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { AuthService, type AuthState } from '@/services/authService';
-
-const STORAGE_KEY = 'travaillerenci_auth_state';
-
-export function useAuth() {
-  const [state, setState] = useState<AuthState>(() => ({
-    user: null,
-    profile: null,
-    isLoading: true,
-    isAuthenticated: false,
-  }));
-
-  useEffect(() => {
-    const initial = AuthService.getInitialState();
-    setState({ ...initial, isLoading: false });
-  }, []);
-
-  const login = useCallback(async (email: string, password: string, role: 'candidate' | 'employer') => {
-    setState((prev) => ({ ...prev, isLoading: true }));
-    try {
-      const next = await AuthService.login({ email, password }, role);
-      setState(next);
-      return next;
-    } finally {
-      setState((prev) => ({ ...prev, isLoading: false }));
-    }
-  }, []);
-
-  const logout = useCallback(async () => {
-    setState((prev) => ({ ...prev, isLoading: true }));
-    await AuthService.logout();
-    setState({ user: null, profile: null, isLoading: false, isAuthenticated: false });
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const onStorage = () => {
-      const next = AuthService.getInitialState();
-      setState((prev) => ({ ...prev, ...next }));
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
-
-  return { ...state, login, logout };
-}
 
 export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((prev: T) => T)) => void] {
   const [stored, setStored] = useState<T>(() => {
@@ -116,4 +70,3 @@ export function useSearchParamsState() {
   return params;
 }
 
-export { STORAGE_KEY };

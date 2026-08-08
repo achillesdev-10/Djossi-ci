@@ -3,6 +3,7 @@ import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
 import AppShell from '@/components/layout/AppShell';
 import AnalyticsTracker from '@/components/analytics/AnalyticsTracker';
+import LegacyAccountMigrator from '@/components/auth/LegacyAccountMigrator';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -69,6 +70,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col bg-background dark:bg-slate-950 dark:text-gray-100 transition-colors">
         <AnalyticsTracker />
+        <LegacyAccountMigrator />
         <AppShell>{children}</AppShell>
       </body>
     </html>

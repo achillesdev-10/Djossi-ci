@@ -295,6 +295,8 @@ Référence complète : voir `.env.example`.
 | `SUPABASE_SERVICE_ROLE_KEY` | si Supabase | Clé admin (côté serveur uniquement) |
 | `GEMINI_API_KEY` | 🟡 | Réécriture & classification IA des contenus scrapés (Google AI Studio). Sans elle, le scraper reste fonctionnel (heuristiques) |
 | `JWT_SECRET` | si auth locale | Sel JWT (générez via `openssl rand -hex 32`) |
+| `GOOGLE_CLIENT_ID` | si OAuth Google | OAuth Client ID (Google Cloud Console) |
+| `GOOGLE_CLIENT_SECRET` | si OAuth Google | OAuth Client Secret (application Web) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | 🟡 | Abonnements entreprise (optionnel MVP) |
 | `STRIPE_SECRET_KEY` | 🟡 | Secret Stripe serveur |
 | `NEXT_PUBLIC_GA_ID` | 🟡 | Google Analytics 4 Measurement ID |
@@ -310,6 +312,18 @@ Référence complète : voir `.env.example`.
 - L'admin modère dans `/admin/jobs` (éditer, valider → publier, rejeter, supprimer) ; les contenus publiés alimentent `/jobs`, `/bourses` et `/concours`.
 - **Automatisation** : le workflow GitHub `scraper.yml` tourne **2× par jour** (06:00 & 18:00 UTC) et est déclenchable à la main ; le dashboard admin (`/admin/scraper`) peut aussi lancer une extraction.
 - **Déclenchement manuel en production (Vercel)** : Vercel n'a pas de Python. Le bouton du dashboard appelle en priorité `SCRAPER_AUTOMATION_URL` si elle est définie (n8n, Make, Google Cloud Scheduler…). En local, il lance directement `python scraper/scraper.py`.
+
+### Connexion Google (OAuth 2.0 + PKCE)
+- Le bouton « Se connecter / S'inscrire avec Google » redirige vers `/api/auth/google`, qui démarre le flux OAuth (code d'autorisation + PKCE S256, `state` anti-CSRF en cookie httpOnly).
+- Le callback `/api/auth/google/callback` échange le code, **vérifie la signature RS256 de l'id_token** contre le JWKS de Google (+ `iss`, `aud`, `exp`) puis crée ou lie le compte (colonne `google_sub` de la table `users`, unique).
+- Un compte existant (email/mot de passe) est automatiquement lié au compte Google lors de la première connexion avec le même email.
+- **Configuration** (Google Cloud Console → APIs & Services → Credentials → Create Credentials → OAuth client ID → *Web application*) :
+  1. Ajoutez les deux variables d'environnement `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET`.
+  2. Ajoutez l'URI de redirection suivante (exactement, selon l'environnement) :
+     - Dev : `http://localhost:3000/api/auth/google/callback`
+     - Prod : `https://travaillerenci.ci/api/auth/google/callback`
+  3. Appliquez la migration `supabase/migrations/0012_google_oauth.sql` côté Supabase (ou relancez `npm run db:setup` en SQLite).
+- Sans configuration, le bouton Google redirige vers `/login?error=google_not_configured` avec un message clair.
 
 ### Notifications WhatsApp
 - Le scraper `scraper/scraper.py` peut envoyer automatiquement un message formaté quand une **nouvelle offre valide** est créée en base.

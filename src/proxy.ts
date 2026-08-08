@@ -3,7 +3,9 @@ import type { NextRequest } from 'next/server';
 import {
   ADMIN_SESSION_COOKIE,
   LEGACY_ADMIN_SESSION_COOKIE,
+  USER_SESSION_COOKIE,
   verifyAdminSessionToken,
+  verifyUserSessionToken,
 } from '@/lib/sessionToken';
 
 /**
@@ -40,6 +42,17 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Session utilisateur (candidat / entreprise) : cookie httpOnly signé.
+  const userToken = request.cookies.get(USER_SESSION_COOKIE)?.value;
+  let hasUserSession = false;
+  if (userToken) {
+    try {
+      hasUserSession = Boolean(await verifyUserSessionToken(userToken));
+    } catch {
+      hasUserSession = false;
+    }
+  }
+
   // 2. Routes API /api/admin/* : 401 JSON (les fetch clients gèrent le code).
   if (pathname.startsWith('/api/admin/')) {
     if (!hasValidSession) {
@@ -60,9 +73,20 @@ export async function proxy(request: NextRequest) {
   }
 
   // 4. Pages /admin/* : redirect 307 vers /admin/login.
-  if (pathname.startsWith('/admin/')) {
+  //    NB : on couvre aussi le chemin exact "/admin" (le dashboard) —
+  //    `startsWith("/admin/")` seul laissait /admin accessible sans session.
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
     if (!hasValidSession) {
       const loginUrl = new URL('/admin/login', request.url);
+      loginUrl.searchParams.set('next', pathname + request.nextUrl.search);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // 5. Espaces membres /dashboard/* : session utilisateur requise.
+  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+    if (!hasUserSession) {
+      const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('next', pathname + request.nextUrl.search);
       return NextResponse.redirect(loginUrl);
     }
@@ -72,5 +96,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*', '/dashboard/:path*'],
 };

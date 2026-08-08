@@ -577,6 +577,54 @@ export class ExamService {
     return rows.map((r) => r.organizer);
   }
 
+  // ------------------------------------------------------------ MAINTENANCE
+  /**
+   * Suppression automatique des concours dont l'information a été collectée
+   * il y a plus de 35 jours (5 semaines) — une annonce dont la fin
+   * d'inscription est encore dans le futur est conservée.
+   * Exécutée à chaque chargement du dashboard exams (comme pour les offres).
+   */
+  static async purgeOldExams(maxAgeDays: number = 35): Promise<number> {
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      if (!supabase) return 0;
+      try {
+        const nowIso = new Date().toISOString();
+        const cutoff = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000).toISOString();
+        const r1 = await supabase
+          .from('exams')
+          .delete()
+          .lt('created_at', cutoff)
+          .is('registration_end', null)
+          .select('id');
+        const r2 = await supabase
+          .from('exams')
+          .delete()
+          .lt('created_at', cutoff)
+          .lt('registration_end', nowIso)
+          .select('id');
+        return (r1.data?.length ?? 0) + (r2.data?.length ?? 0);
+      } catch {
+        return 0;
+      }
+    }
+    const db = await getDb();
+    if (!db) return 0;
+    try {
+      const nowIso = new Date().toISOString();
+      const cutoff = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000).toISOString();
+      const result = db
+        .prepare(
+          `DELETE FROM exams
+           WHERE created_at < $cutoff AND (registration_end IS NULL OR registration_end < $now)`,
+        )
+        .run({ $cutoff: cutoff, $now: nowIso });
+      return result.changes || 0;
+    } catch {
+      return 0;
+    }
+  }
+
   // ------------------------------------------------------------ ADMIN STATS
   static async getAdminStats(): Promise<{
     total: number;
@@ -586,6 +634,10 @@ export class ExamService {
     totalViews: number;
     openNow: number;
   }> {
+    // Purge « 5 semaines » au chargement du dashboard exams (miroir de la
+    // purge des offres dans getAdminDashboardData).
+    await this.purgeOldExams();
+
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseClient();
       if (!supabase) return { total: 0, published: 0, pending: 0, rejected: 0, totalViews: 0, openNow: 0 };

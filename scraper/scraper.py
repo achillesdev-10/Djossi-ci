@@ -64,6 +64,7 @@ from scraper.core.gemini import GeminiEnricher
 from scraper.core.scheduler import JobScheduler
 from scraper.models.content_item import ContentItem
 from scraper.database.repository import JobRepository
+from scraper.database.exam_repository import ExamRepository
 
 # Scrapers actifs — sources VÉRIFIÉES en HTTP simple (les anciennes sources
 # novojob / rmo / emploiivoire / jobivoire2 / emploi.ci étaient mortes ou
@@ -252,6 +253,19 @@ def run_scraping_pipeline(
             expired_count = repo.expire_overdue_offers()
             if expired_count:
                 logger.info(f"   ⏰ Contenus expirés automatiquement : {expired_count}")
+
+            # Publication automatique : les contenus en attente depuis plus de
+            # 21 min (admin non connecté) sont validés et publiés.
+            auto_published = repo.auto_publish_pending()
+            if auto_published:
+                logger.info(f"   ⚡ Contenus en attente validés & publiés automatiquement (≥ 21 min) : {auto_published}")
+
+            # Suppression automatique : les offres de plus de 21 jours (deadline
+            # passée ou absente) sont purgées de la base.
+            purged_old = repo.purge_old_offers()
+            if purged_old:
+                logger.info(f"   🗑  Offres supprimées automatiquement (plus de 21 jours) : {purged_old}")
+
             st = repo.stats()
     except Exception as exc:
         logger.error(f"❌ Erreur d'enregistrement en BDD : {exc}", exc_info=True)
@@ -299,6 +313,47 @@ def purge_demo_offers() -> int:
         return 1
 
 
+def run_maintenance() -> int:
+    """
+    Tâche de maintenance automatique, SANS scraping :
+      • publication des contenus en attente depuis ≥ 21 minutes
+      • suppression des offres âgées de plus de 21 jours
+      • expiration des offres dont la deadline est dépassée
+      • suppression des concours dont l'information a plus de 5 semaines
+
+    Utilisée par le workflow GitHub Actions (exécution fréquente) pour que la
+    modération automatique fonctionne même quand personne ne se connecte.
+    """
+    try:
+        with JobRepository(DB_PATH) as repo:
+            auto_published = repo.auto_publish_pending()
+            purged_old = repo.purge_old_offers()
+            expired = repo.expire_overdue_offers()
+    except Exception as exc:
+        logger.error(f"❌ Maintenance (offres) impossible : {exc}", exc_info=True)
+        return 1
+
+    exam_purged = 0
+    try:
+        with ExamRepository(DB_PATH) as exam_repo:
+            exam_purged = exam_repo.purge_old_exams()
+    except Exception as exc:
+        logger.error(f"❌ Maintenance (concours) impossible : {exc}", exc_info=True)
+        return 1
+
+    if auto_published:
+        logger.info(f"⚡ {auto_published} contenu(s) en attente publié(s) automatiquement (≥ 21 min).")
+    if purged_old:
+        logger.info(f"🗑  {purged_old} offre(s) supprimée(s) automatiquement (plus de 21 jours).")
+    if expired:
+        logger.info(f"⏰ {expired} contenu(s) expiré(s) (deadline dépassée).")
+    if exam_purged:
+        logger.info(f"🗑  {exam_purged} concours supprimé(s) automatiquement (info > 5 semaines).")
+    if not (auto_published or purged_old or expired or exam_purged):
+        logger.info("Maintenance : rien à faire (aucun contenu éligible).")
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description="TravaillerEnCi Scraper Engine - Côte d'Ivoire")
     parser.add_argument(
@@ -324,11 +379,19 @@ def main():
         action="store_true",
         help="Supprimer les anciens contenus « démo » déjà enregistrés en BDD puis quitter",
     )
+    parser.add_argument(
+        "--maintenance-only",
+        action="store_true",
+        help="Sans scraping : publie les contenus en attente (≥ 21 min), supprime les offres de plus de 21 jours, expire les deadlines dépassées, puis quitte",
+    )
     parser.add_argument("--schedule", type=str, choices=["hourly", "6h", "daily"], help="Lancer via le scheduler")
     args = parser.parse_args()
 
     if args.purge_demo:
         sys.exit(purge_demo_offers())
+
+    if args.maintenance_only:
+        sys.exit(run_maintenance())
 
     sites = [s.strip().lower() for s in args.sites.split(",") if s.strip()]
     if "all" in sites:

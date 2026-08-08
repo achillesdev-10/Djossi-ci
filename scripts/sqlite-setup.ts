@@ -144,7 +144,46 @@ function runMigration(db: DatabaseSync) {
     );
   `);
 
+  // Authentification réelle (miroir des migrations Supabase 0011 + 0012) :
+  // comptes utilisateurs (mots de passe hachés) + jetons de réinitialisation
+  // + identifiant Google (OAuth).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id            TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
+      email         TEXT NOT NULL UNIQUE,
+      name          TEXT NOT NULL,
+      role          TEXT NOT NULL DEFAULT 'candidate' CHECK (role IN ('candidate','company','admin')),
+      password_hash TEXT NOT NULL,
+      google_sub    TEXT UNIQUE,
+      needs_password_reset INTEGER NOT NULL DEFAULT 0,
+      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      token_hash TEXT PRIMARY KEY,
+      user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  // Migrations défensives pour les bases créées avant l'OAuth Google / la
+  // migration des comptes. NB : SQLite interdit ADD COLUMN avec UNIQUE →
+  // colonne nue + index UNIQUE.
+  const usersCols = db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string }>;
+  if (!usersCols.some((c) => c.name === 'google_sub')) {
+    db.exec('ALTER TABLE users ADD COLUMN google_sub TEXT');
+  }
+  if (!usersCols.some((c) => c.name === 'needs_password_reset')) {
+    db.exec('ALTER TABLE users ADD COLUMN needs_password_reset INTEGER NOT NULL DEFAULT 0');
+  }
+
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);`);
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users (google_sub);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON password_reset_tokens (user_id);`);
+
   console.log('   ✓ Schéma `job_offers` prêt (catégories : job / internship / scholarship / exam).');
+  console.log('   ✓ Schéma `users` + `password_reset_tokens` + `google_sub` prêt (auth réelle + OAuth Google).');
 }
 
 // -----------------------------------------------------------------------------
