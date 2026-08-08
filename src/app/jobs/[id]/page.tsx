@@ -5,6 +5,7 @@ import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
 import SimpleMarkdown from '@/components/content/SimpleMarkdown';
 import type { JobOfferSchema } from '@/types';
 import { formatDate, truncate } from '@/lib/utils';
+import { getSiteUrl } from '@/lib/site';
 
 export const revalidate = 300;
 
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     (job.seo_description || job.description).replace(/\*\*/g, '').replace(/\n/g, ' '),
     170
   );
-  const canonicalUrl = `https://travaillerenci.vercel.app/jobs/${job.slug || job.id}`;
+  const canonicalUrl = `${getSiteUrl()}/jobs/${job.slug || job.id}`;
   return {
     title: job.seo_title || `${job.title} — ${job.company} | TravaillerEnCi`,
     description: desc,
@@ -87,7 +88,7 @@ export default async function JobDetailPage({ params }: PageProps) {
     hiringOrganization: {
       '@type': 'Organization',
       name: job.company,
-      sameAs: job.source_url || 'https://travaillerenci.vercel.app',
+      sameAs: job.source_url || getSiteUrl(),
     },
     jobLocation: {
       '@type': 'Place',
@@ -176,7 +177,7 @@ export default async function JobDetailPage({ params }: PageProps) {
               {/* Bouton Partager sur WhatsApp très visible */}
               <div className="pt-1">
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`*${job.title}* chez *${job.company}* (${job.location})\n\nConsultez l'offre complète sur TravaillerEnCi : https://travaillerenci.vercel.app/jobs/${job.id}`)}`}
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`*${job.title}* chez *${job.company}* (${job.location})\n\nConsultez l'offre complète sur TravaillerEnCi : ${getSiteUrl()}/jobs/${job.id}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition-all"

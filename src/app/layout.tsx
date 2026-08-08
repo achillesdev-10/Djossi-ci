@@ -1,9 +1,10 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
 import AppShell from '@/components/layout/AppShell';
 import AnalyticsTracker from '@/components/analytics/AnalyticsTracker';
 import LegacyAccountMigrator from '@/components/auth/LegacyAccountMigrator';
+import { getSiteUrl } from '@/lib/site';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -18,6 +19,16 @@ const poppins = Poppins({
   display: 'swap',
 });
 
+// Couleurs du thème pour la barre d'adresse mobile + PWA (manifest.ts).
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#00a83f' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
+  ],
+};
+
 export const metadata: Metadata = {
   title: {
     default: 'TravaillerenCi - Offres d\'emploi en Côte d\'Ivoire',
@@ -26,14 +37,20 @@ export const metadata: Metadata = {
   description: 'Trouvez votre emploi de rêve en Côte d\'Ivoire. Découvrez des milliers d\'offres d\'emploi, des stages et des opportunités professionnelles.',
   keywords: ['emploi', 'côte d\'ivoire', 'jobs', 'offres d\'emploi', 'travail', 'abidjan', 'carrière', 'recrutement'],
   authors: [{ name: 'TravaillerenCi Team' }],
+  // Base des URLs absolues (og:url, canonical, sitemap…) — domaine actuel,
+  // remplaçable via NEXT_PUBLIC_SITE_URL le jour où travaillerenci.ci sera actif.
+  metadataBase: new URL(getSiteUrl()),
   icons: {
-    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
-    apple: '/favicon.svg',
+    icon: [
+      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
+      { url: '/favicon.ico', sizes: '48x48', type: 'image/x-icon' },
+    ],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180' }],
   },
   openGraph: {
     type: 'website',
     locale: 'fr_CI',
-    url: 'https://travaillerenci.ci',
+    url: getSiteUrl(),
     siteName: 'TravaillerenCi',
     title: 'TravaillerenCi - Offres d\'emploi en Côte d\'Ivoire',
     description: 'Trouvez votre emploi de rêve en Côte d\'Ivoire.',
@@ -68,6 +85,22 @@ export default function RootLayout({
             `,
           }}
         />
+        {/* PWA : enregistrement du service worker en production uniquement */}
+        {process.env.NODE_ENV === 'production' && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+                  window.addEventListener('load', function () {
+                    navigator.serviceWorker.register('/sw.js').catch(function (err) {
+                      console.warn('Enregistrement du service worker impossible:', err);
+                    });
+                  });
+                }
+              `,
+            }}
+          />
+        )}
       </head>
       <body className="min-h-screen flex flex-col bg-background dark:bg-slate-950 dark:text-gray-100 transition-colors">
         <AnalyticsTracker />

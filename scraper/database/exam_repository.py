@@ -16,11 +16,16 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
-from datetime import datetime, timedelta
+import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from scraper.models.exam_item import ExamItem, compute_min_diploma_level
+from scraper.models.exam_item import (
+    ExamItem,
+    compute_min_diploma_level,
+    url_hostname,
+)
 
 try:
     from supabase import create_client, Client as SupabaseClient
@@ -119,16 +124,97 @@ class ExamRepository:
     def _iso(self, value: Optional[datetime]) -> Optional[str]:
         return value.isoformat() if value else None
 
-    def upsert(self, item: ExamItem) -> tuple[str, bool]:
-        """Insère ou met à jour un concours (dédup par titre+organisateur ou source_url)."""
+    @staticmethod
+    def _url_specificity(url: Optional[str]) -> int:
+        """Nombre de segments de chemin — l'URL la plus spécifique (fiche détail)
+        gagne face à une page générique (racine du site) lors d'une fusion."""
+        if not url:
+            return 0
+        try:
+            from urllib.parse import urlsplit
+
+            path = urlsplit(url).path
+        except ValueError:
+            return 0
+        return len([s for s in path.split("/") if s])
+
+    def _find_existing(self, item: ExamItem) -> tuple[Optional[sqlite3.Row], str]:
+        """Recherche l'id d'un concours déjà en base.
+
+        Ordre de déduction (du plus fort au plus faible signal) :
+          1. source_url EXACTE (URLs normalisées côté modèle) ;
+          2. titre + organisateur + MÊME domaine source, insensibles à la casse
+             (intitulés identiques — ex. « CONCOURS ADMINISTRATIFS 2026 ») ;
+          3. titre identique + MÊME domaine source, organisateur différent
+             (dédup inter-sources : la même annonce scrapée par deux sources ne
+             doit créer qu'une fiche).
+
+        NB — compromis assumé : un intitulé identique sur le même domaine est
+        considéré comme le même concours. Pour un communiqué multi-filières
+        (ex. INFAS, une entrée par filière), les filières ont le même titre ET
+        le même organisateur : la règle 2 les fusionnerait. En pratique chaque
+        URL scrapée produit UNE fiche (le communiqué regroupe les filières), et
+        les fiches multi-filières distinctes ont des URLs différentes — la
+        règle 1 les distingue. À garder en tête si le runner venait à éclater
+        une fiche par filière.
+        """
         assert self.conn is not None
         cur = self.conn.cursor()
+        title_key = item.title.strip().upper()
+        org_key = item.organizer.strip().upper()
+        host = url_hostname(item.source_url)
+        # 1) URL exacte.
         cur.execute(
-            "SELECT id FROM exams WHERE source_url = ? OR (title = ? AND organizer = ?) LIMIT 1",
-            (item.source_url, item.title, item.organizer),
+            "SELECT id, source_url FROM exams WHERE source_url = ? LIMIT 1",
+            (item.source_url,),
         )
         row = cur.fetchone()
+        if row:
+            return row, "url"
+        # 2) Titre + organisateur + même domaine, insensibles à la casse.
+        if host:
+            cur.execute(
+                "SELECT id, source_url FROM exams "
+                "WHERE UPPER(TRIM(title)) = ? AND UPPER(TRIM(organizer)) = ? "
+                "LIMIT 50",
+                (title_key, org_key),
+            )
+            for cand in cur.fetchall():
+                if url_hostname(cand["source_url"]) == host:
+                    return cand, "title_organizer"
+        # 3) Titre identique + même domaine source, organisateur différent.
+        if host:
+            cur.execute(
+                "SELECT id, source_url FROM exams WHERE UPPER(TRIM(title)) = ? LIMIT 50",
+                (title_key,),
+            )
+            for cand in cur.fetchall():
+                if url_hostname(cand["source_url"]) == host:
+                    return cand, "title_domain"
+        return None, ""
+
+    def upsert(self, item: ExamItem) -> tuple[str, bool]:
+        """Insère ou met à jour un concours.
+
+        Déduplication robuste : source_url exacte → titre+organisateur
+        (insensible à la casse) → titre + domaine source. La fiche la plus
+        spécifique (URL de détail) gagne lors d'une fusion inter-sources.
+        """
+        assert self.conn is not None
+        row, match_mode = self._find_existing(item)
+        cur = self.conn.cursor()
         now = datetime.now().isoformat()
+
+        # Fusion par titre+domaine : la fiche la plus spécifique (URL de détail)
+        # gagne. Si l'existant est DÉJÀ aussi spécifique (ou plus) que le nouvel
+        # item (ex. page d'accueil scrapée par une autre source), on ignore le
+        # doublon : on ne réécrit PAS l'organisateur de la fiche en place avec
+        # celui d'une source tierce (corruption potentielle).
+        source_url = item.source_url
+        if row and match_mode == "title_domain":
+            existing_url = row["source_url"] or ""
+            if self._url_specificity(existing_url) >= self._url_specificity(source_url):
+                return row["id"], False
 
         payload = (
             item.title,
@@ -151,7 +237,7 @@ class ExamRepository:
             item.location,
             json.dumps(item.cities, ensure_ascii=False),
             json.dumps(item.documents, ensure_ascii=False),
-            item.source_url,
+            source_url,
             item.source,
             item.status,
             item.confidence,
@@ -179,9 +265,14 @@ class ExamRepository:
             self._supabase_upsert(item)
             return exam_id, False
 
+        # id généré EXPLICITEMENT : certaines bases locales ont été créées sans
+        # DEFAULT sur la colonne id (CREATE TABLE IF NOT EXISTS + schéma plus
+        # ancien) — sans cela l'INSERT produisait des lignes avec id NULL
+        # (4 lignes constatées en base locale).
+        exam_id = str(uuid.uuid4())
         cur.execute(
             """INSERT INTO exams (
-                title, organizer, category, exam_type, description_md,
+                id, title, organizer, category, exam_type, description_md,
                 registration_start, registration_end, exam_date, results_date,
                 age_min, age_max, age_reference_date, nationality, diplomas,
                 min_diploma_level, positions_count, registration_fee, location,
@@ -190,17 +281,14 @@ class ExamRepository:
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-            )
-            RETURNING id""",
-            (*payload, now, now),
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?
+            )""",
+            (exam_id, *payload, now, now),
         )
-        res = cur.fetchone()
         self.conn.commit()
-        if res:
-            self._supabase_upsert(item)
-            return res["id"], True
-        return "", False
+        self._supabase_upsert(item)
+        return exam_id, True
 
     # ------------------------------------------------------------------
     def _supabase_upsert(self, item: ExamItem) -> None:
@@ -209,9 +297,12 @@ class ExamRepository:
         try:
             table = self.supabase.table("exams")
             existing: Optional[Dict[str, Any]] = None
+            match_mode = ""
+            # Miroir de _find_existing : URL exacte → titre+organisateur
+            # (insensible à la casse) → titre + même domaine source.
             if item.source_url:
                 resp = (
-                    table.select("id,status")
+                    table.select("id,status,source_url")
                     .eq("source_url", item.source_url)
                     .limit(1)
                     .execute()
@@ -219,17 +310,45 @@ class ExamRepository:
                 rows = resp.data or []
                 if rows:
                     existing = rows[0]
+                    match_mode = "url"
             if existing is None:
-                resp = (
-                    table.select("id,status")
-                    .eq("title", item.title)
-                    .eq("organizer", item.organizer)
-                    .limit(1)
-                    .execute()
-                )
-                rows = resp.data or []
-                if rows:
-                    existing = rows[0]
+                host = url_hostname(item.source_url)
+                if host:
+                    resp = (
+                        table.select("id,status,source_url")
+                        .ilike("title", item.title.strip())
+                        .ilike("organizer", item.organizer.strip())
+                        .limit(50)
+                        .execute()
+                    )
+                    for cand in resp.data or []:
+                        if url_hostname(cand.get("source_url")) == host:
+                            existing = cand
+                            match_mode = "title_organizer"
+                            break
+            if existing is None:
+                host = url_hostname(item.source_url)
+                if host:
+                    resp = (
+                        table.select("id,status,source_url")
+                        .ilike("title", item.title.strip())
+                        .limit(50)
+                        .execute()
+                    )
+                    for cand in resp.data or []:
+                        if url_hostname(cand.get("source_url")) == host:
+                            existing = cand
+                            match_mode = "title_domain"
+                            break
+
+            # Fusion par titre+domaine : si l'existant est déjà aussi spécifique
+            # (ou plus) que le nouvel item, on ignore le doublon — on ne réécrit
+            # pas l'organisateur de la fiche en place.
+            source_url = item.source_url
+            if existing and match_mode == "title_domain":
+                existing_url = existing.get("source_url") or ""
+                if self._url_specificity(existing_url) >= self._url_specificity(source_url):
+                    return
 
             payload = {
                 "title": item.title,
@@ -252,7 +371,7 @@ class ExamRepository:
                 "location": item.location,
                 "cities": item.cities,
                 "documents": item.documents,
-                "source_url": item.source_url,
+                "source_url": source_url,
                 "source_website": item.source,
                 "status": item.status,
                 "confidence": item.confidence,
@@ -306,6 +425,64 @@ class ExamRepository:
         row = cur.fetchone() or {"total": 0, "pending": 0, "published": 0}
         return {k: int(v or 0) for k, v in dict(row).items()}
 
+    # ------------------------------------------------------------------
+    def auto_publish_pending(self, max_age_minutes: int = 21) -> int:
+        """
+        Publication AUTOMATIQUE des concours en attente depuis plus de
+        `max_age_minutes` minutes (défaut : 21 min — miroir des offres).
+
+        L'admin garde la main pendant les premières minutes : s'il se connecte
+        à /admin/exams, il peut valider ou rejeter. Passé ce délai, les
+        concours sont publiés automatiquement pour que la page /concours ne
+        reste jamais vide faute de modération manuelle.
+
+        NB : les dates sont comparées via julianday() car la colonne created_at
+        mêle des formats « YYYY-MM-DD HH:MM:SS » (défaut SQLite) et ISO avec
+        « T » (écritures Node/Python) — la comparaison lexicographique directe
+        serait faussée.
+        """
+        assert self.conn is not None
+        # UTC explicite : aligné sur le service Next.js (toISOString) pour que
+        # la règle des 21 minutes soit identique partout.
+        cutoff = (datetime.now(timezone.utc) - timedelta(minutes=max_age_minutes)).isoformat()
+        cur = self.conn.execute(
+            """
+            UPDATE exams
+               SET status = 'published',
+                   is_verified = 1,
+                   published_at = COALESCE(published_at, datetime('now')),
+                   updated_at = datetime('now')
+             WHERE status = 'pending'
+               AND julianday(created_at) < julianday(?)
+            """,
+            (cutoff,),
+        )
+        self.conn.commit()
+        count = int(cur.rowcount or 0)
+
+        # Miroir Supabase (production / CI) : la base SQLite y est vide, la
+        # logique doit aussi s'appliquer côté Supabase.
+        if self.supabase is not None:
+            try:
+                resp = (
+                    self.supabase.table("exams")
+                    .update(
+                        {
+                            "status": "published",
+                            "is_verified": True,
+                            "published_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                    )
+                    .eq("status", "pending")
+                    .lt("created_at", cutoff)
+                    .select("id")
+                    .execute()
+                )
+                count += len(resp.data or [])
+            except Exception as exc:
+                _log_warning(f"Échec auto-publication Supabase exams : {exc}")
+        return count
+
     def purge_old_exams(self, max_age_days: int = 35) -> int:
         """
         Suppression AUTOMATIQUE des concours dont l'information a été collectée
@@ -316,11 +493,15 @@ class ExamRepository:
         jamais un concours toujours ouvert.
         """
         assert self.conn is not None
-        now = datetime.now().isoformat()
-        cutoff = (datetime.now() - timedelta(days=max_age_days)).isoformat()
+        now = datetime.now(timezone.utc).isoformat()
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).isoformat()
+        # julianday() : les colonnes mêlent « YYYY-MM-DD HH:MM:SS » (défaut
+        # SQLite) et ISO avec « T » (écritures Node/Python) — la comparaison
+        # lexicographique directe serait faussée.
         cur = self.conn.execute(
             "DELETE FROM exams "
-            "WHERE created_at < ? AND (registration_end IS NULL OR registration_end < ?)",
+            "WHERE julianday(created_at) < julianday(?) "
+            "AND (registration_end IS NULL OR julianday(registration_end) < julianday(?))",
             (cutoff, now),
         )
         self.conn.commit()

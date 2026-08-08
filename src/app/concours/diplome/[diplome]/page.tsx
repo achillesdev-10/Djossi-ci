@@ -4,12 +4,13 @@ import type { Metadata } from 'next';
 import { ExamService } from '@/services/examService';
 import CategoryIcon from '@/components/exams/CategoryIcon';
 import PhaseSection, { groupExamsByPhase, SECTION_LIMIT } from '@/components/exams/PhaseSection';
+import { getSiteUrl } from '@/lib/site';
 import { DIPLOMA_SEO, DIPLOMA_SEO_BY_SLUG } from '@/lib/examSeo';
 import { EXAM_CATEGORIES } from '@/lib/examConstants';
 
 export const revalidate = 300;
 
-const BASE_URL = 'https://travaillerenci.ci';
+const BASE_URL = getSiteUrl();
 
 interface PageProps {
   params: Promise<{ diplome: string }>;

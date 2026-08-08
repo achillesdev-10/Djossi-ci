@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
 import SimpleMarkdown from '@/components/content/SimpleMarkdown';
 import { formatDate, truncate } from '@/lib/utils';
+import { getSiteUrl } from '@/lib/site';
 
 export const revalidate = 300;
 
@@ -30,6 +31,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: bourse.title,
       description: desc,
       locale: 'fr_CI',
+      url: `${getSiteUrl()}/bourses/${bourse.id}`,
+      siteName: 'TravaillerenCi',
       tags: ['bourse', "bourse d'études", bourse.location!],
     },
   };

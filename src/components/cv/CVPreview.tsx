@@ -1,6 +1,7 @@
 'use client';
 
 import type { CVData } from '@/types/cv';
+import { getSiteHostname } from '@/lib/site';
 
 interface CVPreviewProps {
   cvData: CVData;
@@ -157,7 +158,7 @@ export default function CVPreview({ cvData }: CVPreviewProps) {
 
       <footer className="mt-10 pt-4 border-t border-gray-100 text-center">
         <p className="text-xs text-gray-400">
-          CV généré via <span className="font-semibold">travaillerenci.ci</span>
+          CV généré via <span className="font-semibold">{getSiteHostname()}</span>
         </p>
       </footer>
     </div>

@@ -4,13 +4,14 @@ import type { Metadata } from 'next';
 import { ExamService } from '@/services/examService';
 import CategoryIcon from '@/components/exams/CategoryIcon';
 import PhaseSection, { groupExamsByPhase, SECTION_LIMIT } from '@/components/exams/PhaseSection';
+import { getSiteUrl } from '@/lib/site';
 import { CATEGORY_SEO } from '@/lib/examSeo';
 import { EXAM_CATEGORIES, EXAM_CATEGORY_LABEL } from '@/lib/examConstants';
 import type { ExamCategory } from '@/types/exam';
 
 export const revalidate = 300;
 
-const BASE_URL = 'https://travaillerenci.ci';
+const BASE_URL = getSiteUrl();
 
 interface PageProps {
   params: Promise<{ category: string }>;

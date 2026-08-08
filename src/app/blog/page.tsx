@@ -3,6 +3,7 @@ import { BlogService } from '@/services/blogService';
 import CoverImage from '@/components/content/CoverImage';
 import type { BlogPost } from '@/types/blog';
 import { formatDateShort } from '@/lib/utils';
+import { getSiteUrl } from '@/lib/site';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,21 @@ export const metadata = {
   title: 'Blog — TravaillerenCi',
   description:
     "Conseils emploi, actualités du marché du travail et coulisses de la plateforme : le blog TravaillerenCi pour réussir votre carrière en Côte d'Ivoire.",
+  openGraph: {
+    type: 'website',
+    locale: 'fr_CI',
+    url: `${getSiteUrl()}/blog`,
+    siteName: 'TravaillerenCi',
+    title: 'Blog — Conseils & actualités | TravaillerenCi',
+    description:
+      "Conseils emploi, actualités du marché du travail ivoirien et coulisses de la plateforme TravaillerenCi.",
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Blog — Conseils & actualités | TravaillerenCi',
+    description:
+      "Conseils emploi, actualités du marché du travail ivoirien et coulisses de la plateforme TravaillerenCi.",
+  },
 };
 
 function formatDate(iso: string | null) {

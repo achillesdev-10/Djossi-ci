@@ -17,6 +17,7 @@ import {
 } from '@/lib/examConstants';
 import { CATEGORY_SEO } from '@/lib/examSeo';
 import { cn, formatDate, truncate } from '@/lib/utils';
+import { getSiteUrl } from '@/lib/site';
 import type { Exam } from '@/types/exam';
 
 export const revalidate = 300;
@@ -25,7 +26,7 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-const BASE_URL = 'https://travaillerenci.ci';
+const BASE_URL = getSiteUrl();
 
 // Mots-clés emploi par catégorie de concours — pour le bloc « Offres liées »
 // (connexion concours ↔ emploi, uniquement quand les résultats sont publiés).

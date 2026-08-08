@@ -1,3 +1,5 @@
+import { getSiteUrl } from './site';
+
 const COUNTRIES: Record<string, string> = {
   CI: 'Côte d\'Ivoire',
 };
@@ -89,7 +91,8 @@ const REMOTE_OPTIONS: Array<{ value: string; label: string }> = [
 const SITE_CONFIG = {
   name: 'TravaillerenCi',
   description: 'Plateforme d\'offres d\'emploi en Côte d\'Ivoire',
-  url: 'https://travaillerenci.ci',
+  // Domaine actuel (vercel.app) — bascule via NEXT_PUBLIC_SITE_URL quand .ci sera actif.
+  url: getSiteUrl(),
   supportEmail: 'achillesdev10@gmail.com',
   // Pas de numéro de téléphone pour le moment.
   phone: '',

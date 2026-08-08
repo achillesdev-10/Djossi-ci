@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CarouselSlide } from '@/app/api/home/carousel/route';
+import type { CarouselSlide } from '@/lib/homeCarousel';
 
 const TYPE_LABEL: Record<CarouselSlide['type'], string> = {
   offre: 'Offre d\u2019emploi',
@@ -39,28 +39,16 @@ function SlideMedia({ slide }: { slide: CarouselSlide }) {
   );
 }
 
-export default function HomeCarousel() {
-  const [slides, setSlides] = useState<CarouselSlide[]>([]);
+/**
+ * Carrousel « À la une ». Les slides sont construites côté serveur
+ * (src/lib/homeCarousel.ts) et passées en props : le contenu est donc
+ * présent dans le HTML rendu par le serveur (SEO), ce composant ne gère
+ * plus que l'aspect interactif (défilement, flèches, indicateurs).
+ */
+export default function HomeCarousel({ slides }: { slides: CarouselSlide[] }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    fetch('/api/home/carousel', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : { slides: [] }))
-      .then((data) => {
-        if (mounted && Array.isArray(data.slides)) {
-          setSlides(data.slides);
-        }
-      })
-      .catch(() => {
-        if (mounted) setSlides([]);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   const go = useCallback(
     (next: number) => {
@@ -78,6 +66,10 @@ export default function HomeCarousel() {
     };
   }, [paused, slides.length, index, go]);
 
+  // Index borné : si la liste de slides change (revalidation ISR) et rétrécit,
+  // on évite qu'aucune slide ne soit active (index hors bornes).
+  const current = slides.length > 0 ? index % slides.length : 0;
+
   if (slides.length === 0) {
     return (
       <div className="w-full overflow-hidden rounded-2xl bg-primary shadow-lg h-56 sm:h-72">
@@ -89,7 +81,7 @@ export default function HomeCarousel() {
               <path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20Z" />
             </svg>
             <p className="mt-3 text-sm sm:text-base font-semibold">
-              Chargement des opportunités…
+              Aucune opportunité à la une pour le moment
             </p>
           </div>
         </div>
@@ -111,9 +103,9 @@ export default function HomeCarousel() {
           <div
             key={s.id}
             className={`absolute inset-0 transition-opacity duration-700 ${
-              i === index ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              i === current ? 'opacity-100 z-10' : 'opacity-0 z-0'
             }`}
-            aria-hidden={i !== index}
+            aria-hidden={i !== current}
           >
             <Link href={s.href} className="block h-full w-full">
               <SlideMedia slide={s} />
@@ -155,7 +147,7 @@ export default function HomeCarousel() {
         {slides.length > 1 && (
           <>
             <button
-              onClick={() => go(index - 1)}
+              onClick={() => go(current - 1)}
               aria-label="Slide précédente"
               className="absolute left-2 sm:left-4 top-1/2 z-20 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-lg opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white"
             >
@@ -165,7 +157,7 @@ export default function HomeCarousel() {
               </svg>
             </button>
             <button
-              onClick={() => go(index + 1)}
+              onClick={() => go(current + 1)}
               aria-label="Slide suivante"
               className="absolute right-2 sm:right-4 top-1/2 z-20 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-800 shadow-lg opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white"
             >
@@ -187,7 +179,7 @@ export default function HomeCarousel() {
               onClick={() => go(i)}
               aria-label={`Aller à la slide ${i + 1}`}
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/80'
+                i === current ? 'w-6 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/80'
               }`}
             />
           ))}

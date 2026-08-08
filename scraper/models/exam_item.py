@@ -16,6 +16,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from typing import List, Optional
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import BaseModel, Field
 
@@ -82,6 +83,146 @@ def compute_min_diploma_level(diplomas: List[str]) -> Optional[int]:
     return min(levels) if levels else None
 
 
+# -----------------------------------------------------------------------------
+# Normalisation des diplômes → valeurs canoniques du filtre front (DIPLOMA_FILTERS)
+# -----------------------------------------------------------------------------
+# Le filtre /concours?diploma=… fait une égalité EXACTE sur le tableau `diplomas`
+# (json_each côté SQLite, `contains` côté Supabase). Les variantes rencontrées
+# dans les communiqués (baccalauréat, BAC+3, BTS, DUT, Licence Pro, Maîtrise…)
+# doivent donc être ramenées à la valeur canonique du filtre.
+_DIPLOMA_ALIASES = {
+    "CEPE": "CEPE",
+    "BEPC": "BEPC",
+    "CAP": "CAP/BEP",
+    "CAP/BEP": "CAP/BEP",
+    "BEP": "CAP/BEP",
+    "BAC": "BAC",
+    "BTS": "BTS/DUT",
+    "BTS/DUT": "BTS/DUT",
+    "DUT": "BTS/DUT",
+    "DEUG": "DEUG",
+    "LICENCE": "LICENCE",
+    "LICENCE PRO": "LICENCE",
+    "LICENCE PROFESSIONNELLE": "LICENCE",
+    "MASTER": "MASTER",
+    "INGENIEUR": "INGENIEUR",
+    "DOCTORAT": "DOCTORAT",
+}
+
+# Variantes libres (baccalauréat, BAC+3, Maîtrise, PHD, CAP1/CAP2…) détectées par regex.
+_DIPLOMA_VARIANTS = [
+    (re.compile(r"^BACCALAUREAT$|^BACCALAURÉAT$", re.I), "BAC"),
+    (re.compile(r"^BACC?\s*\+\s*\d+$", re.I), "BAC"),
+    (re.compile(r"^MAITRISE$|^MAÎTRISE$", re.I), "MASTER"),
+    (re.compile(r"^PHD$|^PH\.?D$", re.I), "DOCTORAT"),
+    (re.compile(r"^CAP\s*[12]$", re.I), "CAP/BEP"),
+    (re.compile(r"^INGÉNIEUR$", re.I), "INGENIEUR"),
+]
+
+
+def normalize_diploma(raw: Optional[str]) -> Optional[str]:
+    """Ramène un diplôme brut à sa valeur canonique (filtre front), None si vide."""
+    if not raw:
+        return None
+    token = re.sub(r"\s+", " ", str(raw).strip().upper().replace("’", "'"))
+    if not token:
+        return None
+    if token in _DIPLOMA_ALIASES:
+        return _DIPLOMA_ALIASES[token]
+    for pat, canonical in _DIPLOMA_VARIANTS:
+        if pat.match(token):
+            return canonical
+    return token
+
+
+def normalize_diplomas(diplomas: List[str]) -> List[str]:
+    """Normalise + déduplique (ordre préservé) une liste de diplômes."""
+    out: List[str] = []
+    for d in diplomas:
+        n = normalize_diploma(d)
+        if n and n not in out:
+            out.append(n)
+    return out
+
+
+# -----------------------------------------------------------------------------
+# Normalisation / validation des URLs sources
+# -----------------------------------------------------------------------------
+# Paramètres de suivi à retirer : deux URLs ne différant que par un ?utm_…
+# désignent la même fiche et doivent être dédupliquées.
+_TRACKING_PARAMS = {
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+    "fbclid", "gclid", "ref", "ref_source", "source",
+}
+
+
+def normalize_source_url(url: Optional[str]) -> Optional[str]:
+    """URL source normalisée : minuscules, sans fragment ni paramètres de suivi."""
+    if not url:
+        return None
+    try:
+        parts = urlsplit(url.strip())
+    except ValueError:
+        return url.strip()
+    if parts.scheme.lower() not in ("http", "https") or not parts.hostname:
+        return url.strip()
+    query = parts.query
+    kept = [
+        (k, v) for k, v in parse_qsl(query, keep_blank_values=True)
+        if k.lower() not in _TRACKING_PARAMS
+    ]
+
+    return urlunsplit(
+        (
+            parts.scheme.lower(),
+            parts.netloc.lower(),
+            parts.path or "/",
+            urlencode(kept) if kept else "",
+            "",  # fragment toujours supprimé
+        )
+    )
+
+
+def url_hostname(url: Optional[str]) -> Optional[str]:
+    """Hôte (minuscules, sans port) d'une URL, None si invalide."""
+    if not url:
+        return None
+    try:
+        host = urlsplit(url).hostname
+    except ValueError:
+        return None
+    return host.lower() if host else None
+
+
+def validate_source_url(url: Optional[str]) -> tuple[bool, str]:
+    """Validation stricte d'une URL source : schéma http(s) + hôte valide."""
+    if not url:
+        return False, "source_url obligatoire"
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return False, "source_url invalide (non parsable)"
+    if parts.scheme.lower() not in ("http", "https"):
+        return False, f"source_url invalide (schéma « {parts.scheme or 'vide'} »)"
+    if not parts.hostname or "." not in parts.hostname:
+        return False, "source_url invalide (hôte absent)"
+    return True, "ok"
+
+
+def is_url_on_domain(url: Optional[str], allowed_domains: List[str]) -> bool:
+    """True si l'hôte de `url` appartient à l'un des domaines autorisés (ou sous-domaine)."""
+    host = url_hostname(url)
+    if not host:
+        return False
+    for domain in allowed_domains:
+        d = domain.strip().lower().lstrip(".")
+        if not d:
+            continue
+        if host == d or host.endswith("." + d):
+            return True
+    return False
+
+
 class ExamItem(BaseModel):
     """Un concours extrait d'une source officielle, avant validation BDD."""
 
@@ -123,8 +264,12 @@ class ExamItem(BaseModel):
         if self.exam_type and self.exam_type not in EXAM_TYPES:
             self.exam_type = None
         self.confidence = self.confidence if self.confidence in EXAM_CONFIDENCE else "medium"
-        self.diplomas = [str(d).strip().upper() for d in self.diplomas if str(d).strip()]
+        # Diplômes normalisés vers les valeurs canoniques du filtre front.
+        self.diplomas = normalize_diplomas(self.diplomas)
         self.min_diploma_level = compute_min_diploma_level(self.diplomas)
+        # URL source normalisée (minuscules, sans fragment ni paramètres de suivi)
+        # → la déduplication par source_url devient robuste.
+        self.source_url = normalize_source_url(self.source_url) or ""
 
     # ------------------------------------------------------------------
     def dedup_key(self) -> str:
@@ -144,6 +289,7 @@ class ExamItem(BaseModel):
             return False, "organisateur absent"
         if not self.description_md or len(self.description_md.strip()) < 25:
             return False, "description trop courte"
-        if not self.source_url:
-            return False, "source_url obligatoire"
+        ok, reason = validate_source_url(self.source_url)
+        if not ok:
+            return False, reason
         return True, "ok"

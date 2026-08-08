@@ -2,11 +2,27 @@ import Link from 'next/link';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
 import type { JobOfferSchema } from '@/types';
 import { formatDate, truncate } from '@/lib/utils';
+import { getSiteUrl } from '@/lib/site';
 
 export const metadata = {
   title: "Bourses d'études en Côte d'Ivoire",
   description:
     "Découvrez les bourses d'études disponibles en Côte d'Ivoire et à l'international pour financer votre parcours académique. Programme de bourses, aides financières, universités partenaires.",
+  openGraph: {
+    type: 'website',
+    locale: 'fr_CI',
+    url: `${getSiteUrl()}/bourses`,
+    siteName: 'TravaillerenCi',
+    title: "Bourses d'études en Côte d'Ivoire | TravaillerenCi",
+    description:
+      "Découvrez les bourses d'études en Côte d'Ivoire et à l'international : programme de bourses, aides financières et universités partenaires.",
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "Bourses d'études en Côte d'Ivoire | TravaillerenCi",
+    description:
+      "Bourses d'études en Côte d'Ivoire et à l'international : programme de bourses, aides financières et universités partenaires.",
+  },
 };
 
 export const dynamic = 'force-dynamic';

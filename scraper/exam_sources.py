@@ -37,7 +37,12 @@ from bs4 import BeautifulSoup
 from scraper.core.base_scraper import BaseScraper
 from scraper.core.logger import setup_logger
 from scraper.core.robots_check import check_robots
-from scraper.models.exam_item import ExamItem
+from scraper.models.exam_item import (
+    ExamItem,
+    is_url_on_domain,
+    url_hostname,
+    validate_source_url,
+)
 
 logger = setup_logger("exam_sources")
 
@@ -49,6 +54,22 @@ _DETAIL_HREF_RE = re.compile(
     re.I,
 )
 _PDF_RE = re.compile(r"\.pdf(?:[?#].*)?$", re.I)
+
+# Titres de pages génériques (navigation / recherche / accueil) à NE PAS
+# enregistrer comme concours — le pattern « Recherche — » du site ENA a déjà
+# produit une fiche parasite en production.
+_GENERIC_TITLE_RE = re.compile(
+    r"^(recherche|accueil|home|page d'accueil|bienvenue|contact|mentions|plan du site|sitemap|404|erreur)",
+    re.I,
+)
+
+
+def _is_generic_title(title: str) -> bool:
+    """True si le titre correspond à une page générique (jamais un concours)."""
+    if not title:
+        return True
+    t = title.strip()
+    return bool(_GENERIC_TITLE_RE.match(t))
 
 
 def load_sources_config() -> Dict:
@@ -90,14 +111,30 @@ def _extract_title(soup: BeautifulSoup) -> str:
     return ""
 
 
-def _collect_detail_links(soup: BeautifulSoup, base_url: str, extra_patterns: List[str] = None) -> List[str]:
+def _collect_detail_links(
+    soup: BeautifulSoup,
+    base_url: str,
+    extra_patterns: List[str] = None,
+    allowed_domains: List[str] = None,
+) -> List[str]:
+    """Liens de fiches candidates, restreints au(x) domaine(s) autorisé(s) de la source.
+
+    La validation de domaine évite les fiches parasites interdomaines — ex. le
+    scraper ENA suivait un lien « candidater » vers gucaci.ciconcours.com et
+    créait une fiche « CONCOURS ADMINISTRATIFS 2026 » avec organisateur ENA,
+    doublon de la fiche GUCACI officielle (source du doublon constaté en prod).
+    """
     links: List[str] = []
     for a in soup.find_all("a", href=True):
         href = a.get("href", "")
         if not href or href.startswith(("#", "javascript:", "mailto:")):
             continue
-        if _DETAIL_HREF_RE.search(href) or (extra_patterns and any(p in href for p in extra_patterns)):
-            links.append(urljoin(base_url, href))
+        if not (_DETAIL_HREF_RE.search(href) or (extra_patterns and any(p in href for p in extra_patterns))):
+            continue
+        link = urljoin(base_url, href)
+        if allowed_domains and not is_url_on_domain(link, allowed_domains):
+            continue
+        links.append(link)
     # Déduplication en conservant l'ordre.
     seen: set[str] = set()
     out: List[str] = []
@@ -106,6 +143,15 @@ def _collect_detail_links(soup: BeautifulSoup, base_url: str, extra_patterns: Li
             seen.add(link)
             out.append(link)
     return out
+
+
+def _allowed_domains(source_config: Dict) -> List[str]:
+    """Domaines autorisés pour une source : config explicite, sinon l'hôte de base_url."""
+    domains = source_config.get("allowed_domains")
+    if domains and isinstance(domains, list):
+        return [str(d).strip() for d in domains if str(d).strip()]
+    host = url_hostname(str(source_config.get("base_url", "")))
+    return [host] if host else []
 
 
 # ============================================================================
@@ -122,6 +168,7 @@ class CiconcoursPlatformScraper(BaseScraper):
         self.source_config = source_config
         self.base_url = str(source_config.get("base_url", "")).rstrip("/")
         self.source_label = str(source_config.get("name", self.name))
+        self.allowed_domains = _allowed_domains(source_config)
 
     def scrape(self, max_offers: int = 15) -> List[ExamItem]:
         self.logger.info(f"Scraping {self.source_label} -> {self.base_url}")
@@ -132,7 +179,7 @@ class CiconcoursPlatformScraper(BaseScraper):
             soup = self.get_soup(urljoin(f"{self.base_url}/", path.lstrip("/")))
             if soup is None:
                 continue
-            links.extend(_collect_detail_links(soup, self.base_url))
+            links.extend(_collect_detail_links(soup, self.base_url, allowed_domains=self.allowed_domains))
         self.logger.info(f"  [ciconcours] {len(links)} liens de fiches cumulés")
 
         for link in links[: max_offers * 3]:
@@ -146,9 +193,12 @@ class CiconcoursPlatformScraper(BaseScraper):
                 if len(text) < 60:
                     continue
                 title = _extract_title(soup)
-                if not title:
+                if not title or _is_generic_title(title):
                     continue
                 docs = _extract_documents(soup, link)
+                if self.allowed_domains and not is_url_on_domain(link, self.allowed_domains):
+                    self.logger.debug(f"  🚫 Lien hors domaine ignoré : {link}")
+                    continue
                 item = ExamItem(
                     title=title,
                     organizer=str(self.source_config.get("organizer", self.source_label)),
@@ -183,6 +233,7 @@ class ActualitesScraper(BaseScraper):
         self.source_config = source_config
         self.base_url = str(source_config.get("base_url", "")).rstrip("/")
         self.source_label = str(source_config.get("name", self.name))
+        self.allowed_domains = _allowed_domains(source_config)
 
     def scrape(self, max_offers: int = 15) -> List[ExamItem]:
         self.logger.info(f"Scraping {self.source_label} -> {self.base_url}")
@@ -193,7 +244,7 @@ class ActualitesScraper(BaseScraper):
             soup = self.get_soup(urljoin(f"{self.base_url}/", path.lstrip("/")))
             if soup is None:
                 continue
-            links.extend(_collect_detail_links(soup, self.base_url))
+            links.extend(_collect_detail_links(soup, self.base_url, allowed_domains=self.allowed_domains))
 
         for link in links[: max_offers * 3]:
             if len(items) >= max_offers:
@@ -210,7 +261,10 @@ class ActualitesScraper(BaseScraper):
                 if not any(k in probe for k in ("concours", "recrutement", "inscription", "examen", "communiqué", "communique", "résultat", "resultat")):
                     continue
                 title = _extract_title(soup)
-                if not title:
+                if not title or _is_generic_title(title):
+                    continue
+                if self.allowed_domains and not is_url_on_domain(link, self.allowed_domains):
+                    self.logger.debug(f"  🚫 Lien hors domaine ignoré : {link}")
                     continue
                 docs = _extract_documents(soup, link)
                 item = ExamItem(
@@ -247,6 +301,7 @@ class AipScraper(BaseScraper):
         self.source_config = source_config
         self.base_url = str(source_config.get("base_url", self.base_url)).rstrip("/")
         self.source_label = "AIP — Agence Ivoirienne de Presse"
+        self.allowed_domains = _allowed_domains(source_config)
 
     def scrape(self, max_offers: int = 15) -> List[ExamItem]:
         self.logger.info(f"Scraping AIP (veille) -> {self.base_url}")
@@ -257,7 +312,7 @@ class AipScraper(BaseScraper):
             soup = self.get_soup(urljoin(f"{self.base_url}/", path.lstrip("/")))
             if soup is None:
                 continue
-            links.extend(_collect_detail_links(soup, self.base_url, extra_patterns=["concours"]))
+            links.extend(_collect_detail_links(soup, self.base_url, extra_patterns=["concours"], allowed_domains=self.allowed_domains))
 
         for link in links[: max_offers * 3]:
             if len(items) >= max_offers:
@@ -272,7 +327,10 @@ class AipScraper(BaseScraper):
                 if not re.search(r"concours|recrutement|inscription", text[:2000], re.I):
                     continue
                 title = _extract_title(soup)
-                if not title:
+                if not title or _is_generic_title(title):
+                    continue
+                if self.allowed_domains and not is_url_on_domain(link, self.allowed_domains):
+                    self.logger.debug(f"  🚫 Lien hors domaine ignoré : {link}")
                     continue
                 item = ExamItem(
                     title=title,

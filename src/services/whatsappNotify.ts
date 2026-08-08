@@ -17,6 +17,7 @@
  *  Docs : https://developers.facebook.com/docs/whatsapp/cloud-api
  */
 import 'server-only';
+import { getSiteUrl } from '@/lib/site';
 import type { Exam } from '@/types/exam';
 
 const WHATSAPP_API_VERSION = 'v21.0';
@@ -44,7 +45,7 @@ function buildMessage(exam: Exam): string {
   }
   if (exam.diplomas.length > 0) lines.push(`🎓 Diplômes : ${exam.diplomas.join(', ')}`);
   // URL SEO : slug descriptif si disponible, sinon ID (legacy).
-  const url = `https://travaillerenci.ci/concours/${exam.slug || exam.id}`;
+  const url = `${getSiteUrl()}/concours/${exam.slug || exam.id}`;
   lines.push(`🔗 Voir la fiche : ${url}`);
   return lines.join('\n');
 }

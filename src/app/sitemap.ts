@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { getSiteUrl } from '@/lib/site';
 import { ExamService } from '@/services/examService';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
 import { BlogService } from '@/services/blogService';
@@ -7,7 +8,9 @@ import { EXAM_CATEGORIES } from '@/lib/examConstants';
 
 export const revalidate = 86400; // 24 h
 
-const BASE_URL = 'https://travaillerenci.ci';
+// Domaine actuel (vercel.app) — bascule sur travaillerenci.ci via
+// NEXT_PUBLIC_SITE_URL quand le domaine sera actif.
+const BASE_URL = getSiteUrl();
 
 const STATIC_ROUTES = [
   '',

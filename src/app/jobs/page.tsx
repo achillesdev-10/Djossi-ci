@@ -1,12 +1,29 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { JobOfferSchemaService } from '@/services/jobOfferSchemaService';
 import SearchBar from '@/components/jobs/SearchBar';
 import CompactJobCard from '@/components/home/CompactJobCard';
 import type { JobOfferSchema } from '@/types';
+import { getSiteUrl } from '@/lib/site';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Toutes les offres d\'emploi en Côte d\'Ivoire',
   description: 'Parcourez, filtrez et recherchez des milliers d\'offres d\'emploi, CDI, CDD et stages à Abidjan et partout en Côte d\'Ivoire sur TravaillerEnCi.',
+  openGraph: {
+    type: 'website',
+    locale: 'fr_CI',
+    url: `${getSiteUrl()}/jobs`,
+    siteName: 'TravaillerenCi',
+    title: 'Toutes les offres d\'emploi en Côte d\'Ivoire | TravaillerenCi',
+    description:
+      'CDI, CDD et stages à Abidjan et partout en Côte d\'Ivoire : parcourez les offres vérifiées TravaillerEnCi.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Toutes les offres d\'emploi en Côte d\'Ivoire | TravaillerenCi',
+    description:
+      'CDI, CDD et stages à Abidjan et partout en Côte d\'Ivoire : parcourez les offres vérifiées TravaillerEnCi.',
+  },
 };
 
 interface JobsPageProps {

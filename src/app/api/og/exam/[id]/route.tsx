@@ -9,6 +9,7 @@
 import { ImageResponse } from 'next/og';
 import { ExamService } from '@/services/examService';
 import { EXAM_CATEGORY_LABEL, EXAM_PHASE_LABEL, examPhase } from '@/lib/examConstants';
+import { getSiteHostname } from '@/lib/site';
 import type { Exam } from '@/types/exam';
 
 export const runtime = 'nodejs';
@@ -191,7 +192,7 @@ function OgCard({ exam, fontFamily }: { exam: Exam | null; fontFamily?: string }
           paddingTop: 24,
         }}
       >
-        <span>travaillerenci.ci</span>
+        <span>{getSiteHostname()}</span>
         <span>{deadlineLabel}</span>
       </div>
     </div>

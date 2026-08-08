@@ -7,18 +7,16 @@ import 'server-only';
  *  Configuration :
  *    RESEND_API_KEY          — clé API (https://resend.com/api-keys)
  *    EMAIL_FROM              — expéditeur vérifié (défaut : TravaillerEnCi <noreply@travaillerenci.ci>)
- *    NEXT_PUBLIC_SITE_URL    — URL publique du site (défaut : https://travaillerenci.ci)
+ *    NEXT_PUBLIC_SITE_URL    — URL publique du site (défaut : https://travaillerenci.vercel.app)
  */
+
+// URL publique du site — centralisée dans src/lib/site.ts (NEXT_PUBLIC_SITE_URL
+// prioritaire, repli sur le domaine Vercel actuel tant que .ci est inactif).
+import { getSiteUrl } from '@/lib/site';
+export { getSiteUrl };
 
 export function isEmailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY);
-}
-
-/** URL publique du site (dev → localhost, prod → domaine). */
-export function getSiteUrl(): string {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
-  if (process.env.NODE_ENV === 'development') return 'http://localhost:3000';
-  return 'https://travaillerenci.ci';
 }
 
 interface ResendPayload {

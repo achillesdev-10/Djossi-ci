@@ -333,9 +333,13 @@ def run_maintenance() -> int:
         logger.error(f"❌ Maintenance (offres) impossible : {exc}", exc_info=True)
         return 1
 
+    exam_auto_published = 0
     exam_purged = 0
     try:
         with ExamRepository(DB_PATH) as exam_repo:
+            # Publication automatique des concours en attente ≥ 21 min
+            # (même règle que les offres : l'admin garde la main au début).
+            exam_auto_published = exam_repo.auto_publish_pending()
             exam_purged = exam_repo.purge_old_exams()
     except Exception as exc:
         logger.error(f"❌ Maintenance (concours) impossible : {exc}", exc_info=True)
@@ -347,9 +351,11 @@ def run_maintenance() -> int:
         logger.info(f"🗑  {purged_old} offre(s) supprimée(s) automatiquement (plus de 21 jours).")
     if expired:
         logger.info(f"⏰ {expired} contenu(s) expiré(s) (deadline dépassée).")
+    if exam_auto_published:
+        logger.info(f"⚡ {exam_auto_published} concours en attente publié(s) automatiquement (≥ 21 min).")
     if exam_purged:
         logger.info(f"🗑  {exam_purged} concours supprimé(s) automatiquement (info > 5 semaines).")
-    if not (auto_published or purged_old or expired or exam_purged):
+    if not (auto_published or purged_old or expired or exam_auto_published or exam_purged):
         logger.info("Maintenance : rien à faire (aucun contenu éligible).")
     return 0
 

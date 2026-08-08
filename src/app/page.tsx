@@ -10,6 +10,8 @@ import NewsTicker, { type TickerItem } from '@/components/home/NewsTicker';
 import HomeCarousel from '@/components/home/HomeCarousel';
 import PollWidget from '@/components/home/PollWidget';
 import OffersGrid from '@/components/home/OffersGrid';
+import { buildCarouselSlides } from '@/lib/homeCarousel';
+import { getSiteUrl } from '@/lib/site';
 
 export const revalidate = 60;
 
@@ -128,6 +130,19 @@ export default async function HomePage({
   const { rows: jobsList, total } = jobs;
   const totalKnown = Math.max(total, jobsList.length);
 
+  // Carrousel « À la une » construit CÔTÉ SERVEUR : les titres des opportunités
+  // sont ainsi présents dans le HTML brut (SEO / partage), au lieu d'un
+  // « Chargement des opportunités… » côté client. On réutilise les données déjà
+  // chargées ci-dessus (offres du fil actu, concours, blog) pour éviter des
+  // requêtes redondantes — sauf en cas de recherche active, où le carrousel
+  // doit rester sur les dernières opportunités publiées (re-fetch ciblé).
+  const carousel = await buildCarouselSlides({
+    withOgImages: false,
+    offers: keyword || location || contract ? undefined : (jobsList as JobOfferSchema[]),
+    exams: examRows.rows,
+    posts: blogRows.rows,
+  });
+
   const tickerItems: TickerItem[] = [
     ...jobsList.slice(0, 5).map((job) => ({
       id: `job-${job.id}`,
@@ -160,7 +175,7 @@ export default async function HomePage({
     '@type': 'WebSite',
     name: 'TravaillerenCi',
     alternateName: 'TravaillerEnCi',
-    url: 'https://travaillerenci.ci',
+    url: getSiteUrl(),
     inLanguage: 'fr-CI',
     description:
       "Plateforme d'offres d'emploi, de stages, de bourses et de concours administratifs en Côte d'Ivoire.",
@@ -168,7 +183,7 @@ export default async function HomePage({
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://travaillerenci.ci/jobs?q={search_term_string}',
+        urlTemplate: `${getSiteUrl()}/jobs?q={search_term_string}`,
       },
       'query-input': 'required name=search_term_string',
     },
@@ -282,7 +297,7 @@ export default async function HomePage({
               actionHref="/jobs"
               actionLabel="Tout voir"
             />
-            <HomeCarousel />
+            <HomeCarousel slides={carousel.slides} />
           </div>
           <div className="animate-fade-in-up" style={{ animationDelay: '120ms' }}>
             <PollWidget />

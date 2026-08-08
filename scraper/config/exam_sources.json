@@ -24,7 +24,8 @@
       "category": "administratif",
       "robots_status": "non-standard",
       "verified_at": "2026-08",
-      "notes": "robots.txt renvoie une réponse XML (pare-feu secure.sndi.ci) — scraping possible en lecture simple. Communiqués sur la page d'accueil et la section « À la une ». Les inscriptions passent par GUCACI.",
+      "allowed_domains": ["fonctionpublique.gouv.ci"],
+      "notes": "robots.txt renvoie une réponse XML (pare-feu secure.sndi.ci) — scraping possible en lecture simple. Communiqués sur la page d'accueil et la section « À la une ». Les inscriptions passent par GUCACI (fiches gucaci.ciconcours.com ignorées ici).",
       "enabled": true
     },
     {
@@ -37,7 +38,8 @@
       "category": "administratif",
       "robots_status": "ok",
       "verified_at": "2026-08",
-      "notes": "robots.txt standard, sitemap présent. Concours direct/professionnel (cycles Moyen, Moyen Supérieur, Supérieur), résultats, actualités. Inscriptions via la plateforme unifiée.",
+      "allowed_domains": ["ena.ci"],
+      "notes": "robots.txt standard, sitemap présent. Concours direct/professionnel (cycles Moyen, Moyen Supérieur, Supérieur), résultats, actualités. Inscriptions via la plateforme unifiée (les liens vers gucaci.ciconcours.com sont ignorés : la fiche est déjà collectée par la source gucaci).",
       "enabled": true
     },
     {

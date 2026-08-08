@@ -49,11 +49,17 @@ FRENCH_MONTHS = {
     "septembre": 9, "octobre": 10, "novembre": 11, "décembre": 12, "decembre": 12,
 }
 
-# Expressions fréquentes de diplômes ivoiriens.
+# Expressions fréquentes de diplômes ivoiriens — ordre décroissant de
+# spécificité (les variantes longues d'abord, sinon « BAC » masquerait
+# « BACCALAUREAT » et « BTS » masquerait « BTS/DUT »).
 _DIPLOMA_PATTERNS = [
-    r"CEPE", r"BEPC", r"CAP/BEP", r"CAP\b", r"BEP\b", r"BAC", r"BTS/DUT",
-    r"BTS\b", r"DUT\b", r"DEUG", r"LICENCE\s+PRO", r"LICENCE", r"MASTER",
-    r"INGENIEUR", r"DOCTORAT",
+    r"BACCALAURÉAT", r"BACCALAUREAT", r"BACC\s*\+\s*\d+", r"BAC\s*\+\s*\d+",
+    r"MAÎTRISE", r"MAITRISE", r"PHD", r"PH\.?D",
+    r"LICENCE\s+PROFESSIONNELLE", r"LICENCE\s+PRO", r"LICENCE",
+    r"DOCTORAT", r"INGÉNIEUR", r"INGENIEUR",
+    r"CAP/BEP", r"CAP\s*[12]\b", r"CAP\b", r"BEP\b",
+    r"BTS/DUT", r"BTS\b", r"DUT\b", r"DEUG",
+    r"BAC", r"BEPC", r"CEPE",
 ]
 
 _DATE_TOKEN_RE = re.compile(
@@ -138,11 +144,14 @@ def _nationality(text: str) -> Optional[str]:
 
 
 def _diplomas(text: str) -> List[str]:
+    """Diplômes cités dans un communiqué, normalisés vers les valeurs canoniques du filtre front."""
+    from scraper.models.exam_item import normalize_diploma
+
     found: List[str] = []
     for pat in _DIPLOMA_PATTERNS:
-        if re.search(rf"\b{pat}\b", text, re.I):
-            norm = pat.replace(r"\b", "")
-            if norm not in found:
+        for m in re.finditer(rf"\b{pat}\b", text, re.I):
+            norm = normalize_diploma(m.group(0))
+            if norm and norm not in found:
                 found.append(norm)
     return found
 

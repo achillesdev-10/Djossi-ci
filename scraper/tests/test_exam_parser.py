@@ -39,6 +39,8 @@ from scraper.models.exam_item import (  # noqa: E402
     ExamItem,
     compute_min_diploma_level,
     diploma_level,
+    normalize_diploma,
+    normalize_diplomas,
 )
 
 # ---------------------------------------------------------------------------
@@ -144,7 +146,8 @@ def test_communique_infas():
     assert fields["category"] == "sante"
     assert fields["registration_start"] == datetime(2026, 8, 20)
     assert fields["registration_end"] == datetime(2026, 9, 20)
-    assert "BAC" in fields["diplomas"] and "BTS" in fields["diplomas"]
+    # Normalisation : « BTS » est ramené à la valeur canonique du filtre « BTS/DUT ».
+    assert "BAC" in fields["diplomas"] and "BTS/DUT" in fields["diplomas"]
     assert fields["positions_count"] == 4
 
 
@@ -182,11 +185,62 @@ def test_exam_item_normalization():
         diplomas=["bac", "Licence Pro"],
         category="administratif",
     )
-    assert item.diplomas == ["BAC", "LICENCE PRO"]
+    # « Licence Pro » → valeur canonique « LICENCE » (filtre exact front).
+    assert item.diplomas == ["BAC", "LICENCE"]
     assert item.min_diploma_level == 4
     assert item.confidence == "medium"
     ok, _ = item.is_valid()
     assert ok
+
+
+def test_diploma_variants_normalization():
+    """Les variantes (baccalauréat, BAC+3, BTS, DUT…) → valeurs canoniques du filtre."""
+    text = (
+        "Peuvent postuler les titulaires d'un baccalauréat (BAC+3 minimum), "
+        "d'un BTS, d'un DUT ou d'une maîtrise ainsi que les titulaires du CAP "
+        "et du BEP. Les docteurs (PhD) sont aussi éligibles."
+    )
+    fields = parse_communique(text, default_organizer="Test")
+    diplomas = fields["diplomas"]
+    assert "BAC" in diplomas, diplomas
+    assert "BTS/DUT" in diplomas, diplomas  # BTS et DUT fusionnés
+    assert "MASTER" in diplomas, diplomas  # maîtrise → MASTER
+    assert "CAP/BEP" in diplomas, diplomas  # CAP et BEP fusionnés
+    assert "DOCTORAT" in diplomas, diplomas  # PhD → DOCTORAT
+    assert diplomas == list(dict.fromkeys(diplomas)), "pas de doublon dans la liste"
+
+
+def test_cap1_cap2_detected():
+    """« CAP1 » / « CAP2 » (fréquents dans les communiqués ivoiriens) → CAP/BEP."""
+    from scraper.core.exam_parser import _diplomas
+
+    assert _diplomas("titulaires du CAP1 ou du CAP2") == ["CAP/BEP"]
+    assert "CAP/BEP" in _diplomas("cap1, cap2 ou BEPC")
+
+
+def test_source_url_validation():
+    """La validation source_url rejette les URLs invalides / non-http(s)."""
+    from scraper.models.exam_item import validate_source_url
+
+    ok, _ = validate_source_url("https://www.ena.ci/concours")
+    assert ok
+    ok, reason = validate_source_url("javascript:alert(1)")
+    assert not ok and "schéma" in reason
+    ok, reason = validate_source_url("ftp://ena.ci/concours")
+    assert not ok
+    ok, reason = validate_source_url("")
+    assert not ok
+    ok, reason = validate_source_url("/chemin/relatif")
+    assert not ok
+
+    item = ExamItem(
+        title="Concours test",
+        organizer="ENA",
+        description_md="Description assez longue pour passer la validation du modele.",
+        source_url="mailto:test@ena.ci",
+    )
+    ok, _ = item.is_valid()
+    assert not ok, "une source_url mailto: doit être rejetée"
 
 
 if __name__ == "__main__":

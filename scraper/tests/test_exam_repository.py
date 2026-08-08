@@ -107,6 +107,91 @@ def test_two_distinct_exams():
             assert count == 2
 
 
+def test_dedup_title_case_insensitive():
+    """« CONCOURS ADMINISTRATIFS 2026 » et « concours administratifs 2026 » = même fiche,
+    même si les URLs diffèrent (règle 2 : titre + organisateur + domaine, insensibles à la casse)."""
+    with tempfile.TemporaryDirectory() as td:
+        with ExamRepository(Path(td) / "test.sqlite3") as repo:
+            id1, is_new = repo.upsert(
+                make_item("https://gucaci.ciconcours.com/concours-2026", "CONCOURS ADMINISTRATIFS 2026")
+            )
+            assert is_new is True
+            id2, is_new = repo.upsert(
+                make_item("https://gucaci.ciconcours.com/concours-2026/ena", "concours administratifs 2026")
+            )
+            assert is_new is False, "intitulé identique (casse différente) = mise à jour"
+            assert id2 == id1
+            count = repo.conn.execute("SELECT COUNT(*) AS n FROM exams").fetchone()["n"]
+            assert count == 1
+
+
+def test_url_tracking_params_normalized():
+    """Deux URLs ne différant que par un paramètre de suivi = même fiche (règle 1)."""
+    with tempfile.TemporaryDirectory() as td:
+        with ExamRepository(Path(td) / "test.sqlite3") as repo:
+            url = "https://gucaci.ciconcours.com/concours-2026"
+            id1, _ = repo.upsert(make_item(url, "Concours tracking"))
+            id2, is_new = repo.upsert(make_item(url + "?utm_source=x&ref=y", "Concours tracking"))
+            assert is_new is False
+            assert id2 == id1
+            count = repo.conn.execute("SELECT COUNT(*) AS n FROM exams").fetchone()["n"]
+            assert count == 1
+
+
+def test_dedup_title_same_domain_keeps_most_specific_url():
+    """Deux sources scrapant le même intitulé sur le même domaine : une seule fiche,
+    et l'URL de détail gagne face à la page d'accueil (cas du doublon constaté en prod)."""
+    with tempfile.TemporaryDirectory() as td:
+        with ExamRepository(Path(td) / "test.sqlite3") as repo:
+            detail_url = "https://gucaci.ciconcours.com/comment-sinscrire/procedure/ena-professionnels"
+            home_url = "https://gucaci.ciconcours.com/"
+            id_detail, _ = repo.upsert(
+                make_item(detail_url, "CONCOURS ADMINISTRATIFS 2026")
+            )
+            # Autre source (ex. ENA) scrapant la page d'accueil GUCACI : même
+            # intitulé, même domaine, mais organisateur DIFFÉRENT → règle 3.
+            item_ena = make_item(home_url, "CONCOURS ADMINISTRATIFS 2026")
+            item_ena.organizer = "École Nationale d'Administration (ENA)"
+            id_home, is_new = repo.upsert(item_ena)
+            assert is_new is False, "intitulé identique sur le même domaine = dédup"
+            assert id_home == id_detail
+            row = repo.conn.execute(
+                "SELECT source_url, organizer FROM exams WHERE id = ?", (id_detail,)
+            ).fetchone()
+            assert row["source_url"] == detail_url, "l'URL de détail doit être conservée"
+            assert row["organizer"] == "ENA Test", "l'organisateur de la fiche en place ne doit pas être écrasé"
+            count = repo.conn.execute("SELECT COUNT(*) AS n FROM exams").fetchone()["n"]
+            assert count == 1
+
+
+def test_id_never_null_on_insert():
+    """Régression : l'INSERT génère un UUID explicite — plus jamais de ligne id NULL."""
+    with tempfile.TemporaryDirectory() as td:
+        with ExamRepository(Path(td) / "test.sqlite3") as repo:
+            exam_id, _ = repo.upsert(make_item("https://example.com/concours-id", "Concours ID"))
+            assert exam_id, "l'id doit être non vide"
+            row = repo.conn.execute(
+                "SELECT id FROM exams WHERE id = ?", (exam_id,)
+            ).fetchone()
+            assert row is not None and row["id"], "l'id doit exister en base"
+
+
+def test_source_url_normalized_on_insert():
+    """Les URLs sources sont stockées normalisées (hôte minuscules, sans fragment/tracking)."""
+    with tempfile.TemporaryDirectory() as td:
+        with ExamRepository(Path(td) / "test.sqlite3") as repo:
+            exam_id, _ = repo.upsert(
+                make_item(
+                    "https://GUCACI.ciconcours.com/Concours-2026?utm_source=news&ref=x#section",
+                    "Concours normalisé",
+                )
+            )
+            row = repo.conn.execute(
+                "SELECT source_url FROM exams WHERE id = ?", (exam_id,)
+            ).fetchone()
+            assert row["source_url"] == "https://gucaci.ciconcours.com/Concours-2026", row["source_url"]
+
+
 if __name__ == "__main__":
     import traceback
 

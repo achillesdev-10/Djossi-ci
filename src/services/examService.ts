@@ -613,12 +613,75 @@ export class ExamService {
     try {
       const nowIso = new Date().toISOString();
       const cutoff = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000).toISOString();
+      // julianday() : la colonne created_at mêle « YYYY-MM-DD HH:MM:SS »
+      // (défaut SQLite) et ISO avec « T » (écritures Node/Python) — une
+      // comparaison lexicographique directe serait faussée.
       const result = db
         .prepare(
           `DELETE FROM exams
-           WHERE created_at < $cutoff AND (registration_end IS NULL OR registration_end < $now)`,
+           WHERE julianday(created_at) < julianday($cutoff)
+             AND (registration_end IS NULL OR julianday(registration_end) < julianday($now))`,
         )
         .run({ $cutoff: cutoff, $now: nowIso });
+      return result.changes || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Publication automatique des concours en attente depuis plus de
+   * `maxAgeMinutes` (défaut : 21 min — miroir des offres).
+   *
+   * Cause racine historique du « 0 concours recensé » : les concours
+   * collectés par le scraper restaient en statut `pending` pour toujours,
+   * faute de modération automatique (seules les offres en bénéficiaient).
+   * Exécutée à chaque chargement du dashboard exams (comme pour les offres)
+   * et par la maintenance CI (scraper.py --maintenance-only).
+   */
+  static async autoPublishPending(maxAgeMinutes: number = 21): Promise<number> {
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      if (!supabase) return 0;
+      try {
+        const cutoff = new Date(Date.now() - maxAgeMinutes * 60 * 1000).toISOString();
+        const { data, error } = await supabase
+          .from('exams')
+          .update({
+            status: 'published',
+            is_verified: true,
+            published_at: new Date().toISOString(),
+          })
+          .eq('status', 'pending')
+          .lt('created_at', cutoff)
+          .select('id');
+        if (error) {
+          console.error('ExamService.autoPublishPending error:', error.message);
+          return 0;
+        }
+        return data?.length ?? 0;
+      } catch {
+        return 0;
+      }
+    }
+    const db = await getDb();
+    if (!db) return 0;
+    try {
+      const cutoff = new Date(Date.now() - maxAgeMinutes * 60 * 1000).toISOString();
+      // julianday() : la colonne created_at mêle « YYYY-MM-DD HH:MM:SS »
+      // (défaut SQLite) et ISO avec « T » (écritures Node/Python) — une
+      // comparaison lexicographique directe serait faussée.
+      const result = db
+        .prepare(
+          `UPDATE exams
+           SET status = 'published',
+               is_verified = 1,
+               published_at = COALESCE(published_at, datetime('now')),
+               updated_at = datetime('now')
+           WHERE status = 'pending'
+             AND julianday(created_at) < julianday($cutoff)`,
+        )
+        .run({ $cutoff: cutoff });
       return result.changes || 0;
     } catch {
       return 0;

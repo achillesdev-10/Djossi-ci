@@ -150,7 +150,7 @@ export const EXAM_PHASE_BADGE: Record<ExamPhase, string> = {
 /**
  * URL publique d'une fiche concours — slug SEO descriptif si disponible,
  * sinon repli sur l'ID (enregistrements legacy sans slug).
- * Convention : `https://travaillerenci.ci${examUrl(exam)}`.
+ * Convention : `${getSiteUrl()}${examUrl(exam)}` (voir src/lib/site.ts).
  */
 export function examUrl(exam: { slug?: string | null; id: string }): string {
   return exam.slug ? `/concours/${exam.slug}` : `/concours/${exam.id}`;

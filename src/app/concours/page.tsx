@@ -13,6 +13,7 @@ import {
   examPhase,
 } from '@/lib/examConstants';
 import { DIPLOMA_SEO } from '@/lib/examSeo';
+import { getSiteUrl } from '@/lib/site';
 import type { ExamPhase } from '@/types/exam';
 import { cn } from '@/lib/utils';
 
@@ -34,6 +35,8 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'fr_CI',
+    url: `${getSiteUrl()}/concours`,
+    siteName: 'TravaillerenCi',
     title: 'Concours administratifs en Côte d’Ivoire | TravaillerEnCi',
     description:
       'Tous les concours de la fonction publique ivoirienne centralisés : dates d’inscription, conditions d’éligibilité et liens officiels.',

@@ -33,7 +33,7 @@ from typing import Any, Dict, Optional
 
 import httpx
 
-from scraper.models.exam_item import ExamItem
+from scraper.models.exam_item import ExamItem, normalize_diplomas
 from scraper.core.exam_parser import confidence_from_gaps, parse_communique
 from scraper.core.logger import setup_logger
 
@@ -251,6 +251,8 @@ class ExamGeminiEnricher:
             diplomas = [str(d).strip().upper() for d in diplomas if str(d).strip()]
         else:
             diplomas = item.diplomas
+        # Normalisation vers les valeurs canoniques du filtre front (BAC+3 → BAC…).
+        diplomas = normalize_diplomas(diplomas)
 
         cities = parsed.get("cities")
         if isinstance(cities, str):
@@ -328,7 +330,7 @@ class ExamGeminiEnricher:
         if fields.get("nationality"):
             item.nationality = str(fields["nationality"])
         if fields.get("diplomas"):
-            item.diplomas = [str(d).upper() for d in fields["diplomas"]]  # type: ignore[union-attr]
+            item.diplomas = normalize_diplomas([str(d) for d in fields["diplomas"]])  # type: ignore[union-attr]
         if fields.get("registration_fee"):
             item.registration_fee = str(fields["registration_fee"])
         if fields.get("positions_count"):
