@@ -255,12 +255,12 @@ export default function CVGeneratorPage() {
                 )}
               </div>
             </div>
-            <div className="relative hidden lg:block h-44 w-60 shrink-0">
+            <div className="relative mx-auto h-32 w-52 shrink-0 lg:mx-0 lg:h-44 lg:w-60">
               <NextImage
                 src="/illustrations/resume-folder.svg"
                 alt="Illustration d'un dossier de CV posé sur un bureau, prêt à être envoyé"
                 fill
-                sizes="15rem"
+                sizes="(min-width: 1024px) 15rem, 13rem"
                 className="object-contain drop-shadow-lg"
               />
             </div>
