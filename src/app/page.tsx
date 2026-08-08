@@ -216,7 +216,7 @@ export default async function HomePage({
               <h1 className="text-[28px] leading-[1.15] sm:text-4xl lg:text-[44px] xl:text-5xl font-extrabold mb-3 sm:mb-5 font-[var(--font-display)] text-gray-900 dark:text-white">
                 Travailleren<span className="text-primary">Ci</span>
                 <span className="block text-gray-800 dark:text-gray-200 text-[22px] sm:text-3xl lg:text-[32px] mt-1 sm:mt-2">
-                  Trouvez un job qui <span className="text-gradient-primary">vaut le coup</span>
+                  Trouvez un job qui <span className="text-primary">vaut le coup</span>
                 </span>
               </h1>
 

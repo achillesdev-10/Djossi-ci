@@ -222,9 +222,7 @@ export default function CVGeneratorPage() {
               </div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-gray-900 dark:text-white font-[var(--font-display)]">
                 Générateur de CV IA —{' '}
-                <span className="bg-gradient-to-r from-primary to-emerald-500 bg-clip-text text-transparent">
-                  travaillerenci
-                </span>
+                <span className="text-primary">travaillerenci</span>
               </h1>
               <p className="mt-3 text-gray-600 dark:text-gray-300 text-base md:text-lg leading-relaxed">
                 Créez un CV professionnel en quelques minutes. Optimisez votre contenu avec l'IA

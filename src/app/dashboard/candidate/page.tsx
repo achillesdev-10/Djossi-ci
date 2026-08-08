@@ -115,7 +115,7 @@ export default function CandidateDashboardPage() {
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 text-gray-900 dark:text-slate-50 transition-colors">
       {/* Alerte : compte migré sans mot de passe → définir un mot de passe */}
       {user?.needs_password_reset ? (
-        <div className="rounded-3xl border border-orange-500/40 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-slate-900 dark:to-slate-900 dark:border-orange-500/30 p-6 lg:p-8 shadow-xl flex flex-col lg:flex-row gap-8">
+        <div className="rounded-3xl border border-orange-500/40 bg-orange-50 dark:bg-slate-900 dark:border-orange-500/30 p-6 lg:p-8 shadow-xl flex flex-col lg:flex-row gap-8">
           <div className="flex-1">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/10 px-3 py-1 text-[11px] font-bold text-orange-600 dark:text-orange-400 border border-orange-500/30 mb-4">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -144,23 +144,34 @@ export default function CandidateDashboardPage() {
       ) : null}
 
       {/* Bannière de bienvenue */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-emerald-600 to-accent text-white p-6 sm:p-8 shadow-2xl shadow-primary/20">
-        <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-orange-400/30 blur-3xl" aria-hidden="true" />
-        <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-emerald-300/20 blur-3xl" aria-hidden="true" />
-        <div className="relative">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold border border-white/20 backdrop-blur-sm mb-4">
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2-6.3-4.6-6.3 4.6L8 13.8 2 9.2h7.6z" />
-            </svg>
-            Membre TravaillerEnCi
-          </span>
-          <h1 className="text-2xl lg:text-3xl font-black font-[var(--font-display)] mb-2">
-            {hydrated && firstName ? `Bienvenue, ${firstName} !` : 'Bienvenue sur votre espace !'}
-          </h1>
-          <p className="text-white/85 text-sm sm:text-base max-w-xl">
-            Votre compte est créé. Découvrez tous les avantages de votre adhésion gratuite et
-            lancez votre recherche d’emploi dès maintenant.
-          </p>
+      <div className="relative overflow-hidden rounded-3xl bg-primary text-white p-6 sm:p-8 lg:p-10 shadow-2xl shadow-primary/20">
+        <div className="pointer-events-none absolute -top-24 -right-10 h-64 w-64 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
+        <div className="flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-10 relative z-10">
+          <div className="flex-1 text-center lg:text-left">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold border border-white/20 backdrop-blur-sm mb-4">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2-6.3-4.6-6.3 4.6L8 13.8 2 9.2h7.6z" />
+              </svg>
+              Membre TravaillerEnCi
+            </span>
+            <h1 className="text-2xl lg:text-3xl font-black font-[var(--font-display)] mb-2">
+              {hydrated && firstName ? `Bienvenue, ${firstName} !` : 'Bienvenue sur votre espace !'}
+            </h1>
+            <p className="text-white/85 text-sm sm:text-base max-w-xl mx-auto lg:mx-0">
+              Votre compte est créé. Découvrez tous les avantages de votre adhésion gratuite et
+              lancez votre recherche d’emploi dès maintenant.
+            </p>
+          </div>
+          <div className="shrink-0 w-44 sm:w-56 lg:w-72 mx-auto lg:mx-0 animate-float">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/hero-illustration.svg"
+              alt="Illustration : offres vérifiées et recherche d'emploi en Côte d'Ivoire"
+              width={520}
+              height={445}
+              className="w-full h-auto drop-shadow-2xl"
+            />
+          </div>
         </div>
       </div>
 

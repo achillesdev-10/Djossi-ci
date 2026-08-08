@@ -108,7 +108,7 @@ export default function CandidatesPage() {
             </span>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-black font-[var(--font-display)] tracking-tight mb-6">
               Votre carrière{' '}
-              <span className="text-gradient-tricolor">commence ici</span>
+              <span className="text-secondary">commence ici</span>
             </h1>
             <p className="text-lg md:text-xl text-gray-600 dark:text-slate-400 mb-8 max-w-2xl">
               Rejoignez des milliers de candidats qui trouvent chaque jour un emploi, un stage,

@@ -7,6 +7,7 @@ import { useDarkMode } from '@/hooks/useDarkMode';
 import { fetchCurrentUser, logoutCurrentUser, type StoredUser } from '@/lib/clientAuth';
 
 const NAV_LINKS = [
+  { label: 'Accueil', href: '/' },
   { label: 'Offres d\'emploi', href: '/jobs' },
   { label: 'Entreprises', href: '/companies' },
   { label: 'Candidats', href: '/candidates' },
