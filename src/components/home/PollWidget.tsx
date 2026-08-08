@@ -95,10 +95,10 @@ export default function PollWidget() {
   return (
     <section
       aria-label="Sondage"
-      className="rounded-2xl sm:rounded-3xl border border-orange-100 bg-gradient-to-b from-white to-orange-50/60 p-5 sm:p-6 shadow-sm dark:from-slate-900 dark:to-slate-900 dark:border-slate-800"
+      className="rounded-2xl sm:rounded-3xl border border-orange-100 bg-white p-5 sm:p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800"
     >
       <div className="mb-4 flex items-center gap-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/30">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500 text-white shadow-md shadow-orange-500/30">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
             <path d="M10 12.5 8.5 14a2 2 0 1 1-3-3L8 8.5a2 2 0 0 1 2.8 0l1.2 1.2" />
             <path d="M14 11.5l1.5-1.5a2 2 0 1 1 3 3l-2.5 2.5a2 2 0 0 1-2.8 0l-1.2-1.2" />
@@ -160,7 +160,7 @@ export default function PollWidget() {
                       }`}
                     >
                       <div
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/15 to-orange-400/15 transition-all duration-700"
+                        className="absolute inset-y-0 left-0 bg-primary/10 transition-all duration-700"
                         style={{ width: `${pct}%` }}
                       />
                       <div className="relative flex items-center justify-between gap-2 text-[13px]">

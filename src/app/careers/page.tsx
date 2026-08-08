@@ -80,13 +80,9 @@ const OPPORTUNITIES = [
 
 export default function CareersPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white to-gray-50/70 dark:from-slate-950 dark:to-slate-900">
+    <main className="min-h-screen bg-gray-50 dark:bg-slate-950">
       {/* ===== En-tête ===== */}
-      <section className="relative overflow-hidden border-b border-border/40 bg-gradient-to-br from-primary/8 via-white to-accent/8 dark:from-primary/10 dark:via-slate-950 dark:to-accent/10">
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-primary)_0%,_transparent_55%)] opacity-20 dark:opacity-10"
-        />
+      <section className="relative overflow-hidden border-b border-border/40 bg-primary/5 dark:bg-primary/10">
         <div className="container mx-auto px-4 py-14 sm:py-20 relative z-10 max-w-4xl text-center">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary dark:text-emerald-400 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold mb-5">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
@@ -185,7 +181,7 @@ export default function CareersPage() {
 
       {/* ===== CTA final ===== */}
       <section className="container mx-auto px-4 pb-16 sm:pb-24 max-w-4xl">
-        <div className="rounded-3xl bg-gradient-to-br from-primary to-accent p-8 sm:p-10 text-center text-white shadow-xl shadow-primary/20">
+        <div className="rounded-3xl bg-primary p-8 sm:p-10 text-center text-white shadow-xl shadow-primary/20">
           <h2 className="text-2xl sm:text-3xl font-extrabold font-[var(--font-display)]">
             Envoyez-nous votre candidature
           </h2>

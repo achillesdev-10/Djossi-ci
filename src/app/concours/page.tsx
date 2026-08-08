@@ -143,10 +143,10 @@ export default async function ConcoursPage({ searchParams }: ConcoursPageProps) 
   }
 
   return (
-    <main className="flex-1 min-h-screen bg-gradient-to-b from-white to-gray-50/70 py-8 transition-colors dark:from-slate-950 dark:to-slate-900 sm:py-12">
+    <main className="flex-1 min-h-screen bg-gray-50 py-8 transition-colors dark:bg-slate-950 sm:py-12">
       <div className="container mx-auto max-w-6xl px-4">
         {/* ===================== HÉRO ===================== */}
-        <section className="relative overflow-hidden mb-8 rounded-3xl bg-gradient-to-br from-primary via-emerald-700 to-accent text-white shadow-2xl shadow-primary/20">
+        <section className="relative overflow-hidden mb-8 rounded-3xl bg-primary text-white shadow-2xl shadow-primary/20">
           {/* Décor : halos + formes flottantes */}
           <div
             className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-orange-400/30 blur-3xl"

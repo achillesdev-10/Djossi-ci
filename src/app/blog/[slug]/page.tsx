@@ -56,7 +56,7 @@ export default async function BlogArticlePage({
   const shareUrl = `${SITE_CONFIG.url}/blog/${post.slug}`;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white to-gray-50/70 dark:from-slate-950 dark:to-slate-900">
+    <main className="min-h-screen bg-gray-50 dark:bg-slate-950">
       {/* ===== Couverture ===== */}
       {post.cover_image ? (
         <div className="relative h-56 sm:h-80 lg:h-96 w-full overflow-hidden bg-slate-100 dark:bg-slate-900">
@@ -65,7 +65,7 @@ export default async function BlogArticlePage({
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
         </div>
       ) : (
-        <div className="relative h-40 sm:h-56 w-full overflow-hidden bg-gradient-to-br from-primary/15 via-white to-accent/15 dark:from-primary/10 dark:via-slate-900 dark:to-accent/10 flex items-center justify-center">
+        <div className="relative h-40 sm:h-56 w-full overflow-hidden bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-16 h-16 sm:w-20 sm:h-20 opacity-50 text-primary" aria-hidden="true">
             <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" />
             <path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z" />
@@ -103,7 +103,7 @@ export default async function BlogArticlePage({
             </h1>
 
             <div className="mt-5 flex items-center gap-3 border-y border-border/60 py-4">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-sm">
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
                 {post.author.charAt(0).toUpperCase()}
               </div>
               <div>
@@ -146,7 +146,7 @@ export default async function BlogArticlePage({
         </article>
 
         {/* ===== CTA ===== */}
-        <div className="mt-8 rounded-3xl bg-gradient-to-br from-primary to-accent p-7 sm:p-9 text-center text-white shadow-xl shadow-primary/20">
+        <div className="mt-8 rounded-3xl bg-primary p-7 sm:p-9 text-center text-white shadow-xl shadow-primary/20">
           <h2 className="text-xl sm:text-2xl font-extrabold font-[var(--font-display)]">
             Trouvez votre prochaine opportunité
           </h2>

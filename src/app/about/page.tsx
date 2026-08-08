@@ -88,13 +88,9 @@ const JOURNEY = [
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white to-gray-50/70 dark:from-slate-950 dark:to-slate-900">
+    <main className="min-h-screen bg-gray-50 dark:bg-slate-950">
       {/* ===== En-tête ===== */}
-      <section className="relative overflow-hidden border-b border-border/40 bg-gradient-to-br from-primary/8 via-white to-accent/8 dark:from-primary/10 dark:via-slate-950 dark:to-accent/10">
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-primary)_0%,_transparent_55%)] opacity-20 dark:opacity-10"
-        />
+      <section className="relative overflow-hidden border-b border-border/40 bg-primary/5 dark:bg-primary/10">
         <div className="container mx-auto px-4 py-14 sm:py-20 relative z-10 max-w-4xl text-center">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary dark:text-emerald-400 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold mb-5">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
@@ -159,7 +155,7 @@ export default function AboutPage() {
               className="relative bg-white dark:bg-slate-900 border border-border rounded-2xl p-6 sm:p-8 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
             >
               <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
-                <div className="shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/15 to-accent/15 border border-primary/10 flex items-center justify-center text-primary">
+                <div className="shrink-0 w-14 h-14 rounded-2xl bg-primary/10 border border-primary/10 flex items-center justify-center text-primary">
                   <span aria-hidden="true">{step.icon}</span>
                 </div>
                 <div>
@@ -200,7 +196,7 @@ export default function AboutPage() {
         </div>
 
         {/* ===== CTA ===== */}
-        <div className="mt-14 rounded-3xl bg-gradient-to-br from-primary to-accent p-8 sm:p-10 text-center text-white shadow-xl shadow-primary/20">
+        <div className="mt-14 rounded-3xl bg-primary p-8 sm:p-10 text-center text-white shadow-xl shadow-primary/20">
           <h2 className="text-2xl sm:text-3xl font-extrabold font-[var(--font-display)]">
             Prêt à booster votre carrière&nbsp;?
           </h2>

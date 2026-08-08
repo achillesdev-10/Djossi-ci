@@ -179,11 +179,11 @@ export default async function ConcoursDetailPage({ params }: PageProps) {
   const shareUrl = encodeURIComponent(absoluteUrl);
 
   return (
-    <main className="flex-1 min-h-screen bg-gradient-to-b from-white to-gray-50/60 transition-colors dark:from-slate-950 dark:to-slate-900">
+    <main className="flex-1 min-h-screen bg-gray-50 transition-colors dark:bg-slate-950">
       <ExamViewsTracker examId={exam.id} />
 
       {/* ============================ EN-TÊTE ============================ */}
-      <section className="border-b border-gray-100 bg-gradient-to-br from-emerald-500/8 via-white to-emerald-500/8 dark:border-slate-800 dark:from-emerald-500/10 dark:via-slate-950 dark:to-emerald-500/10">
+      <section className="border-b border-gray-100 bg-emerald-500/5 dark:border-slate-800 dark:bg-emerald-500/10">
         <div className="container mx-auto max-w-4xl px-4 pb-6 pt-4 sm:pt-8">
           <nav aria-label="Fil d'Ariane" className="mb-4 sm:mb-6">
             <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-gray-500 dark:text-gray-400 sm:text-sm">

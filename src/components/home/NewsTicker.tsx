@@ -53,9 +53,9 @@ export default function NewsTicker({ items }: { items: TickerItem[] }) {
   const doubled = [...items, ...items];
 
   return (
-    <div className="relative z-10 overflow-hidden border-y border-white/10 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
+    <div className="relative z-10 overflow-hidden border-y border-white/10 bg-slate-900">
       <div className="flex items-stretch">
-        <div className="relative z-10 flex shrink-0 items-center gap-2 bg-gradient-to-r from-orange-600 to-orange-500 px-3.5 sm:px-5 text-white shadow-lg">
+        <div className="relative z-10 flex shrink-0 items-center gap-2 bg-orange-600 px-3.5 sm:px-5 text-white shadow-lg">
           <span className="relative flex h-2 w-2">
             <span className="animate-ticker-pulse absolute inline-flex h-full w-full rounded-full bg-white" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />

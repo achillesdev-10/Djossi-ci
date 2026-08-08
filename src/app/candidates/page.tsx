@@ -92,7 +92,7 @@ export default function CandidatesPage() {
   return (
     <div className="text-gray-900 dark:text-slate-50">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-orange-50 via-white to-white dark:from-slate-900 dark:via-slate-950 dark:to-slate-950">
+      <section className="relative overflow-hidden bg-orange-50 dark:bg-slate-950">
         <div className="container mx-auto px-4 py-16 md:py-24">
           <nav className="text-sm text-gray-500 mb-8">
             <Link href="/" className="hover:text-primary">
@@ -207,7 +207,7 @@ export default function CandidatesPage() {
 
       {/* Témoignage */}
       <section className="container mx-auto px-4 py-16">
-        <div className="max-w-3xl mx-auto rounded-3xl bg-gradient-to-br from-primary to-accent text-white p-8 md:p-12 text-center shadow-2xl">
+        <div className="max-w-3xl mx-auto rounded-3xl bg-primary text-white p-8 md:p-12 text-center shadow-2xl">
           <div className="text-5xl mb-4 opacity-40 font-serif leading-none">“</div>
           <blockquote className="text-lg md:text-xl font-medium leading-relaxed mb-6">
             J’ai trouvé mon premier CDI trois semaines après mon inscription. Les alertes par

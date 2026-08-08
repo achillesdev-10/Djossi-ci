@@ -91,7 +91,7 @@ export default async function ConcoursCategoryPage({ params }: PageProps) {
   };
 
   return (
-    <main className="flex-1 min-h-screen bg-gradient-to-b from-white to-gray-50/70 py-8 transition-colors dark:from-slate-950 dark:to-slate-900 sm:py-12">
+    <main className="flex-1 min-h-screen bg-gray-50 py-8 transition-colors dark:bg-slate-950 sm:py-12">
       <div className="container mx-auto max-w-6xl px-4">
         <nav aria-label="Fil d'Ariane" className="mb-6 text-sm text-gray-500 dark:text-gray-400">
           <Link href="/" className="hover:text-primary">
@@ -110,7 +110,7 @@ export default async function ConcoursCategoryPage({ params }: PageProps) {
         </nav>
 
         {/* En-tête éditorial unique */}
-        <div className="mb-8 rounded-2xl border border-gray-100 bg-gradient-to-br from-primary/5 via-white to-accent/5 p-6 dark:border-slate-800 dark:from-primary/10 dark:via-slate-900 dark:to-accent/10 sm:p-8">
+        <div className="mb-8 rounded-2xl border border-gray-100 bg-primary/5 p-6 dark:border-slate-800 dark:bg-primary/10 sm:p-8">
           <h1 className="mb-3 font-[var(--font-display)] text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">
             {seo.title}
           </h1>

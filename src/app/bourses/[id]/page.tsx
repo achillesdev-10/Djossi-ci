@@ -51,8 +51,8 @@ export default async function BourseDetailPage({ params }: PageProps) {
   const hasEmail = Boolean(bourse.apply_email);
 
   return (
-    <main className="flex-1 min-h-screen bg-gradient-to-b from-white to-gray-50/60 dark:from-slate-950 dark:to-slate-900 transition-colors">
-      <section className="bg-gradient-to-br from-amber-500/8 via-white to-amber-500/8 dark:from-amber-500/10 dark:via-slate-950 dark:to-amber-500/10 border-b border-gray-100 dark:border-slate-800">
+    <main className="flex-1 min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors">
+      <section className="bg-amber-500/5 dark:bg-amber-500/10 border-b border-gray-100 dark:border-slate-800">
         <div className="container mx-auto px-4 pt-4 sm:pt-8 pb-6 max-w-4xl">
           <nav aria-label="Fil d'Ariane" className="mb-4 sm:mb-6">
             <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] sm:text-sm text-gray-500 dark:text-gray-400">

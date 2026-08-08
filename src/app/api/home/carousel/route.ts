@@ -17,7 +17,7 @@ export interface CarouselSlide {
   fallback: {
     domain: string;
     initial: string;
-    gradient: string;
+    color: string;
   };
 }
 
@@ -90,13 +90,13 @@ function getDomain(url: string | null): string {
   }
 }
 
-const GRADIENTS = [
-  'from-orange-500 via-amber-500 to-yellow-500',
-  'from-emerald-600 via-green-500 to-teal-500',
-  'from-blue-600 via-sky-600 to-cyan-500',
-  'from-fuchsia-600 via-purple-600 to-indigo-600',
-  'from-rose-500 via-orange-500 to-amber-500',
-  'from-slate-700 via-slate-800 to-slate-900',
+const COLORS = [
+  'bg-orange-500',
+  'bg-emerald-600',
+  'bg-sky-600',
+  'bg-purple-600',
+  'bg-rose-500',
+  'bg-slate-800',
 ];
 
 function fallbackFor(url: string | null, title: string, index: number): CarouselSlide['fallback'] {
@@ -104,7 +104,7 @@ function fallbackFor(url: string | null, title: string, index: number): Carousel
   return {
     domain,
     initial: (title.trim().charAt(0) || 'T').toUpperCase(),
-    gradient: GRADIENTS[index % GRADIENTS.length],
+    color: COLORS[index % COLORS.length],
   };
 }
 
@@ -166,7 +166,7 @@ export async function GET() {
   }
 
   // Récupération asynchrone des images OpenGraph depuis les sites d'origine
-  // (chaque échec bascule proprement sur le dégradé local + favicon).
+  // (chaque échec bascule proprement sur la couleur locale + favicon).
   const results = await Promise.allSettled(
     slides.map((s) =>
       s.image ? Promise.resolve(s.image) : s.sourceUrl ? fetchOgImage(s.sourceUrl) : Promise.resolve(null),

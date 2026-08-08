@@ -91,7 +91,7 @@ export default async function ConcoursDiplomaPage({ params }: PageProps) {
   };
 
   return (
-    <main className="flex-1 min-h-screen bg-gradient-to-b from-white to-gray-50/70 py-8 transition-colors dark:from-slate-950 dark:to-slate-900 sm:py-12">
+    <main className="flex-1 min-h-screen bg-gray-50 py-8 transition-colors dark:bg-slate-950 sm:py-12">
       <div className="container mx-auto max-w-6xl px-4">
         <nav aria-label="Fil d'Ariane" className="mb-6 text-sm text-gray-500 dark:text-gray-400">
           <Link href="/" className="hover:text-primary">
@@ -110,7 +110,7 @@ export default async function ConcoursDiplomaPage({ params }: PageProps) {
         </nav>
 
         {/* En-tête éditorial unique */}
-        <div className="mb-8 rounded-2xl border border-gray-100 bg-gradient-to-br from-emerald-500/5 via-white to-sky-500/5 p-6 dark:border-slate-800 dark:from-emerald-500/10 dark:via-slate-900 dark:to-sky-500/10 sm:p-8">
+        <div className="mb-8 rounded-2xl border border-gray-100 bg-emerald-500/5 p-6 dark:border-slate-800 dark:bg-emerald-500/10 sm:p-8">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-bold text-primary">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
               <path d="M22 10 12 5 2 10l10 5 10-5Z" />

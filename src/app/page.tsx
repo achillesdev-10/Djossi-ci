@@ -17,7 +17,7 @@ const QUICK_LINKS = [
     label: 'Offres d\u2019emploi',
     desc: 'CDI, CDD, prestation',
     href: '/jobs',
-    gradient: 'from-orange-500 to-amber-500',
+    color: 'bg-orange-500',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
         <rect x="2" y="7" width="20" height="14" rx="2" />
@@ -29,7 +29,7 @@ const QUICK_LINKS = [
     label: 'Stages',
     desc: 'Pour étudiants & jeunes diplômés',
     href: '/jobs?contract=Stage',
-    gradient: 'from-sky-500 to-cyan-500',
+    color: 'bg-sky-500',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
         <path d="M22 10 12 5 2 10l10 5 10-5Z" />
@@ -41,7 +41,7 @@ const QUICK_LINKS = [
     label: 'Bourses d\u2019études',
     desc: 'Étudier en CI & à l\u2019étranger',
     href: '/bourses',
-    gradient: 'from-emerald-500 to-green-500',
+    color: 'bg-emerald-600',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
         <path d="M22 10 12 5 2 10l10 5 10-5Z" />
@@ -54,7 +54,7 @@ const QUICK_LINKS = [
     label: 'Concours admin.',
     desc: 'ENA, INFAS, CAFOP\u2026',
     href: '/concours',
-    gradient: 'from-accent to-indigo-600',
+    color: 'bg-indigo-600',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
         <path d="M3 21h18" />
@@ -67,7 +67,7 @@ const QUICK_LINKS = [
     label: 'Générateur de CV',
     desc: 'Un CV pro avec l\u2019IA',
     href: '/generateur-de-cv',
-    gradient: 'from-fuchsia-500 to-purple-600',
+    color: 'bg-purple-600',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
@@ -80,7 +80,7 @@ const QUICK_LINKS = [
     label: 'Conseils & Blog',
     desc: 'Astuces candidature',
     href: '/blog',
-    gradient: 'from-rose-500 to-pink-500',
+    color: 'bg-rose-500',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 sm:h-7 sm:w-7 drop-shadow">
         <path d="M15 12h-5M15 8h-5M8 3h5.6a1 1 0 0 1 .7.3l3.4 3.4a1 1 0 0 1 .3.7V21a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
@@ -174,7 +174,7 @@ export default async function HomePage({
   };
 
   return (
-    <main className="flex-1 min-h-screen bg-gradient-to-b from-white to-gray-50/70 dark:from-slate-950 dark:to-slate-900 transition-colors">
+    <main className="flex-1 min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors">
       {/* JSON-LD (SEO) : WebSite + SearchAction */}
       <script
         type="application/ld+json"
@@ -187,20 +187,7 @@ export default async function HomePage({
       {/* ======================================================================== */}
       {/*   HERO — Mobile-first : texte lisible, peu de padding vertical            */}
       {/* ======================================================================== */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/8 via-white to-accent/8 dark:from-primary/10 dark:via-slate-950 dark:to-accent/10 pt-8 pb-8 sm:pt-14 sm:pb-10 border-b border-border/40">
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-primary)_0%,_transparent_55%)] opacity-20 dark:opacity-10"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute -bottom-24 -right-20 w-72 h-72 rounded-full bg-secondary/10 blur-3xl animate-float-slow"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute -top-20 -left-16 w-72 h-72 rounded-full bg-accent/10 blur-3xl animate-float"
-        />
-
+      <section className="relative overflow-hidden bg-primary/5 dark:bg-primary/10 pt-8 pb-8 sm:pt-14 sm:pb-10 border-b border-border/40">
         <div className="container mx-auto px-4 relative z-10 max-w-6xl">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             {/* Colonne texte */}
@@ -315,7 +302,7 @@ export default async function HomePage({
               className="group relative overflow-hidden rounded-2xl p-4 sm:p-5 text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl animate-fade-in-up"
               style={{ animationDelay: `${i * 60}ms` }}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${link.gradient} opacity-100`} />
+              <div className={`absolute inset-0 ${link.color} opacity-100`} />
               <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/15 transition-transform duration-500 group-hover:scale-150" />
               <div className="relative flex flex-col gap-1.5">
                 <span className="text-2xl sm:text-3xl drop-shadow" aria-hidden="true">
@@ -401,15 +388,7 @@ export default async function HomePage({
       {/*   BANDEAU CTA                                                             */}
       {/* ======================================================================== */}
       <section className="container mx-auto px-4 pb-16 sm:pb-24 max-w-6xl">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary via-emerald-600 to-accent px-6 py-10 sm:p-12 text-center text-white shadow-xl shadow-primary/20 animate-gradient-x">
-          <div
-            aria-hidden="true"
-            className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/10 blur-2xl"
-          />
-          <div
-            aria-hidden="true"
-            className="absolute -bottom-12 -right-8 h-48 w-48 rounded-full bg-orange-400/25 blur-3xl"
-          />
+        <div className="relative overflow-hidden rounded-3xl bg-primary px-6 py-10 sm:p-12 text-center text-white shadow-xl shadow-primary/20">
           <div className="relative">
             <h2 className="font-[var(--font-display)] text-2xl sm:text-4xl font-extrabold mb-3">
               Prêt à décrocher votre prochain job ?
@@ -498,7 +477,7 @@ function HomeBlogCard({
       className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-primary/25 animate-fade-in-up"
       style={{ animationDelay: `${index * 70}ms` }}
     >
-      <div className="relative h-24 sm:h-32 overflow-hidden bg-gradient-to-br from-primary/15 via-white to-accent/15 dark:from-primary/10 dark:via-slate-900 dark:to-accent/10">
+      <div className="relative h-24 sm:h-32 overflow-hidden bg-gray-100 dark:bg-slate-800">
         {post.cover_image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

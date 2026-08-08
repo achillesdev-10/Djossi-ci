@@ -36,7 +36,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
   });
 
   return (
-    <main className="flex-1 min-h-screen bg-gradient-to-b from-white to-gray-50/70 dark:from-slate-950 dark:to-slate-900 transition-colors py-8 sm:py-12">
+    <main className="flex-1 min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors py-8 sm:py-12">
       <div className="container mx-auto px-4 max-w-6xl">
         <nav aria-label="Fil d'Ariane" className="text-sm text-gray-500 dark:text-gray-400 mb-6">
           <Link href="/" className="hover:text-primary">Accueil</Link>

@@ -105,13 +105,13 @@ export default async function JobDetailPage({ params }: PageProps) {
   };
 
   return (
-    <main className="flex-1 min-h-screen bg-gradient-to-b from-white to-gray-50/60 dark:from-slate-950 dark:to-slate-900 transition-colors">
+    <main className="flex-1 min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPostingJsonLd) }}
       />
       {/* ============= HERO / HEADER DU POSTE ============= */}
-      <section className="bg-gradient-to-br from-primary/8 via-white to-accent/8 dark:from-primary/10 dark:via-slate-950 dark:to-accent/10 border-b border-gray-100 dark:border-slate-800">
+      <section className="bg-primary/5 dark:bg-primary/10 border-b border-gray-100 dark:border-slate-800">
         <div className="container mx-auto px-4 pt-4 sm:pt-8 pb-6 max-w-4xl">
           <nav aria-label="Fil d'Ariane" className="mb-4 sm:mb-6">
             <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] sm:text-sm text-gray-500 dark:text-gray-400">

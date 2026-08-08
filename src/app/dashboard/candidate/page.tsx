@@ -161,6 +161,26 @@ export default function CandidateDashboardPage() {
               Votre compte est créé. Découvrez tous les avantages de votre adhésion gratuite et
               lancez votre recherche d’emploi dès maintenant.
             </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mt-6">
+              <Link
+                href="/generateur-de-cv"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-extrabold text-primary shadow-lg shadow-black/10 hover:-translate-y-0.5 hover:shadow-xl transition-all"
+              >
+                <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Créer mon CV avec l'IA
+              </Link>
+              <Link
+                href="/jobs"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/10 px-5 py-3 text-sm font-bold text-white backdrop-blur hover:bg-white/20 transition-colors"
+              >
+                <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Voir les offres
+              </Link>
+            </div>
           </div>
           <div className="shrink-0 w-44 sm:w-56 lg:w-72 mx-auto lg:mx-0 animate-float">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -173,6 +193,27 @@ export default function CandidateDashboardPage() {
             />
           </div>
         </div>
+      </div>
+
+      {/* Statistiques plateforme */}
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        {[
+          { value: '50 000+', label: 'Candidats inscrits' },
+          { value: '1 500+', label: 'Offres vérifiées' },
+          { value: '2 000+', label: 'Entreprises actives' },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-3xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4 sm:p-6 text-center shadow-sm"
+          >
+            <div className="text-xl sm:text-2xl font-black text-primary font-[var(--font-display)]">
+              {stat.value}
+            </div>
+            <div className="text-[11px] sm:text-xs text-gray-500 dark:text-slate-400 mt-1">
+              {stat.label}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Avantages membre */}

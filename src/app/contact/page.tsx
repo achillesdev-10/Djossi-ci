@@ -45,13 +45,9 @@ const INFO_ITEMS = [
 
 export default function ContactPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white to-gray-50/70 dark:from-slate-950 dark:to-slate-900">
+    <main className="min-h-screen bg-gray-50 dark:bg-slate-950">
       {/* ===== En-tête ===== */}
-      <section className="relative overflow-hidden border-b border-border/40 bg-gradient-to-br from-primary/8 via-white to-accent/8 dark:from-primary/10 dark:via-slate-950 dark:to-accent/10">
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--color-primary)_0%,_transparent_55%)] opacity-20 dark:opacity-10"
-        />
+      <section className="relative overflow-hidden border-b border-border/40 bg-primary/5 dark:bg-primary/10">
         <div className="container mx-auto px-4 py-12 sm:py-16 relative z-10 max-w-4xl text-center">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary dark:text-emerald-400 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold mb-5">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
@@ -79,7 +75,7 @@ export default function ContactPage() {
                 key={item.title}
                 className="flex items-center gap-4 rounded-2xl border border-border bg-white dark:bg-slate-900 p-5 shadow-sm hover:border-primary/30 transition-colors"
               >
-                <div className="shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 border border-primary/10 flex items-center justify-center text-primary">
+                <div className="shrink-0 w-12 h-12 rounded-xl bg-primary/10 border border-primary/10 flex items-center justify-center text-primary">
                   <span aria-hidden="true">{item.icon}</span>
                 </div>
                 <div className="min-w-0">
@@ -158,7 +154,7 @@ export default function ContactPage() {
             {/* CTA emploi */}
             <Link
               href="/jobs"
-              className="group flex items-center justify-between gap-4 rounded-2xl bg-gradient-to-br from-primary to-accent p-5 text-white shadow-lg shadow-primary/20 hover:brightness-110 transition-all"
+              className="group flex items-center justify-between gap-4 rounded-2xl bg-primary p-5 text-white shadow-lg shadow-primary/20 hover:brightness-110 transition-all"
             >
               <div>
                 <div className="font-bold font-[var(--font-display)]">Envie de trouver un job ?</div>

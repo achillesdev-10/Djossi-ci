@@ -29,14 +29,7 @@ function SlideMedia({ slide }: { slide: CarouselSlide }) {
     );
   }
   return (
-    <div className={`absolute inset-0 bg-gradient-to-br ${slide.fallback.gradient}`}>
-      <div
-        className="absolute inset-0 opacity-25"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle at 20% 30%, rgba(255,255,255,0.35), transparent 45%), radial-gradient(circle at 80% 70%, rgba(0,0,0,0.25), transparent 50%)',
-        }}
-      />
+    <div className={`absolute inset-0 ${slide.fallback.color}`}>
       <div className="absolute inset-0 flex items-center justify-center">
         <span className="text-6xl sm:text-7xl font-black text-white/90 font-[var(--font-display)] drop-shadow-lg">
           {slide.fallback.initial}
@@ -87,7 +80,7 @@ export default function HomeCarousel() {
 
   if (slides.length === 0) {
     return (
-      <div className="w-full overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-accent to-orange-500 shadow-lg animate-gradient-x h-56 sm:h-72">
+      <div className="w-full overflow-hidden rounded-2xl bg-primary shadow-lg h-56 sm:h-72">
         <div className="flex h-full items-center justify-center px-6 text-white">
           <div className="text-center">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="h-12 w-12 mx-auto opacity-90" aria-hidden="true">

@@ -105,10 +105,6 @@ html.dark body {
   .animate-pop {
     animation: pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
-  .animate-gradient-x {
-    background-size: 200% 200%;
-    animation: gradientX 8s ease infinite;
-  }
   .animate-ticker-pulse {
     animation: tickerPulse 1.6s ease-in-out infinite;
   }
@@ -133,11 +129,6 @@ html.dark body {
     0%   { opacity: 0; transform: scale(0.92); }
     100% { opacity: 1; transform: scale(1); }
   }
-  @keyframes gradientX {
-    0%   { background-position: 0% 50%; }
-    50%  { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
   @keyframes tickerPulse {
     0%, 100% { opacity: 1; }
     50%      { opacity: 0.45; }
@@ -147,7 +138,6 @@ html.dark body {
     .animate-marquee,
     .animate-float,
     .animate-float-slow,
-    .animate-gradient-x,
     .animate-ticker-pulse {
       animation: none !important;
     }

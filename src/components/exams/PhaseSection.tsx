@@ -10,17 +10,17 @@ const PHASE_SECTION_ACCENTS = {
   emerald: {
     dot: 'bg-emerald-500',
     ring: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
-    bar: 'from-emerald-500 to-teal-400',
+    bar: 'bg-emerald-500',
   },
   indigo: {
     dot: 'bg-indigo-500',
     ring: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
-    bar: 'from-indigo-500 to-violet-400',
+    bar: 'bg-indigo-500',
   },
   slate: {
     dot: 'bg-slate-400',
     ring: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30',
-    bar: 'from-slate-400 to-slate-300',
+    bar: 'bg-slate-400',
   },
 } as const;
 
@@ -102,7 +102,7 @@ export default function PhaseSection({
           </span>
         </div>
       </div>
-      <div className={`mb-2 h-0.5 w-16 rounded-full bg-gradient-to-r ${a.bar}`} aria-hidden="true" />
+      <div className={`mb-2 h-0.5 w-16 rounded-full ${a.bar}`} aria-hidden="true" />
       <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
         {visible.map((exam) => (
           <ExamCard key={exam.id} exam={exam} priority={false} />

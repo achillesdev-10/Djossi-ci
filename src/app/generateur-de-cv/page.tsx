@@ -208,9 +208,8 @@ export default function CVGeneratorPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <section className="relative overflow-hidden border-b border-gray-100 dark:border-slate-800 bg-gradient-to-br from-primary/5 via-white to-emerald-50/30 dark:from-primary/10 dark:via-slate-900 dark:to-emerald-900/10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(16,185,129,0.08),transparent_60%)]" />
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <section className="relative overflow-hidden border-b border-gray-100 dark:border-slate-800 bg-primary/5 dark:bg-primary/10">
         <div className="container mx-auto px-4 py-10 md:py-14 relative">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
             <div className="max-w-2xl">
